@@ -4,9 +4,10 @@ import { WebSocketService } from '../services/websocket.service';
 import { VideoNavigationService, VideoItem, NavigationState } from '../services/video-navigation.service';
 
 @Component({
-  selector: 'ns-remote-control',
-  templateUrl: './remote-control.component.html',
-  styleUrls: ['./remote-control.component.css']
+    selector: 'ns-remote-control',
+    templateUrl: './remote-control.component.html',
+    styleUrls: ['./remote-control.component.css'],
+    standalone: false
 })
 export class RemoteControlComponent implements OnInit, OnDestroy {
   isConnected = false;
