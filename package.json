@@ -3,7 +3,7 @@
   "main": "./src/main.ts",
   "version": "1.0.0",
   "private": true,
-  "dependencies": {
+    "dependencies": {
     "@angular/animations": "~19.2.14",
     "@angular/cdk": "^19.2.19",
     "@angular/common": "~19.2.14",
