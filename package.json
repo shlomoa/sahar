@@ -14,8 +14,8 @@
     "@angular/platform-browser": "~20.1.2",
     "@angular/platform-browser-dynamic": "~20.1.2",
     "@angular/router": "~20.1.2",
-    "@nativescript/angular": "^20.0.0",
-    "@nativescript/core": "~8.8.0",
+    "@nativescript/angular": "^18.0.0",
+    "@nativescript/core": "^8.9.5",
     "rxjs": "~7.8.0",
     "zone.js": "~0.15.1"
   },
