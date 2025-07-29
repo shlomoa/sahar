@@ -1,0 +1,199 @@
+<div class="remote-container">
+  <!-- Header with device status -->
+  <mat-toolbar class="header-toolbar">
+    <span>Remote Control</span>
+    <span class="spacer"></span>
+    <mat-chip-set>
+      <mat-chip [color]="connectionStatus === 'connected' ? 'primary' : 'accent'">
+        {{ connectionStatus | titlecase }}
+      </mat-chip>
+    </mat-chip-set>
+  </mat-toolbar>
+
+  <!-- Main content area -->
+  <div class="content-area">
+    <!-- Current navigation display (synced with TV) -->
+    <div class="current-content" *ngIf="currentNavigation">
+      <!-- Performers list -->
+      <div *ngIf="currentNavigation.level === 'performers'" class="performers-grid">
+        <mat-card 
+          *ngFor="let performer of performers; trackBy: trackByPerformerId"
+          class="performer-card"
+          [class.selected]="performer.id.toString() === currentNavigation.performerId"
+          (click)="navigateToPerformer(performer.id.toString())">
+          <img 
+            mat-card-image 
+            [src]="performer.thumbnail" 
+            [alt]="performer.name"
+            loading="lazy">
+          <mat-card-content>
+            <h3>{{ performer.name }}</h3>
+            <p>{{ performer.videos.length }} videos</p>
+          </mat-card-content>
+        </mat-card>
+      </div>
+
+      <!-- Videos list for selected performer -->
+      <div *ngIf="currentNavigation.level === 'videos'" class="videos-grid">
+        <div class="breadcrumb">
+          <button mat-button (click)="navigateToPerformers()">
+            <mat-icon>arrow_back</mat-icon>
+            Back to Performers
+          </button>
+        </div>
+        
+        <mat-card 
+          *ngFor="let video of getVideosForPerformer(currentNavigation.performerId || ''); trackBy: trackByVideoId"
+          class="video-card"
+          [class.selected]="video.id.toString() === currentNavigation.videoId"
+          (click)="navigateToVideo(currentNavigation.performerId || '', video.id.toString())">
+          <img 
+            mat-card-image 
+            [src]="video.thumbnail" 
+            [alt]="video.title"
+            loading="lazy">
+          <mat-card-content>
+            <h4>{{ video.title }}</h4>
+            <p>{{ video.duration }}min • {{ video.scenes.length }} scenes</p>
+          </mat-card-content>
+        </mat-card>
+      </div>
+
+      <!-- Scenes list for selected video -->
+      <div *ngIf="currentNavigation.level === 'scenes'" class="scenes-grid">
+        <div class="breadcrumb">
+          <button mat-button (click)="navigateToVideos(currentNavigation.performerId || '')">
+            <mat-icon>arrow_back</mat-icon>
+            Back to Videos
+          </button>
+        </div>
+        
+        <mat-card 
+          *ngFor="let scene of getScenesForVideo(currentNavigation.performerId || '', currentNavigation.videoId || ''); trackBy: trackBySceneId"
+          class="scene-card"
+          [class.selected]="scene.timestamp.toString() === currentNavigation.sceneTimestamp"
+          (click)="navigateToScene(currentNavigation.performerId || '', currentNavigation.videoId || '', scene.timestamp.toString())">
+          <img 
+            mat-card-image 
+            [src]="scene.thumbnail" 
+            [alt]="'Scene at ' + scene.timestamp"
+            loading="lazy">
+          <mat-card-content>
+            <h5>{{ scene.timestamp }}s</h5>
+          </mat-card-content>
+        </mat-card>
+      </div>
+
+      <!-- Video navigation controls (when scene is selected) -->
+      <div *ngIf="currentNavigation.level === 'scene-selected'" class="video-controls">
+        <div class="breadcrumb">
+          <button mat-button (click)="navigateToScenes(currentNavigation.performerId || '', currentNavigation.videoId || '')">
+            <mat-icon>arrow_back</mat-icon>
+            Back to Scenes
+          </button>
+        </div>
+
+        <!-- Current scene info -->
+        <mat-card class="current-scene-info">
+          <mat-card-content>
+            <h3>{{ getCurrentVideo()?.title }}</h3>
+            <p>Scene: {{ currentNavigation.sceneTimestamp }}s</p>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Video control buttons -->
+        <div class="control-buttons">
+          <div class="playback-controls">
+            <button mat-raised-button color="primary" (click)="sendControlCommand('previous-scene')" 
+                    [disabled]="!hasPreviousScene()">
+              <mat-icon>skip_previous</mat-icon>
+              Previous
+            </button>
+            
+            <button mat-raised-button color="accent" (click)="sendControlCommand('play-pause')" class="play-pause-btn">
+              <mat-icon>{{ isPlaying ? 'pause' : 'play_arrow' }}</mat-icon>
+              {{ isPlaying ? 'Pause' : 'Play' }}
+            </button>
+            
+            <button mat-raised-button color="primary" (click)="sendControlCommand('next-scene')" 
+                    [disabled]="!hasNextScene()">
+              <mat-icon>skip_next</mat-icon>
+              Next
+            </button>
+          </div>
+
+          <div class="seek-controls">
+            <button mat-raised-button (click)="sendControlCommand('rewind')">
+              <mat-icon>replay_10</mat-icon>
+              -10s
+            </button>
+            
+            <button mat-raised-button (click)="sendControlCommand('fast-forward')">
+              <mat-icon>forward_10</mat-icon>
+              +10s
+            </button>
+          </div>
+
+          <div class="volume-controls">
+            <mat-icon>volume_up</mat-icon>
+            <input 
+              type="range" 
+              min="0" 
+              max="100" 
+              step="1" 
+              [value]="volumeLevel"
+              (input)="onVolumeChange(+($any($event).target.value))"
+              class="volume-slider">
+            <span>{{ volumeLevel }}%</span>
+          </div>
+
+          <div class="additional-controls">
+            <button mat-raised-button (click)="sendControlCommand('toggle-fullscreen')">
+              <mat-icon>fullscreen</mat-icon>
+              Fullscreen
+            </button>
+            
+            <button mat-raised-button (click)="sendControlCommand('toggle-mute')">
+              <mat-icon>{{ isMuted ? 'volume_off' : 'volume_up' }}</mat-icon>
+              {{ isMuted ? 'Unmute' : 'Mute' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Connection setup (when not connected) -->
+    <div *ngIf="connectionStatus === 'disconnected'" class="connection-setup">
+      <mat-card>
+        <mat-card-header>
+          <mat-card-title>Connect to TV</mat-card-title>
+          <mat-card-subtitle>Scan for available devices on your network</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div *ngIf="discoveredDevices.length === 0" class="scanning">
+            <mat-progress-spinner mode="indeterminate" diameter="50"></mat-progress-spinner>
+            <p>Scanning for devices...</p>
+          </div>
+          
+          <div *ngIf="discoveredDevices.length > 0" class="device-list">
+            <h4>Available Devices:</h4>
+            <mat-selection-list #deviceList (selectionChange)="onDeviceSelection($event)">
+              <mat-list-option *ngFor="let device of discoveredDevices" [value]="device">
+                <mat-icon matListItemIcon>tv</mat-icon>
+                <div matListItemTitle>{{ device.name }}</div>
+                <div matListItemLine>{{ device.address }}:{{ device.port }}</div>
+              </mat-list-option>
+            </mat-selection-list>
+          </div>
+        </mat-card-content>
+        <mat-card-actions>
+          <button mat-raised-button color="primary" (click)="startDeviceDiscovery()" 
+                  [disabled]="isScanning">
+            <mat-icon>refresh</mat-icon>
+            {{ isScanning ? 'Scanning...' : 'Refresh' }}
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    </div>
+  </div>
+</div>

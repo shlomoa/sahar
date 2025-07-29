@@ -1,0 +1,458 @@
+/* iPad Remote Control Styles */
+
+// Variables
+:host {
+  --primary-color: #1976d2;
+  --accent-color: #ff4081;
+  --warn-color: #f44336;
+  --background-color: #fafafa;
+  --surface-color: #ffffff;
+  --text-primary: #212121;
+  --text-secondary: #757575;
+  --border-color: #e0e0e0;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --border-radius: 8px;
+}
+
+.remote-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--background-color);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+// Toolbar Styles
+.remote-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow);
+  
+  .tv-icon {
+    margin-right: 12px;
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+  }
+  
+  .toolbar-title {
+    font-size: 20px;
+    font-weight: 600;
+  }
+  
+  .toolbar-spacer {
+    flex: 1;
+  }
+  
+  .connection-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    
+    mat-icon {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+    }
+    
+    .connection-text {
+      font-size: 14px;
+      font-weight: 500;
+    }
+  }
+}
+
+// Main Content
+.remote-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+// Tab Styles
+.control-tabs {
+  height: 100%;
+  
+  ::ng-deep {
+    .mat-mdc-tab-group {
+      height: 100%;
+    }
+    
+    .mat-mdc-tab-body-wrapper {
+      flex: 1;
+      overflow: hidden;
+    }
+    
+    .mat-mdc-tab-header {
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .mat-mdc-tab-label {
+      font-size: 16px;
+      font-weight: 500;
+      padding: 0 24px;
+      min-width: 120px;
+    }
+  }
+}
+
+.tab-content {
+  height: 100%;
+  overflow-y: auto;
+  padding: 16px;
+  
+  h3, h4, h5 {
+    color: var(--text-primary);
+    margin: 0 0 16px 0;
+  }
+}
+
+// Navigation Tab Styles
+.navigation-tab {
+  .breadcrumb-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding: 16px;
+    background: var(--surface-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 16px;
+      color: var(--text-secondary);
+      
+      .breadcrumb-arrow {
+        font-size: 18px;
+        color: var(--text-secondary);
+      }
+    }
+    
+    .back-button {
+      mat-icon {
+        font-size: 24px;
+      }
+    }
+  }
+  
+  .content-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    padding-bottom: 24px;
+  }
+  
+  .performer-card, .video-card, .scene-card {
+    background: var(--surface-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    overflow: hidden;
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    }
+    
+    &.selected {
+      border: 2px solid var(--primary-color);
+      box-shadow: 0 4px 16px rgba(25, 118, 210, 0.3);
+    }
+    
+    img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      border-radius: var(--border-radius) var(--border-radius) 0 0;
+    }
+    
+    .performer-info, .video-info, .scene-info {
+      padding: 16px;
+      
+      h3, h4, h5 {
+        margin: 0 0 8px 0;
+        color: var(--text-primary);
+        font-weight: 600;
+      }
+      
+      .video-count, .video-duration, .scene-count, .scene-time, .scene-duration {
+        display: block;
+        font-size: 14px;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+      }
+    }
+  }
+  
+  .scene-card {
+    img {
+      height: 120px;
+    }
+    
+    .scene-info {
+      padding: 12px;
+      
+      h5 {
+        font-size: 14px;
+        margin-bottom: 4px;
+      }
+      
+      .scene-time, .scene-duration {
+        font-size: 12px;
+      }
+    }
+  }
+}
+
+// Playback Tab Styles
+.playback-tab {
+  .now-playing-card {
+    margin-bottom: 24px;
+    
+    .playing-info {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      
+      .playing-thumbnail {
+        width: 120px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: var(--border-radius);
+      }
+      
+      .playing-details {
+        flex: 1;
+        
+        h3 {
+          margin: 0 0 8px 0;
+          font-size: 18px;
+          font-weight: 600;
+        }
+        
+        p {
+          margin: 0 0 4px 0;
+          color: var(--text-secondary);
+          font-size: 14px;
+        }
+        
+        .time-info {
+          font-weight: 500;
+          color: var(--text-primary);
+        }
+      }
+    }
+  }
+  
+  .progress-section {
+    margin-bottom: 32px;
+    
+    .playback-progress {
+      margin-bottom: 16px;
+      height: 8px;
+      border-radius: 4px;
+    }
+    
+    .seek-slider {
+      width: 100%;
+    }
+  }
+  
+  .playback-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 32px;
+    
+    .play-pause-button {
+      width: 80px;
+      height: 80px;
+      
+      mat-icon {
+        font-size: 36px;
+        width: 36px;
+        height: 36px;
+      }
+    }
+    
+    .control-button {
+      width: 56px;
+      height: 56px;
+      
+      mat-icon {
+        font-size: 28px;
+        width: 28px;
+        height: 28px;
+      }
+    }
+  }
+  
+  .volume-control {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: var(--surface-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    
+    .volume-icon {
+      color: var(--text-secondary);
+    }
+    
+    .volume-slider {
+      flex: 1;
+    }
+    
+    .volume-value {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+      min-width: 40px;
+      text-align: right;
+    }
+  }
+}
+
+// Devices Tab Styles
+.devices-tab {
+  .device-card {
+    margin-bottom: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    &.connected {
+      border: 2px solid var(--primary-color);
+      background: rgba(25, 118, 210, 0.05);
+    }
+    
+    mat-icon[mat-card-avatar] {
+      font-size: 40px;
+      width: 40px;
+      height: 40px;
+      color: var(--primary-color);
+    }
+    
+    .device-info {
+      .capabilities {
+        margin-bottom: 8px;
+        
+        .capability-chip {
+          display: inline-block;
+          background: var(--primary-color);
+          color: white;
+          padding: 4px 8px;
+          border-radius: 12px;
+          font-size: 12px;
+          margin-right: 8px;
+          margin-bottom: 4px;
+        }
+      }
+      
+      .last-seen {
+        font-size: 12px;
+        color: var(--text-secondary);
+      }
+    }
+  }
+  
+  .manual-connection-card {
+    margin-bottom: 24px;
+  }
+  
+  .connection-debug {
+    background: var(--surface-color);
+    padding: 16px;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    
+    h4 {
+      margin-bottom: 12px;
+      color: var(--text-primary);
+    }
+    
+    pre {
+      font-size: 12px;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+  }
+}
+
+// Responsive Design for iPad
+@media (max-width: 1024px) {
+  .content-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+  }
+  
+  .tab-content {
+    padding: 12px;
+  }
+  
+  .playback-controls {
+    gap: 16px;
+    
+    .play-pause-button {
+      width: 64px;
+      height: 64px;
+      
+      mat-icon {
+        font-size: 28px;
+        width: 28px;
+        height: 28px;
+      }
+    }
+    
+    .control-button {
+      width: 48px;
+      height: 48px;
+      
+      mat-icon {
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .remote-toolbar {
+    .toolbar-title {
+      font-size: 18px;
+    }
+    
+    .connection-status .connection-text {
+      display: none;
+    }
+  }
+  
+  .content-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+  
+  .now-playing-card .playing-info {
+    flex-direction: column;
+    text-align: center;
+    
+    .playing-thumbnail {
+      width: 160px;
+      height: 120px;
+    }
+  }
+}

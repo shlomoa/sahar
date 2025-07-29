@@ -1,0 +1,60 @@
+<!-- TV Application Layout (80% data view) -->
+<div class="tv-container">
+  <!-- Navigation Bar (10%) -->
+  <mat-toolbar class="nav-bar" color="primary">
+    <button mat-icon-button (click)="onHomeClick()">
+      <mat-icon>home</mat-icon>
+    </button>
+    
+    <div class="breadcrumb" *ngIf="navigation$ | async as nav">
+      <span *ngFor="let crumb of nav.breadcrumb; let i = index">
+        <span *ngIf="i > 0"> > </span>
+        <span [class.active]="i === nav.breadcrumb.length - 1">{{ crumb }}</span>
+      </span>
+    </div>
+    
+    <span class="spacer"></span>
+    
+    <button mat-icon-button (click)="onBackClick()" 
+            *ngIf="(navigation$ | async)?.canGoBack">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+  </mat-toolbar>
+
+  <!-- Data View Area (80%) -->
+  <div class="data-view" *ngIf="navigation$ | async as nav">
+    <mat-grid-list cols="4" rowHeight="300px" gutterSize="16px">
+      <mat-grid-tile *ngFor="let item of nav.currentLevel">
+        <mat-card class="content-card" (click)="onItemClick(item)">
+          <div class="card-image">
+            <img [src]="item.thumbnail" 
+                 [alt]="item.title" 
+                 (error)="onImageError($event)"
+                 onerror="this.src='https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg?auto=compress&cs=tinysrgb&w=300'" />
+          </div>
+          <mat-card-content>
+            <h3>{{ item.title }}</h3>
+            <p *ngIf="item.startTime !== undefined" class="time-info">
+              {{ item.startTime }}s
+              <span *ngIf="item.endTime"> - {{ item.endTime }}s</span>
+            </p>
+          </mat-card-content>
+        </mat-card>
+      </mat-grid-tile>
+    </mat-grid-list>
+  </div>
+
+  <!-- Status Bar (10%) -->
+  <mat-toolbar class="status-bar" color="accent">
+    <div *ngIf="navigation$ | async as nav">
+      <span>Connection: Connected</span>
+      <span class="spacer"></span>
+      <span>Items: {{ nav.currentLevel.length }}</span>
+      <span class="spacer"></span>
+      <span *ngIf="nav.currentPerformer">Performer: {{ nav.currentPerformer.name }}</span>
+      <span *ngIf="nav.currentVideo">Video: {{ nav.currentVideo.title }}</span>
+    </div>
+  </mat-toolbar>
+</div>
+
+<router-outlet />
