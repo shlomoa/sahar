@@ -1,0 +1,39 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Verification Testing Suite",
+			"type": "shell",
+			"command": "echo",
+			"args": [
+				"🧪 SAHAR TV REMOTE VERIFICATION PLAN\n",
+				"=======================================\n",
+				"🔁 Integration Testing:\n",
+				"  ✓ Connect: Tablet → TV WebSocket\n",
+				"  ✓ Command Dispatch: Play video segment verify start/end\n",
+				"  ✓ Control Commands: Pause/resume/stop functionality\n",
+				"  ✓ Reconnect: Handle tablet reconnect after network loss\n",
+				"  ✓ Stress Test: Rapid command switching gracefully\n\n",
+				"🚀 Deployment Verification:\n",
+				"  ✓ Cold Boot: Both devices → successful communication\n",
+				"  ✓ Tablet Playback: Can play all saved segments\n",
+				"  ✓ Display Sync: Responsive and clear\n",
+				"  ✓ TV Error Handling: Handle unreachable videoId without crash\n",
+				"  ✓ Performance: Test on older TVs (2020+ models)\n\n",
+				"📋 Manual Test Commands:\n",
+				"  1. node websocket-test-server.js\n",
+				"  2. cd apps/tv && ng serve --port 4203\n",
+				"  3. cd apps/remote && ng serve --port 4202\n",
+				"  4. Open http://localhost:4203 (TV)\n",
+				"  5. Open http://localhost:4202 (Remote)\n",
+				"  6. Test WebSocket connection\n",
+				"  7. Verify synchronized navigation\n",
+				"  8. Test enhanced video controls\n\n",
+				"✅ Ready for comprehensive testing!"
+			],
+			"group": "test",
+			"isBackground": false,
+			"problemMatcher": []
+		}
+	]
+}

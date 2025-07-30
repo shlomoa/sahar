@@ -1,20 +1,23 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatListModule } from '@angular/material/list';
 
+// Components
+import { DeviceConnectionComponent } from './components/device-connection/device-connection.component';
+import { PerformersGridComponent } from './components/performers-grid/performers-grid.component';
+import { VideosGridComponent } from './components/videos-grid/videos-grid.component';
+import { ScenesGridComponent } from './components/scenes-grid/scenes-grid.component';
+import { VideoControlsComponent } from './components/video-controls/video-controls.component';
+
+// Services and Models
 import { WebSocketService } from './services/websocket.service';
 import { performersData, Performer, Video, LikedScene } from './models/video-navigation';
 
 interface NavigationState {
   level: 'performers' | 'videos' | 'scenes' | 'scene-selected';
-  performerId?: string;
-  videoId?: string;
+  performerId?: number;
+  videoId?: number;
   sceneTimestamp?: string;
 }
 
@@ -33,19 +36,17 @@ type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
   imports: [
     CommonModule,
     MatToolbarModule,
-    MatCardModule,
     MatButtonModule,
-    MatIconModule,
-    MatChipsModule,
-    MatProgressSpinnerModule,
-    MatListModule
+    DeviceConnectionComponent,
+    PerformersGridComponent,
+    VideosGridComponent,
+    ScenesGridComponent,
+    VideoControlsComponent
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
 export class App implements OnInit, OnDestroy {
-  title = 'remote';
-
   // Data
   performers: Performer[] = performersData;
   
@@ -73,27 +74,20 @@ export class App implements OnInit, OnDestroy {
     this.websocketService.disconnect();
   }
 
+  // WebSocket event handlers
   private setupWebSocketListeners() {
     this.websocketService.getConnectionState().subscribe(state => {
-      this.connectionStatus = state === 'connected' ? 'connected' : 'disconnected';
-    });
-
-    this.websocketService.getMessages().subscribe(message => {
-      this.handleWebSocketMessage(message);
+      this.connectionStatus = state === 'connected' ? 'connected' : 
+                              state === 'connecting' ? 'connecting' : 'disconnected';
+      console.log('🔌 Connection status:', this.connectionStatus);
     });
 
     this.websocketService.getTVStatus().subscribe(status => {
       if (status?.payload?.currentState) {
-        this.currentNavigation = {
-          level: status.payload.currentState.level as any,
-          performerId: status.payload.currentState.selectedPerformerId?.toString(),
-          videoId: status.payload.currentState.selectedVideoId?.toString(),
-          sceneTimestamp: status.payload.currentState.selectedSceneId?.toString()
-        };
+        this.synchronizeWithTVNavigation(status.payload.currentState);
       }
       if (status?.payload?.playerState) {
-        this.isPlaying = status.payload.playerState.isPlaying;
-        this.volumeLevel = status.payload.playerState.volume;
+        this.synchronizeWithTVPlayer(status.payload.playerState);
       }
     });
 
@@ -104,93 +98,127 @@ export class App implements OnInit, OnDestroy {
         port: d.port,
         type: d.type
       }));
+      console.log('🔍 Discovered devices:', this.discoveredDevices);
     });
   }
 
-  private handleWebSocketMessage(message: any) {
-    switch (message.type) {
-      case 'navigation-update':
-        this.currentNavigation = message.navigation;
-        break;
-      case 'playback-status':
-        this.isPlaying = message.isPlaying;
-        this.isMuted = message.isMuted;
-        this.volumeLevel = message.volume;
-        break;
-      case 'device-discovery':
-        if (message.devices) {
-          this.discoveredDevices = message.devices;
-        }
-        break;
+  // Synchronization methods
+  private synchronizeWithTVNavigation(tvState: any) {
+    console.log('📍 Synchronizing navigation with TV:', tvState);
+    
+    if (tvState.level === 'performers') {
+      this.currentNavigation = { level: 'performers' };
+    } else if (tvState.level === 'videos' && tvState.selectedPerformerId) {
+      this.currentNavigation = { 
+        level: 'videos', 
+        performerId: tvState.selectedPerformerId.toString() 
+      };
+    } else if (tvState.level === 'scenes' && tvState.selectedPerformerId && tvState.selectedVideoId) {
+      this.currentNavigation = { 
+        level: 'scenes', 
+        performerId: tvState.selectedPerformerId.toString(),
+        videoId: tvState.selectedVideoId.toString()
+      };
+    } else if (tvState.selectedSceneId) {
+      this.currentNavigation = { 
+        level: 'scene-selected', 
+        performerId: tvState.selectedPerformerId?.toString(),
+        videoId: tvState.selectedVideoId?.toString(),
+        sceneTimestamp: tvState.selectedSceneId?.toString()
+      };
+    }
+    
+    console.log('📱 Remote navigation updated:', this.currentNavigation);
+  }
+
+  private synchronizeWithTVPlayer(playerState: any) {
+    console.log('🎮 Synchronizing player state with TV:', playerState);
+    
+    this.isPlaying = playerState.isPlaying || false;
+    this.isMuted = playerState.volume === 0;
+    this.volumeLevel = playerState.volume || 50;
+    
+    if (playerState.selectedSceneId && playerState.selectedVideoId) {
+      this.currentNavigation = {
+        level: 'scene-selected',
+        performerId: this.currentNavigation.performerId,
+        videoId: playerState.selectedVideoId.toString(),
+        sceneTimestamp: playerState.selectedSceneId.toString()
+      };
     }
   }
 
-  // Device discovery
+  // Device connection methods
+  connectToDevice(device: DiscoveredDevice) {
+    console.log('🔌 Connecting to device:', device);
+    this.connectionStatus = 'connecting';
+    const url = `ws://${device.address}:${device.port}`;
+    this.websocketService.connect(url);
+  }
+
   startDeviceDiscovery() {
     this.isScanning = true;
     this.discoveredDevices = [];
+    console.log('🔍 Starting device discovery...');
     
-    // Simulate device discovery for now
     setTimeout(() => {
-      this.discoveredDevices = [
-        { name: 'Living Room TV', address: 'localhost', port: 8000, type: 'tv' }
-      ];
       this.isScanning = false;
-    }, 2000);
-  }
-
-  onDeviceSelection(event: any) {
-    const selectedDevice = event.option.value;
-    if (selectedDevice) {
-      this.connectToDevice(selectedDevice);
-    }
-  }
-
-  private connectToDevice(device: DiscoveredDevice) {
-    this.connectionStatus = 'connecting';
-    this.websocketService.connect(`ws://${device.address}:${device.port}`);
+      if (this.discoveredDevices.length === 0) {
+        this.discoveredDevices = [
+          { name: 'Local TV (Test)', address: 'localhost', port: 8000, type: 'tv' }
+        ];
+        console.log('📺 Added fallback device for testing');
+      }
+    }, 3000);
   }
 
   // Navigation methods
-  navigateToPerformer(performerId: string) {
-    this.websocketService.sendNavigationCommand('select_performer', parseInt(performerId));
+  navigateToPerformer(performerId: number) {
+    console.log('👤 Navigate to performer:', performerId);
+    this.websocketService.sendNavigationCommand('select_performer', performerId);
+    this.currentNavigation = { level: 'videos', performerId };
   }
 
   navigateToPerformers() {
+    console.log('🏠 Navigate to performers');
     this.websocketService.sendNavigationCommand('go_to_performers');
+    this.currentNavigation = { level: 'performers' };
   }
 
-  navigateToVideo(performerId: string, videoId: string) {
-    this.websocketService.sendNavigationCommand('select_video', parseInt(performerId), parseInt(videoId));
+  navigateToVideo(performerId: number, videoId: number) {
+    console.log('🎬 Navigate to video:', performerId, videoId);
+    this.websocketService.sendNavigationCommand('select_video', performerId, videoId);
+    this.currentNavigation = { level: 'scenes', performerId, videoId };
   }
 
-  navigateToVideos(performerId: string) {
-    this.websocketService.sendNavigationCommand('go_to_videos', parseInt(performerId));
+  navigateToVideos(performerId: number) {
+    console.log('📹 Navigate to videos for performer:', performerId);
+    this.websocketService.sendNavigationCommand('go_to_videos', performerId);
+    this.currentNavigation = { level: 'videos', performerId };
   }
 
-  navigateToScene(performerId: string, videoId: string, sceneTimestamp: string) {
-    // For scenes, we'll use the scene ID which is the timestamp
-    this.websocketService.sendNavigationCommand('select_scene', parseInt(performerId), parseInt(videoId), parseInt(sceneTimestamp.replace(':', '')));
+  navigateToScene(performerId: number, videoId: number, sceneTimestamp: string) {
+    console.log('🎯 Navigate to scene:', performerId, videoId, sceneTimestamp);
+    const sceneId = parseInt(sceneTimestamp.replace(':', ''));
+    this.websocketService.sendNavigationCommand('select_scene', performerId, videoId, sceneId);
+    this.currentNavigation = { level: 'scene-selected', performerId, videoId, sceneTimestamp };
   }
 
-  navigateToScenes(performerId: string, videoId: string) {
-    this.websocketService.sendNavigationCommand('go_to_scenes', parseInt(performerId), parseInt(videoId));
-  }
-
-  private updateNavigation(navigation: NavigationState) {
-    this.currentNavigation = navigation;
-    // Navigation is now handled by the specific navigation methods above
+  navigateToScenes(performerId: number, videoId: number) {
+    console.log('🎬 Navigate to scenes for video:', performerId, videoId);
+    this.websocketService.sendNavigationCommand('go_to_scenes', performerId, videoId);
+    this.currentNavigation = { level: 'scenes', performerId, videoId };
   }
 
   // Data access methods
-  getVideosForPerformer(performerId: string): Video[] {
-    const performer = this.performers.find(p => p.id === parseInt(performerId));
+  getVideosForPerformer(performerId: number): Video[] {
+    const performer = this.performers.find(p => p.id === performerId);
     return performer?.videos || [];
   }
 
-  getScenesForVideo(performerId: string, videoId: string): LikedScene[] {
-    const performer = this.performers.find(p => p.id === parseInt(performerId));
-    const video = performer?.videos.find(v => v.id === parseInt(videoId));
+  getScenesForVideo(performerId: number, videoId: number): LikedScene[] {
+    const performer = this.performers.find(p => p.id === performerId);
+    const video = performer?.videos.find(v => v.id === videoId);
     return video?.scenes || [];
   }
 
@@ -198,8 +226,8 @@ export class App implements OnInit, OnDestroy {
     if (!this.currentNavigation.performerId || !this.currentNavigation.videoId) {
       return undefined;
     }
-    const performer = this.performers.find(p => p.id === parseInt(this.currentNavigation.performerId!));
-    return performer?.videos.find(v => v.id === parseInt(this.currentNavigation.videoId!));
+    const performer = this.performers.find(p => p.id === this.currentNavigation.performerId!);
+    return performer?.videos.find(v => v.id === this.currentNavigation.videoId!);
   }
 
   getCurrentScene(): LikedScene | undefined {
@@ -207,23 +235,23 @@ export class App implements OnInit, OnDestroy {
       return undefined;
     }
     const video = this.getCurrentVideo();
-    return video?.scenes.find((s: any) => s.timestamp === this.currentNavigation.sceneTimestamp);
+    return video?.scenes.find((s: any) => s.timestamp.toString() === this.currentNavigation.sceneTimestamp);
   }
 
   // Video control methods
   sendControlCommand(command: string) {
-    // Map our command names to the WebSocket service expected format
+    console.log('🎮 Control command:', command);
+    
     switch (command) {
       case 'play-pause':
         this.websocketService.sendControlCommand(this.isPlaying ? 'pause' : 'play');
+        this.isPlaying = !this.isPlaying;
         break;
       case 'previous-scene':
-        // Handle scene navigation
-        this.websocketService.sendControlCommand('seek', 0); // Go to beginning
+        this.navigateToPreviousScene();
         break;
       case 'next-scene':
-        // Handle scene navigation
-        this.websocketService.sendControlCommand('seek', 100); // Skip forward
+        this.navigateToNextScene();
         break;
       case 'rewind':
         this.websocketService.sendControlCommand('seek', -10);
@@ -236,45 +264,68 @@ export class App implements OnInit, OnDestroy {
         break;
       case 'toggle-mute':
         this.websocketService.sendControlCommand(this.isMuted ? 'unmute' : 'mute');
+        this.isMuted = !this.isMuted;
         break;
-      default:
-        console.log('Unknown command:', command);
+      case 'stop':
+        this.websocketService.sendControlCommand('stop');
+        this.isPlaying = false;
+        break;
+    }
+  }
+
+  private navigateToPreviousScene() {
+    const video = this.getCurrentVideo();
+    if (!video || !this.currentNavigation.sceneTimestamp) return;
+    
+    const currentIndex = video.scenes.findIndex((s: any) => s.timestamp.toString() === this.currentNavigation.sceneTimestamp);
+    if (currentIndex > 0) {
+      const previousScene = video.scenes[currentIndex - 1];
+      this.navigateToScene(
+        this.currentNavigation.performerId!,
+        this.currentNavigation.videoId!,
+        previousScene.timestamp.toString()
+      );
+    }
+  }
+
+  private navigateToNextScene() {
+    const video = this.getCurrentVideo();
+    if (!video || !this.currentNavigation.sceneTimestamp) return;
+    
+    const currentIndex = video.scenes.findIndex((s: any) => s.timestamp.toString() === this.currentNavigation.sceneTimestamp);
+    if (currentIndex < video.scenes.length - 1) {
+      const nextScene = video.scenes[currentIndex + 1];
+      this.navigateToScene(
+        this.currentNavigation.performerId!,
+        this.currentNavigation.videoId!,
+        nextScene.timestamp.toString()
+      );
     }
   }
 
   onVolumeChange(value: number) {
     this.volumeLevel = value;
     this.websocketService.sendControlCommand('volume_up', value);
+    console.log('🔊 Volume changed to:', value);
+  }
+
+  // Enhanced controls visibility
+  showEnhancedControls(): boolean {
+    return this.currentNavigation.level === 'scene-selected' && 
+           this.connectionStatus === 'connected';
   }
 
   hasPreviousScene(): boolean {
     const video = this.getCurrentVideo();
-    if (!video || !this.currentNavigation.sceneTimestamp) {
-      return false;
-    }
-    const currentIndex = video.scenes.findIndex((s: any) => s.timestamp === this.currentNavigation.sceneTimestamp);
+    if (!video || !this.currentNavigation.sceneTimestamp) return false;
+    const currentIndex = video.scenes.findIndex((s: any) => s.timestamp.toString() === this.currentNavigation.sceneTimestamp);
     return currentIndex > 0;
   }
 
   hasNextScene(): boolean {
     const video = this.getCurrentVideo();
-    if (!video || !this.currentNavigation.sceneTimestamp) {
-      return false;
-    }
-    const currentIndex = video.scenes.findIndex((s: any) => s.timestamp === this.currentNavigation.sceneTimestamp);
+    if (!video || !this.currentNavigation.sceneTimestamp) return false;
+    const currentIndex = video.scenes.findIndex((s: any) => s.timestamp.toString() === this.currentNavigation.sceneTimestamp);
     return currentIndex < video.scenes.length - 1;
-  }
-
-  // TrackBy functions for performance
-  trackByPerformerId(index: number, performer: Performer): string {
-    return performer.id.toString();
-  }
-
-  trackByVideoId(index: number, video: Video): string {
-    return video.id.toString();
-  }
-
-  trackBySceneId(index: number, scene: LikedScene): string {
-    return scene.timestamp.toString();
   }
 }

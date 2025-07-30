@@ -167,7 +167,22 @@ apps/tv/src/app/
 2. Add Material Design animations
 3. Implement responsive design
 
-#### Phase 4: Documentation Fix (10 minutes)
+#### Phase 4: Verification and Testing (20 minutes)
+1. **Integration Testing**:
+   - Connect: Tablet → TV WebSocket communication  
+   - Command Dispatch: Play video segment and verify correct start/end times
+   - Control Commands: Pause/resume/stop work as expected
+   - Reconnect: Handle tablet reconnect after network loss
+   - Stress Test: Rapid command switching handled gracefully
+
+2. **Deployment Verification**:
+   - Cold Boot: Both devices → successful communication
+   - Tablet Playback: Can play all saved segments  
+   - Display Sync: Responsive and clear synchronization
+   - TV Error Handling: Handles errors (e.g., unreachable videoId) without crash
+   - Performance: Ensure performance on older TVs (test on 2020+ models)
+
+#### Phase 5: Documentation Fix (10 minutes)
 1. Update README status to reflect actual implementation
 2. Document any remaining known issues
 3. Update system documentation
@@ -231,8 +246,16 @@ npm install @angular/animations
 
 ### 📊 **Success Metrics for Next Session**
 - [ ] Remote app displays synchronized content from TV
-- [ ] WebSocket communication working TV ↔ Remote
+- [ ] WebSocket communication working TV ↔ Remote  
 - [ ] Enhanced controls appear when scene selected
+- [ ] **Verification**: Tablet → TV WebSocket connection established
+- [ ] **Verification**: Play video segment with correct start/end validation
+- [ ] **Verification**: Control commands (pause/resume/stop) functional
+- [ ] **Verification**: Reconnection handling after network loss
+- [ ] **Verification**: Stress test rapid command switching
+- [ ] **Verification**: Cold boot both devices successful communication
+- [ ] **Verification**: Error handling without TV crash
+- [ ] **Verification**: Performance validated on older TV models (2020+)
 - [ ] Documentation accurately reflects implementation status
 - [ ] End-to-end testing passes
 
@@ -240,8 +263,8 @@ npm install @angular/animations
 
 ## 🎯 **Ready for Next Session!**
 
-**Current State**: Solid foundation with TV app working, WebSocket server functional, and Remote app structure complete. Primary focus: Implement Remote app functionality to match documentation claims.
+**Current State**: Solid foundation with TV app working, WebSocket server functional, and Remote app structure complete. Primary focus: Implement Remote app functionality with comprehensive verification testing.
 
-**Estimated Time to Complete**: 60-75 minutes focused development
+**Estimated Time to Complete**: 85-95 minutes focused development (including verification)
 
 **Key Success Factor**: Copy working patterns from TV app to Remote app, then enhance with iPad-specific features.

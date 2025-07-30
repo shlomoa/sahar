@@ -1,0 +1,85 @@
+<div class="video-controls">
+  <div class="breadcrumb">
+    <button mat-button (click)="onBackToScenes()">
+      <mat-icon>arrow_back</mat-icon>
+      Back to Scenes
+    </button>
+  </div>
+
+  <!-- Current scene info with sync status -->
+  <mat-card class="current-scene-info">
+    <mat-card-content>
+      <h3>📺 {{ currentVideo?.title }}</h3>
+      <p><strong>Scene:</strong> {{ currentScene?.title || 'Playing Scene' }} ({{ sceneTimestamp }}s)</p>
+      <div class="sync-indicator synced">
+        <mat-icon>sync</mat-icon>
+        <span>Synchronized with TV</span>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Video control buttons -->
+  <div class="control-buttons">
+    <div class="playback-controls">
+      <button mat-raised-button color="primary" 
+              (click)="onControlCommand('previous-scene')" 
+              [disabled]="!hasPreviousScene" 
+              class="scene-nav-btn">
+        <mat-icon>skip_previous</mat-icon>
+        Previous Scene
+      </button>
+      
+      <button mat-raised-button color="accent" 
+              (click)="onControlCommand('play-pause')" 
+              class="play-pause-btn">
+        <mat-icon>{{ isPlaying ? 'pause' : 'play_arrow' }}</mat-icon>
+        {{ isPlaying ? 'Pause' : 'Play' }}
+      </button>
+      
+      <button mat-raised-button color="primary" 
+              (click)="onControlCommand('next-scene')" 
+              [disabled]="!hasNextScene" 
+              class="scene-nav-btn">
+        <mat-icon>skip_next</mat-icon>
+        Next Scene
+      </button>
+    </div>
+
+    <div class="seek-controls">
+      <button mat-raised-button (click)="onControlCommand('rewind')">
+        <mat-icon>replay_10</mat-icon>
+        -10s
+      </button>
+      
+      <button mat-raised-button (click)="onControlCommand('fast-forward')">
+        <mat-icon>forward_10</mat-icon>
+        +10s
+      </button>
+    </div>
+
+    <div class="volume-controls">
+      <mat-icon>volume_up</mat-icon>
+      <input 
+        type="range" 
+        min="0" 
+        max="100" 
+        step="1" 
+        [value]="volumeLevel"
+        (input)="onVolumeChange(+($any($event).target.value))"
+        class="volume-slider">
+      <span>{{ volumeLevel }}%</span>
+    </div>
+
+    <div class="additional-controls">
+      <button mat-raised-button (click)="onControlCommand('toggle-fullscreen')">
+        <mat-icon>fullscreen</mat-icon>
+        Fullscreen
+      </button>
+      
+      <button mat-raised-button (click)="onControlCommand('toggle-mute')">
+        <mat-icon>{{ isMuted ? 'volume_off' : 'volume_up' }}</mat-icon>
+        {{ isMuted ? 'Unmute' : 'Mute' }}
+      </button>
+    </div>
+  </div>
+</div>

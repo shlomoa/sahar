@@ -213,6 +213,22 @@ cd ../remote && ng build
 
 ## 🧪 Testing Strategy
 
+### Verification Plan ✅
+
+#### 🔁 Integration Testing
+* **Connect**: Tablet → TV WebSocket communication
+* **Command Dispatch**: Play video segment and verify correct start/end times
+* **Control Commands**: Pause/resume/stop work as expected
+* **Reconnect**: Handle tablet reconnect after network loss
+* **Stress Test**: Rapid command switching handled gracefully
+
+#### 🚀 Deployment Verification  
+* **Cold Boot**: Both devices → successful communication
+* **Tablet Playback**: Can play all saved segments
+* **Display Sync**: Responsive and clear synchronization
+* **TV Error Handling**: Handles errors (e.g., unreachable videoId) without crash
+* **Performance**: Ensure performance on older TVs (test on 2020+ models)
+
 ### Unit Testing
 ```bash
 # Test TV application
