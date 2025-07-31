@@ -1,9 +1,10 @@
 // WebSocket Communication Protocol for TV-Remote System
 
 export interface WebSocketMessage {
-  type: 'navigation' | 'control' | 'discovery' | 'status' | 'data';
+  type: 'navigation' | 'control' | 'discovery' | 'status' | 'data' | 'broadcast';
   timestamp: number;
   payload: any;
+  original?: WebSocketMessage; // For broadcast messages containing original message
 }
 
 // Navigation Commands - for moving through the data model
@@ -100,8 +101,13 @@ export interface DataMessage extends WebSocketMessage {
   payload: DataPayload;
 }
 
+export interface BroadcastMessage extends WebSocketMessage {
+  type: 'broadcast';
+  original: NavigationMessage | ControlMessage | DiscoveryMessage | StatusMessage | DataMessage;
+}
+
 // Union type for all possible messages
-export type RemoteMessage = NavigationMessage | ControlMessage | DiscoveryMessage | StatusMessage | DataMessage;
+export type RemoteMessage = NavigationMessage | ControlMessage | DiscoveryMessage | StatusMessage | DataMessage | BroadcastMessage;
 
 // Protocol Configuration
 export const WEBSOCKET_CONFIG = {

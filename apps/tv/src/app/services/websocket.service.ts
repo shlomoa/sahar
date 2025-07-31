@@ -8,6 +8,7 @@ import {
   DiscoveryMessage,
   DiscoveryPayload,
   DataMessage,
+  BroadcastMessage,
   NetworkDevice,
   WebSocketError,
   WEBSOCKET_CONFIG,
@@ -187,6 +188,14 @@ export class WebSocketService {
     this.messagesSubject.next(message);
 
     switch (message.type) {
+      case 'broadcast':
+        // Handle broadcast messages by extracting the original message
+        if (message.original) {
+          console.log('📺 Processing broadcast message:', message.original);
+          this.handleIncomingMessage(message.original);
+        }
+        break;
+        
       case 'navigation':
         this.handleNavigationMessage(message as NavigationMessage);
         break;
