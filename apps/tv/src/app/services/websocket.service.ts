@@ -183,7 +183,7 @@ export class WebSocketService {
     }
   }
 
-  private handleIncomingMessage(message: RemoteMessage): void {
+  private handleIncomingMessage(message: any): void {
     console.log('📺 TV received message:', message);
     this.messagesSubject.next(message);
 
@@ -279,6 +279,7 @@ export class WebSocketService {
 
   private handleNavigationMessage(message: NavigationMessage): void {
     const { action, targetId } = message.payload;
+    console.log('📺 TV processing navigation command:', action, targetId);
 
     switch (action) {
       case 'navigate_to_performer':
@@ -295,6 +296,7 @@ export class WebSocketService {
     }
 
     // Send updated status back to remote
+    console.log('📺 TV sending status update after navigation...');
     this.sendStatusUpdate();
   }
 
@@ -422,14 +424,17 @@ export class WebSocketService {
       }
     };
 
+    console.log('📺 TV sending status message:', message);
     this.sendMessage(message);
   }
 
   private sendMessage(message: RemoteMessage): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      console.log('📺 TV WebSocket sending message:', message.type);
       this.ws.send(JSON.stringify(message));
     } else {
-      console.warn('WebSocket not connected, message not sent:', message);
+      console.warn('📺 TV WebSocket not connected, message not sent:', message);
+      console.warn('📺 WebSocket state:', this.ws?.readyState);
     }
   }
 
