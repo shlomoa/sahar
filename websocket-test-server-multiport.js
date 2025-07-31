@@ -4,8 +4,10 @@
 const WebSocket = require('ws');
 const http = require('http');
 
-// Support multiple ports for discovery testing
-const PORTS = [8000, 5544, 5545, 5546, 5547]; // Include original 8000 for fallback
+// Port Configuration:
+// - Ports 5544-5547: Primary discovery range (per user story requirements)  
+// - Port 8000: Development fallback (for testing compatibility)
+const PORTS = [8000, 5544, 5545, 5546, 5547]; // Development fallback + Specified range
 const servers = new Map();
 const wsServers = new Map();
 

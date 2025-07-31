@@ -235,10 +235,11 @@ export class WebSocketService implements OnDestroy {
       this.scanningSubject.next(false);
       
       if (this.discoveredDevices$.value.length === 0) {
-        // Fallback for local testing
+        // Fallback for local testing (development convenience)
+        // Uses port 8000 for immediate connectivity testing
         const testDevice: DiscoveredDevice = {
           id: 'local-test-tv',
-          name: 'Local TV (Test)',
+          name: 'Local TV (Test - Port 8000)',
           type: 'tv',
           ip: 'localhost',
           port: 8000,
@@ -246,7 +247,7 @@ export class WebSocketService implements OnDestroy {
           lastSeen: Date.now()
         };
         this.discoveredDevices$.next([testDevice]);
-        console.log('📺 Added fallback device for testing');
+        console.log('📺 Added fallback device for testing (development port 8000)');
       }
       console.log(`✅ Device discovery complete. Found ${this.discoveredDevices$.value.length} devices`);
     }, 5000);
@@ -261,7 +262,9 @@ export class WebSocketService implements OnDestroy {
   private async scanNetworkForTVDevices(gatewayBase: string, ports: number[]) {
     const promises: Promise<void>[] = [];
     
-    // Scan IP range 192.168.1.1 to 192.168.1.254
+    // Scan IP range 192.168.1.1 to 192.168.1.254 on specified ports
+    // Primary: 5544-5547 (per user story requirements)
+    // Fallback: 8000 (development convenience)
     for (let ip = 1; ip <= 254; ip++) {
       const targetIP = `${gatewayBase}.${ip}`;
       
