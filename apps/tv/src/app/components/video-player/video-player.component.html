@@ -6,10 +6,10 @@
     </p>
   </div>
 
-  <div class="youtube-player-wrapper" *ngIf="currentVideo?.youtubeId">
+  <div class="youtube-player-wrapper" *ngIf="currentVideo?.url && getYouTubeId()">
     <youtube-player
       #youtubePlayer
-      [videoId]="currentVideo?.youtubeId || ''"
+      [videoId]="getYouTubeId() || ''"
       [width]="playerWidth"
       [height]="playerHeight"
       [playerVars]="{
@@ -24,7 +24,7 @@
     </youtube-player>
   </div>
 
-  <div class="no-video" *ngIf="!currentVideo?.youtubeId">
+  <div class="no-video" *ngIf="!currentVideo?.url">
     <div class="placeholder">
       <mat-icon>tv</mat-icon>
       <h3>No Video Selected</h3>

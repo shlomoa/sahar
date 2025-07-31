@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { VideoNavigationService } from './services/video-navigation.service';
 import { WebSocketService } from './services/websocket.service';
-import { NavigationState, VideoItem, Video, LikedScene } from './models/video-navigation';
+import { NavigationState, VideoItem, Video, LikedScene } from '../../../../shared/models/video-navigation';
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
 import { Observable, Subscription } from 'rxjs';
 
@@ -132,7 +132,7 @@ export class App implements OnInit, OnDestroy {
             console.log('Starting video playback:', {
               video: this.currentVideo.title,
               scene: this.currentScene.title,
-              youtubeId: this.currentVideo.youtubeId
+              url: this.currentVideo.url
             });
           }
         }

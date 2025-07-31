@@ -2,7 +2,7 @@ import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, ViewChild, O
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { YouTubePlayerModule, YouTubePlayer } from '@angular/youtube-player';
-import { Video, LikedScene } from '../../models/video-navigation';
+import { Video, LikedScene } from '../../../../../../shared/models/video-navigation';
 
 @Component({
   selector: 'app-video-player',
@@ -34,6 +34,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy, OnChanges {
   isPlayerReady = false;
   currentTime = 0;
   duration = 0;
+  private player?: any; // YouTube player instance
 
   ngOnInit() {
     // Load YouTube API if not already loaded
@@ -47,13 +48,23 @@ export class VideoPlayerComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['currentVideo'] && this.currentVideo?.youtubeId) {
+    if (changes['currentVideo'] && this.currentVideo?.url) {
       this.loadVideo();
     }
     
     if (changes['currentScene'] && this.currentScene && this.isPlayerReady) {
       this.seekToScene();
     }
+  }
+
+  private extractYouTubeId(url: string): string | null {
+    const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+    const match = url.match(regex);
+    return match ? match[1] : null;
+  }
+
+  getYouTubeId(): string | null {
+    return this.currentVideo?.url ? this.extractYouTubeId(this.currentVideo.url) : null;
   }
 
   private loadYouTubeAPI() {
@@ -72,8 +83,27 @@ export class VideoPlayerComponent implements OnInit, OnDestroy, OnChanges {
     this.isPlayerReady = true;
     this.playerReady.emit();
     
-    if (this.currentVideo?.youtubeId) {
-      this.loadVideo();
+    if (this.currentVideo?.url) {
+      const youtubeId = this.extractYouTubeId(this.currentVideo.url);
+      if (youtubeId) {
+        this.player = new YT.Player('youtube-player', {
+          height: '100%',
+          width: '100%',
+          videoId: youtubeId,
+          playerVars: {
+            autoplay: 0,
+            controls: 1,
+            disablekb: 0,
+            fs: 1,
+            modestbranding: 1,
+            rel: 0
+          },
+          events: {
+            onReady: this.onPlayerReady.bind(this),
+            onStateChange: this.onStateChange.bind(this)
+          }
+        });
+      }
     }
   }
 
@@ -123,11 +153,16 @@ export class VideoPlayerComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private loadVideo() {
-    if (!this.isPlayerReady || !this.currentVideo?.youtubeId) {
+    if (!this.isPlayerReady || !this.currentVideo?.url) {
       return;
     }
 
-    console.log('📺 Loading YouTube video:', this.currentVideo.youtubeId);
+    const youtubeId = this.extractYouTubeId(this.currentVideo.url);
+    if (!youtubeId) {
+      return;
+    }
+
+    console.log('📺 Loading YouTube video:', youtubeId);
     
     // The video will load automatically via the videoId binding
     // If we have a specific scene, seek to it after loading

@@ -1,20 +1,25 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { Performer, Video, LikedScene, VideoItem, NavigationState, emptyNavigationState } from '../models/video-navigation';
+import { Performer, Video, LikedScene, VideoItem, NavigationState, performersData } from '../../../../../shared/models/video-navigation';
 
 @Injectable({
   providedIn: 'root'
 })
 export class VideoNavigationService {
-  private navigationState: NavigationState = emptyNavigationState;
-  private performersData: Performer[] = []; // Data received from Remote
+  private navigationState: NavigationState = {
+    currentLevel: [],
+    breadcrumb: [],
+    canGoBack: false
+  };
+  private performersData: Performer[] = performersData; // Use shared data directly
 
   private navigationSubject = new BehaviorSubject<NavigationState>(this.navigationState);
   public navigation$ = this.navigationSubject.asObservable();
 
   constructor() {
-    // TV starts empty - waiting for data from Remote
-    this.showWaitingState();
+    // TV starts with shared data immediately
+    console.log('📺 TV Navigation Service initialized with performers:', this.performersData.length);
+    this.goHome(); // Show performers immediately
   }
 
   // Called by WebSocket service when Remote sends data
@@ -43,7 +48,9 @@ export class VideoNavigationService {
   }
 
   goHome(): void {
+    console.log('📺 Going home with performers:', this.performersData.length);
     if (this.performersData.length === 0) {
+      console.warn('📺 No performers data available');
       this.showWaitingState();
       return;
     }
