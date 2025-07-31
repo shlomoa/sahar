@@ -5,13 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-
-interface DiscoveredDevice {
-  name: string;
-  address: string;
-  port: number;
-  type: string;
-}
+import { DiscoveredDevice } from '../../services/websocket.service';
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 

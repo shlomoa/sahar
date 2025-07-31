@@ -11,7 +11,7 @@ import { ScenesGridComponent } from './components/scenes-grid/scenes-grid.compon
 import { VideoControlsComponent } from './components/video-controls/video-controls.component';
 
 // Services and Models
-import { WebSocketService } from './services/websocket.service';
+import { WebSocketService, DiscoveredDevice } from './services/websocket.service';
 import { performersData, Performer, Video, LikedScene } from './models/video-navigation';
 
 interface NavigationState {
@@ -19,13 +19,6 @@ interface NavigationState {
   performerId?: number;
   videoId?: number;
   sceneTimestamp?: string;
-}
-
-interface DiscoveredDevice {
-  name: string;
-  address: string;
-  port: number;
-  type: string;
 }
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
@@ -50,10 +43,10 @@ export class App implements OnInit, OnDestroy {
   // Data
   performers: Performer[] = performersData;
   
-  // Navigation state (synced with TV)
+  // Navigation state (synced with TV) - starts undefined until connected
   currentNavigation: NavigationState = { level: 'performers' };
   
-  // Connection management
+  // Connection management - starts disconnected
   connectionStatus: ConnectionStatus = 'disconnected';
   discoveredDevices: DiscoveredDevice[] = [];
   isScanning = false;
@@ -67,7 +60,7 @@ export class App implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.setupWebSocketListeners();
-    this.startDeviceDiscovery();
+    // Device discovery is now handled by the WebSocket service
   }
 
   ngOnDestroy() {
@@ -77,8 +70,16 @@ export class App implements OnInit, OnDestroy {
   // WebSocket event handlers
   private setupWebSocketListeners() {
     this.websocketService.getConnectionState().subscribe(state => {
+      const previousStatus = this.connectionStatus;
       this.connectionStatus = state === 'connected' ? 'connected' : 
                               state === 'connecting' ? 'connecting' : 'disconnected';
+      
+      // Reset navigation when disconnected
+      if (this.connectionStatus === 'disconnected') {
+        console.log('❌ Disconnected - resetting navigation state');
+        this.currentNavigation = { level: 'performers' };
+      }
+      
       console.log('🔌 Connection status:', this.connectionStatus);
     });
 
@@ -92,13 +93,12 @@ export class App implements OnInit, OnDestroy {
     });
 
     this.websocketService.getDiscoveredDevices().subscribe(devices => {
-      this.discoveredDevices = devices.map(d => ({
-        name: d.name,
-        address: d.ip,
-        port: d.port,
-        type: d.type
-      }));
+      this.discoveredDevices = devices;
       console.log('🔍 Discovered devices:', this.discoveredDevices);
+    });
+
+    this.websocketService.getScanningState().subscribe(scanning => {
+      this.isScanning = scanning;
     });
   }
 
@@ -152,24 +152,12 @@ export class App implements OnInit, OnDestroy {
   connectToDevice(device: DiscoveredDevice) {
     console.log('🔌 Connecting to device:', device);
     this.connectionStatus = 'connecting';
-    const url = `ws://${device.address}:${device.port}`;
-    this.websocketService.connect(url);
+    this.websocketService.connectToDevice(device);
   }
 
   startDeviceDiscovery() {
-    this.isScanning = true;
-    this.discoveredDevices = [];
-    console.log('🔍 Starting device discovery...');
-    
-    setTimeout(() => {
-      this.isScanning = false;
-      if (this.discoveredDevices.length === 0) {
-        this.discoveredDevices = [
-          { name: 'Local TV (Test)', address: 'localhost', port: 8000, type: 'tv' }
-        ];
-        console.log('📺 Added fallback device for testing');
-      }
-    }, 3000);
+    console.log('� Starting device discovery...');
+    this.websocketService.startDeviceDiscovery();
   }
 
   // Navigation methods

@@ -155,7 +155,18 @@ export class WebSocketService implements OnDestroy {
     return this.discoveredDevices$.asObservable();
   }
 
-  // Connection management
+  // Enhanced connection management with proper device handling
+  connectToDevice(device: DiscoveredDevice): void {
+    console.log('🔌 Connecting to device:', device);
+    
+    // Stop scanning when attempting connection
+    this.isScanning = false;
+    this.scanningSubject.next(false);
+    
+    const url = `ws://${device.ip}:${device.port}`;
+    this.connect(url);
+  }
+
   connect(url: string): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       console.log('⚠️ Already connected to WebSocket');
@@ -191,93 +202,133 @@ export class WebSocketService implements OnDestroy {
   }
 
   // Device discovery
-  private startDeviceDiscovery(): void {
+  private isScanning = false;
+  private scanningSubject = new BehaviorSubject<boolean>(false);
+
+  getScanningState(): Observable<boolean> {
+    return this.scanningSubject.asObservable();
+  }
+
+  startDeviceDiscovery(): void {
+    if (this.isScanning) {
+      console.log('🔍 Device discovery already in progress...');
+      return;
+    }
+
+    this.isScanning = true;
+    this.scanningSubject.next(true);
+    this.discoveredDevices$.next([]); // Clear previous devices
+    
     console.log('🔍 Starting device discovery...');
     
-    // Try common TV/server addresses
-    const commonAddresses = [
-      'ws://localhost:8000',
-      'ws://192.168.1.100:8000',
-      'ws://192.168.1.101:8000',
-      'ws://192.168.1.102:8000'
-    ];
-
-    // Test each address
-    commonAddresses.forEach(url => {
-      this.testConnection(url);
-    });
-
-    // Scan local network range (simplified)
-    this.scanLocalNetwork();
-  }
-
-  private testConnection(url: string): void {
-    const testWs = new WebSocket(url);
+    // Get the local network gateway IP range
+    const gatewayBase = this.getGatewayBaseIP();
+    const targetPorts = [5544, 5545, 5546, 5547];
     
-    testWs.onopen = () => {
-      console.log(`✅ Device found at: ${url}`);
+    console.log(`🌐 Scanning ${gatewayBase}.x on ports:`, targetPorts);
+    
+    // Scan the gateway IP range for TV devices on specified ports
+    this.scanNetworkForTVDevices(gatewayBase, targetPorts);
+    
+    setTimeout(() => {
+      this.isScanning = false;
+      this.scanningSubject.next(false);
       
-      const urlParts = url.replace('ws://', '').split(':');
-      const ip = urlParts[0];
-      const port = parseInt(urlParts[1]);
-      
-      const device: DiscoveredDevice = {
-        id: `device-${ip}-${port}`,
-        name: `TV Device (${ip})`,
-        type: 'tv',
-        ip,
-        port,
-        capabilities: ['navigation', 'control', 'status'],
-        lastSeen: Date.now()
-      };
-
-      // Add to discovered devices
-      const current = this.discoveredDevices$.value;
-      const exists = current.find(d => d.id === device.id);
-      if (!exists) {
-        this.discoveredDevices$.next([...current, device]);
+      if (this.discoveredDevices$.value.length === 0) {
+        // Fallback for local testing
+        const testDevice: DiscoveredDevice = {
+          id: 'local-test-tv',
+          name: 'Local TV (Test)',
+          type: 'tv',
+          ip: 'localhost',
+          port: 8000,
+          capabilities: ['navigation', 'control', 'status'],
+          lastSeen: Date.now()
+        };
+        this.discoveredDevices$.next([testDevice]);
+        console.log('📺 Added fallback device for testing');
       }
-
-      // Send discovery message
-      const discoveryMsg: DiscoveryMessage = {
-        type: 'discovery',
-        timestamp: Date.now(),
-        payload: {
-          deviceType: 'remote',
-          deviceId: this.deviceId,
-          deviceName: this.deviceName,
-          capabilities: ['navigation', 'control']
-        }
-      };
-      
-      testWs.send(JSON.stringify(discoveryMsg));
-      testWs.close();
-    };
-
-    testWs.onerror = () => {
-      // Silently fail for discovery
-      testWs.close();
-    };
-
-    testWs.onclose = () => {
-      // Clean up
-    };
+      console.log(`✅ Device discovery complete. Found ${this.discoveredDevices$.value.length} devices`);
+    }, 5000);
   }
 
-  private scanLocalNetwork(): void {
-    // Get local IP range (simplified for demo)
-    // In a real app, you'd use more sophisticated network detection
-    const baseIP = '192.168.1.';
+  private getGatewayBaseIP(): string {
+    // In a real implementation, this would detect the actual gateway
+    // For now, assume common home network range
+    return '192.168.1';
+  }
+
+  private async scanNetworkForTVDevices(gatewayBase: string, ports: number[]) {
+    const promises: Promise<void>[] = [];
     
-    for (let i = 1; i <= 254; i++) {
-      const ip = baseIP + i;
-      const url = `ws://${ip}:8000`;
+    // Scan IP range 192.168.1.1 to 192.168.1.254
+    for (let ip = 1; ip <= 254; ip++) {
+      const targetIP = `${gatewayBase}.${ip}`;
       
-      // Test with a timeout to avoid blocking
-      setTimeout(() => {
-        this.testConnection(url);
-      }, i * 10); // Stagger requests
+      for (const port of ports) {
+        promises.push(this.checkTVDevice(targetIP, port));
+      }
     }
+    
+    // Wait for all scans to complete (but don't block the UI)
+    Promise.allSettled(promises).then(results => {
+      const successful = results.filter(r => r.status === 'fulfilled').length;
+      console.log(`🔍 Network scan completed: ${successful}/${results.length} checks successful`);
+    });
+  }
+
+  private async checkTVDevice(ip: string, port: number): Promise<void> {
+    return new Promise((resolve) => {
+      const testUrl = `ws://${ip}:${port}`;
+      
+      try {
+        // Real WebSocket connection test with timeout
+        const testWs = new WebSocket(testUrl);
+        const timeout = setTimeout(() => {
+          testWs.close();
+          resolve(); // Silently fail for discovery
+        }, 2000); // 2 second timeout
+        
+        testWs.onopen = () => {
+          clearTimeout(timeout);
+          console.log(`✅ Found TV device at: ${testUrl}`);
+          
+          // Add device to discovered list
+          if (!this.discoveredDevices$.value.find(d => d.ip === ip && d.port === port)) {
+            const device: DiscoveredDevice = {
+              id: `sahar-tv-${ip}-${port}`,
+              name: `SAHAR TV (${ip})`,
+              type: 'tv',
+              ip: ip,
+              port: port,
+              capabilities: ['navigation', 'control', 'status'],
+              lastSeen: Date.now()
+            };
+            
+            const current = this.discoveredDevices$.value;
+            this.discoveredDevices$.next([...current, device]);
+            console.log(`📺 Added TV device: ${device.name} at ${ip}:${port}`);
+          }
+          
+          testWs.close();
+          resolve();
+        };
+        
+        testWs.onerror = () => {
+          clearTimeout(timeout);
+          testWs.close();
+          resolve(); // Silently fail for discovery
+        };
+        
+        testWs.onclose = () => {
+          clearTimeout(timeout);
+          resolve();
+        };
+        
+      } catch (error) {
+        resolve(); // Silently fail for discovery
+      }
+    });
   }
 
   // WebSocket handlers
@@ -294,6 +345,10 @@ export class WebSocketService implements OnDestroy {
       
       // Start heartbeat
       this.startHeartbeat();
+      
+      // Initialize navigation when connection is first established
+      console.log('🎉 Connection established - initializing navigation to performers');
+      this.sendNavigationCommand('go_to_performers');
     };
 
     this.ws.onmessage = (event) => {
@@ -443,11 +498,6 @@ export class WebSocketService implements OnDestroy {
   }
 
   // Utility methods
-  connectToDevice(device: DiscoveredDevice): void {
-    const url = `ws://${device.ip}:${device.port}`;
-    this.connect(url);
-  }
-
   getCurrentTVState(): StatusUpdate | null {
     return this.tvStatus$.value;
   }
