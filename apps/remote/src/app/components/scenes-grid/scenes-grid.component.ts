@@ -24,8 +24,9 @@ export class ScenesGridComponent {
   @Output() sceneSelected = new EventEmitter<string>();
   @Output() backToVideos = new EventEmitter<void>();
 
-  onSceneSelected(sceneTimestamp: string) {
-    this.sceneSelected.emit(sceneTimestamp);
+  onSceneSelected(sceneId: string) {
+    console.log('📱 Remote: Scene selected with ID:', sceneId);
+    this.sceneSelected.emit(sceneId);
   }
 
   onBackToVideos() {
@@ -33,6 +34,6 @@ export class ScenesGridComponent {
   }
 
   trackBySceneId(index: number, scene: LikedScene): string {
-    return scene.startTime.toString();
+    return scene.id;
   }
 }

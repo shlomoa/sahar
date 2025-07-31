@@ -139,15 +139,57 @@ export class VideoNavigationService {
   }
 
   playScene(sceneId: string): void {
+    console.log('📺 TV: playScene called with sceneId:', sceneId);
     const currentVideo = this.navigationState.currentVideo;
-    if (!currentVideo) return;
+    if (!currentVideo) {
+      console.warn('📺 TV: No current video to play scene in');
+      return;
+    }
+
+    console.log('📺 TV: Current video:', currentVideo.title);
+    console.log('📺 TV: Available scenes:', currentVideo.likedScenes.map(s => ({ id: s.id, title: s.title, startTime: s.startTime })));
 
     const scene = currentVideo.likedScenes.find(s => s.id === sceneId);
-    if (!scene) return;
+    if (!scene) {
+      console.warn('📺 TV: Scene not found with ID:', sceneId);
+      console.warn('📺 TV: Available scene IDs:', currentVideo.likedScenes.map(s => s.id));
+      
+      // Try to find scene by index (in case sceneId is a numeric string)
+      const sceneIndex = parseInt(sceneId);
+      if (!isNaN(sceneIndex) && sceneIndex >= 0 && sceneIndex < currentVideo.likedScenes.length) {
+        const sceneByIndex = currentVideo.likedScenes[sceneIndex];
+        console.log('📺 TV: Found scene by index:', sceneIndex, '→', sceneByIndex.title);
+        return this.playSceneObject(sceneByIndex);
+      }
+      
+      // Try to find scene by startTime (in case sceneId is a timestamp)
+      const sceneByTime = currentVideo.likedScenes.find(s => s.startTime.toString() === sceneId);
+      if (sceneByTime) {
+        console.log('📺 TV: Found scene by startTime:', sceneId, '→', sceneByTime.title);
+        return this.playSceneObject(sceneByTime);
+      }
+      
+      return;
+    }
 
-    const url = `${currentVideo.url}&t=${scene.startTime}`;
-    console.log('📺 TV: Playing scene:', scene.title, 'at', url);
-    // Here you would integrate with video player
+    console.log('📺 TV: Found scene by ID:', scene.title, 'starting at:', scene.startTime);
+    this.playSceneObject(scene);
+  }
+
+  private playSceneObject(scene: LikedScene): void {
+    console.log('📺 TV: Playing scene object:', scene.title, 'at time:', scene.startTime);
+    
+    // Update navigation state to indicate we're playing a scene
+    this.navigationState = {
+      ...this.navigationState,
+      breadcrumb: [...this.navigationState.breadcrumb, `▶️ ${scene.title}`],
+      canGoBack: true
+    };
+    
+    // Emit the updated state so the main component can respond
+    this.navigationSubject.next(this.navigationState);
+    
+    console.log('📺 TV: Scene playback initiated for:', scene.title, 'at time:', scene.startTime);
   }
 
   getCurrentState(): NavigationState {

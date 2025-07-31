@@ -55,6 +55,27 @@ export class App implements OnInit, OnDestroy {
         thumbnail: item.thumbnail,
         type: item.type
       })));
+      
+      // Check if this is a scene playback (breadcrumb indicates playing)
+      if (nav.breadcrumb.some(crumb => crumb.startsWith('▶️')) && nav.currentVideo) {
+        console.log('📺 Scene playback detected via navigation state');
+        this.currentVideo = nav.currentVideo;
+        
+        // Find the scene being played (look for the last breadcrumb with ▶️)
+        const sceneTitle = nav.breadcrumb.find(crumb => crumb.startsWith('▶️'))?.substring(3);
+        if (sceneTitle) {
+          const scene = nav.currentVideo.likedScenes.find(s => s.title === sceneTitle);
+          if (scene) {
+            this.currentScene = scene;
+            console.log('📺 Starting video playback from WebSocket:', {
+              video: this.currentVideo.title,
+              scene: this.currentScene.title,
+              url: this.currentVideo.url,
+              startTime: this.currentScene.startTime
+            });
+          }
+        }
+      }
     });
 
     // Initialize WebSocket connection
