@@ -225,14 +225,14 @@ export class WebSocketService {
           id: v.id.toString(),
           title: v.title,
           thumbnail: v.thumbnail,
-          url: `https://www.youtube.com/watch?v=example${v.id}`, // Convert to YouTube URL
+          url: v.url, // Use the actual YouTube URL from the data
           duration: v.duration,
           description: v.description || '',
-          likedScenes: v.scenes.map((s: any) => ({
+          likedScenes: v.likedScenes.map((s: any) => ({
             id: s.id.toString(),
             title: s.title,
-            startTime: s.timestamp,
-            endTime: s.timestamp + s.duration,
+            startTime: s.startTime,
+            endTime: s.endTime || (s.startTime + 60), // Use endTime or default duration
             thumbnail: s.thumbnail,
             description: s.description || ''
           }))

@@ -468,25 +468,25 @@ export class WebSocketService implements OnDestroy {
   // Send data to TV when connection is established
   sendDataToTV(): void {
     // Import the actual performers data
-    import('../models/video-navigation').then(({ performersData }) => {
+    import('../../../../../shared/models/video-navigation').then(({ performersData }) => {
       // Convert the Remote app data format to the shared protocol format
       const dataPayload: DataPayload = {
-        performers: performersData.map(performer => ({
+        performers: performersData.map((performer: any) => ({
           id: performer.id.toString(),
           name: performer.name,
           thumbnail: performer.thumbnail,
           description: `${performer.videos.length} videos available`,
-          videos: performer.videos.map(video => ({
+          videos: performer.videos.map((video: any) => ({
             id: video.id.toString(),
             title: video.title,
             thumbnail: video.thumbnail,
             duration: this.formatDuration(video.duration),
-            description: `${video.scenes.length} scenes • ${this.formatDuration(video.duration)}`,
-            scenes: video.scenes.map(scene => ({
+            description: `${video.likedScenes.length} scenes • ${this.formatDuration(video.duration)}`,
+            scenes: video.likedScenes.map((scene: any) => ({
               id: scene.id.toString(),
               title: scene.title,
-              timestamp: scene.timestamp,
-              duration: scene.duration,
+              timestamp: scene.startTime,
+              duration: (scene.endTime || scene.startTime + 60) - scene.startTime,
               thumbnail: scene.thumbnail,
               description: `${this.formatDuration(scene.duration)} scene`
             }))

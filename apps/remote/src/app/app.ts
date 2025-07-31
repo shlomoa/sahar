@@ -12,12 +12,12 @@ import { VideoControlsComponent } from './components/video-controls/video-contro
 
 // Services and Models
 import { WebSocketService, DiscoveredDevice } from './services/websocket.service';
-import { performersData, Performer, Video, LikedScene } from './models/video-navigation';
+import { performersData, Performer, Video, LikedScene } from '../../../../shared/models/video-navigation';
 
 interface NavigationState {
   level: 'performers' | 'videos' | 'scenes' | 'scene-selected';
-  performerId?: number;
-  videoId?: number;
+  performerId?: string;
+  videoId?: string;
   sceneTimestamp?: string;
 }
 
@@ -165,7 +165,7 @@ export class App implements OnInit, OnDestroy {
   }
 
   // Navigation methods
-  navigateToPerformer(performerId: number) {
+  navigateToPerformer(performerId: string) {
     console.log('👤 Navigate to performer:', performerId);
     this.websocketService.sendNavigationCommand('navigate_to_performer', performerId.toString(), 'performer');
     this.currentNavigation = { level: 'videos', performerId };
@@ -177,41 +177,41 @@ export class App implements OnInit, OnDestroy {
     this.currentNavigation = { level: 'performers' };
   }
 
-  navigateToVideo(performerId: number, videoId: number) {
+  navigateToVideo(performerId: string, videoId: string) {
     console.log('🎬 Navigate to video:', performerId, videoId);
     this.websocketService.sendNavigationCommand('navigate_to_video', videoId.toString(), 'video');
     this.currentNavigation = { level: 'scenes', performerId, videoId };
   }
 
-  navigateToVideos(performerId: number) {
+  navigateToVideos(performerId: string) {
     console.log('📹 Navigate to videos for performer:', performerId);
     this.websocketService.sendNavigationCommand('navigate_to_performer', performerId.toString(), 'performer');
     this.currentNavigation = { level: 'videos', performerId };
   }
 
-  navigateToScene(performerId: number, videoId: number, sceneTimestamp: string) {
+  navigateToScene(performerId: string, videoId: string, sceneTimestamp: string) {
     console.log('🎯 Navigate to scene:', performerId, videoId, sceneTimestamp);
     const sceneId = parseInt(sceneTimestamp.replace(':', ''));
     this.websocketService.sendNavigationCommand('navigate_to_scene', sceneId.toString(), 'segment');
     this.currentNavigation = { level: 'scene-selected', performerId, videoId, sceneTimestamp };
   }
 
-  navigateToScenes(performerId: number, videoId: number) {
+  navigateToScenes(performerId: string, videoId: string) {
     console.log('🎬 Navigate to scenes for video:', performerId, videoId);
     this.websocketService.sendNavigationCommand('navigate_to_video', videoId.toString(), 'video');
     this.currentNavigation = { level: 'scenes', performerId, videoId };
   }
 
   // Data access methods
-  getVideosForPerformer(performerId: number): Video[] {
+  getVideosForPerformer(performerId: string): Video[] {
     const performer = this.performers.find(p => p.id === performerId);
     return performer?.videos || [];
   }
 
-  getScenesForVideo(performerId: number, videoId: number): LikedScene[] {
-    const performer = this.performers.find(p => p.id === performerId);
-    const video = performer?.videos.find(v => v.id === videoId);
-    return video?.scenes || [];
+  getScenesForVideo(performerId: string, videoId: string): any[] {
+    const performer = this.performers.find((p: any) => p.id === performerId);
+    const video = performer?.videos.find((v: any) => v.id === videoId);
+    return video?.likedScenes || [];
   }
 
   getCurrentVideo(): Video | undefined {
@@ -227,7 +227,7 @@ export class App implements OnInit, OnDestroy {
       return undefined;
     }
     const video = this.getCurrentVideo();
-    return video?.scenes.find((s: any) => s.timestamp.toString() === this.currentNavigation.sceneTimestamp);
+    return video?.likedScenes.find((s: any) => s.startTime.toString() === this.currentNavigation.sceneTimestamp);
   }
 
   // Video control methods
@@ -273,13 +273,13 @@ export class App implements OnInit, OnDestroy {
     const video = this.getCurrentVideo();
     if (!video || !this.currentNavigation.sceneTimestamp) return;
     
-    const currentIndex = video.scenes.findIndex((s: any) => s.timestamp.toString() === this.currentNavigation.sceneTimestamp);
+    const currentIndex = video.likedScenes.findIndex((s: any) => s.startTime.toString() === this.currentNavigation.sceneTimestamp);
     if (currentIndex > 0) {
-      const previousScene = video.scenes[currentIndex - 1];
+      const previousScene = video.likedScenes[currentIndex - 1];
       this.navigateToScene(
         this.currentNavigation.performerId!,
         this.currentNavigation.videoId!,
-        previousScene.timestamp.toString()
+        previousScene.startTime.toString()
       );
     }
   }
@@ -288,13 +288,13 @@ export class App implements OnInit, OnDestroy {
     const video = this.getCurrentVideo();
     if (!video || !this.currentNavigation.sceneTimestamp) return;
     
-    const currentIndex = video.scenes.findIndex((s: any) => s.timestamp.toString() === this.currentNavigation.sceneTimestamp);
-    if (currentIndex < video.scenes.length - 1) {
-      const nextScene = video.scenes[currentIndex + 1];
+    const currentIndex = video.likedScenes.findIndex((s: any) => s.startTime.toString() === this.currentNavigation.sceneTimestamp);
+    if (currentIndex < video.likedScenes.length - 1) {
+      const nextScene = video.likedScenes[currentIndex + 1];
       this.navigateToScene(
         this.currentNavigation.performerId!,
         this.currentNavigation.videoId!,
-        nextScene.timestamp.toString()
+        nextScene.startTime.toString()
       );
     }
   }
@@ -315,14 +315,14 @@ export class App implements OnInit, OnDestroy {
   hasPreviousScene(): boolean {
     const video = this.getCurrentVideo();
     if (!video || !this.currentNavigation.sceneTimestamp) return false;
-    const currentIndex = video.scenes.findIndex((s: any) => s.timestamp.toString() === this.currentNavigation.sceneTimestamp);
+    const currentIndex = video.likedScenes.findIndex((s: any) => s.startTime.toString() === this.currentNavigation.sceneTimestamp);
     return currentIndex > 0;
   }
 
   hasNextScene(): boolean {
     const video = this.getCurrentVideo();
     if (!video || !this.currentNavigation.sceneTimestamp) return false;
-    const currentIndex = video.scenes.findIndex((s: any) => s.timestamp.toString() === this.currentNavigation.sceneTimestamp);
-    return currentIndex < video.scenes.length - 1;
+    const currentIndex = video.likedScenes.findIndex((s: any) => s.startTime.toString() === this.currentNavigation.sceneTimestamp);
+    return currentIndex < video.likedScenes.length - 1;
   }
 }

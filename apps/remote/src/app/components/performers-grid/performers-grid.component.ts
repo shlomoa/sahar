@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { Performer } from '../../models/video-navigation';
+import { Performer } from '../../../../../../shared/models/video-navigation';
 
 @Component({
   selector: 'performers-grid',
@@ -19,15 +19,15 @@ import { Performer } from '../../models/video-navigation';
 })
 export class PerformersGridComponent {
   @Input() performers: Performer[] = [];
-  @Input() selectedPerformerId?: number;
+  @Input() selectedPerformerId?: string;
   
-  @Output() performerSelected = new EventEmitter<number>();
+  @Output() performerSelected = new EventEmitter<string>();
 
-  selectPerformer(performerId: number) {
+  selectPerformer(performerId: string) {
     this.performerSelected.emit(performerId);
   }
 
-  trackByPerformerId(index: number, performer: Performer): number {
+  trackByPerformerId(index: number, performer: Performer): string {
     return performer.id;
   }
 

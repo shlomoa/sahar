@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { Video } from '../../models/video-navigation';
+import { Video } from '../../../../../../shared/models/video-navigation';
 
 @Component({
   selector: 'videos-grid',
@@ -19,12 +19,12 @@ import { Video } from '../../models/video-navigation';
 })
 export class VideosGridComponent {
   @Input() videos: Video[] = [];
-  @Input() selectedVideoId?: number;
+  @Input() selectedVideoId?: string;
   
-  @Output() videoSelected = new EventEmitter<number>();
+  @Output() videoSelected = new EventEmitter<string>();
   @Output() backToPerformers = new EventEmitter<void>();
 
-  onVideoSelected(videoId: number) {
+  onVideoSelected(videoId: string) {
     this.videoSelected.emit(videoId);
   }
 
@@ -32,7 +32,7 @@ export class VideosGridComponent {
     this.backToPerformers.emit();
   }
 
-  trackByVideoId(index: number, video: Video): number {
+  trackByVideoId(index: number, video: Video): string {
     return video.id;
   }
 }

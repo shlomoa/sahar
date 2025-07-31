@@ -10,8 +10,8 @@
     <mat-card 
       *ngFor="let scene of scenes; trackBy: trackBySceneId"
       class="scene-card"
-      [class.selected]="scene.timestamp.toString() === selectedSceneTimestamp"
-      (click)="onSceneSelected(scene.timestamp.toString())">
+      [class.selected]="scene.startTime.toString() === selectedSceneTimestamp"
+      (click)="onSceneSelected(scene.startTime.toString())">
       
       <img 
         mat-card-image 
@@ -21,7 +21,7 @@
         
       <mat-card-content>
         <h3>{{ scene.title }}</h3>
-        <p>{{ scene.timestamp }}s • {{ scene.duration }}s duration</p>
+        <p>{{ scene.startTime }}s • {{ (scene.endTime || 0) - scene.startTime }}s duration</p>
       </mat-card-content>
     </mat-card>
   </div>

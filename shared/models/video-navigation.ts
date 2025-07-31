@@ -58,7 +58,7 @@ export const performersData: Performer[] = [
         id: 'yuval-birthday-song',
         title: 'Happy Birthday Song',
         thumbnail: 'https://images.pexels.com/photos/1729931/pexels-photo-1729931.jpeg?auto=compress&cs=tinysrgb&w=300',
-        url: 'https://www.youtube.com/watch?v=example1',
+        url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
         duration: 240, // 4 minutes
         description: 'A fun birthday celebration song',
         likedScenes: [
@@ -96,7 +96,7 @@ export const performersData: Performer[] = [
         id: 'yuval-animal-sounds',
         title: 'Animal Sounds',
         thumbnail: 'https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg?auto=compress&cs=tinysrgb&w=300',
-        url: 'https://www.youtube.com/watch?v=example2',
+        url: 'https://www.youtube.com/watch?v=L_jWHffIx5E',
         duration: 300, // 5 minutes
         description: 'Learn different animal sounds',
         likedScenes: [
@@ -142,7 +142,7 @@ export const performersData: Performer[] = [
         id: 'michal-abc-song',
         title: 'ABC Learning Song',
         thumbnail: 'https://images.pexels.com/photos/207691/pexels-photo-207691.jpeg?auto=compress&cs=tinysrgb&w=300',
-        url: 'https://www.youtube.com/watch?v=example3',
+        url: 'https://www.youtube.com/watch?v=kffacxfA7G4',
         duration: 180, // 3 minutes
         description: 'Learn the alphabet with songs',
         likedScenes: [
@@ -188,7 +188,7 @@ export const performersData: Performer[] = [
         id: 'roy-superhero-training',
         title: 'Superhero Training',
         thumbnail: 'https://images.pexels.com/photos/163036/mario-luigi-yoschi-figures-163036.jpeg?auto=compress&cs=tinysrgb&w=300',
-        url: 'https://www.youtube.com/watch?v=example4',
+        url: 'https://www.youtube.com/watch?v=YQHsXMglC9A',
         duration: 320, // 5 minutes 20 seconds
         description: 'Join Roy Boy in superhero training adventures',
         likedScenes: [
@@ -226,7 +226,7 @@ export const performersData: Performer[] = [
         id: 'roy-space-adventure',
         title: 'Space Adventure',
         thumbnail: 'https://images.pexels.com/photos/73873/star-clusters-rosette-nebula-star-galaxies-73873.jpeg?auto=compress&cs=tinysrgb&w=300',
-        url: 'https://www.youtube.com/watch?v=example5',
+        url: 'https://www.youtube.com/watch?v=Ct6BUPvE2sM',
         duration: 400, // 6 minutes 40 seconds
         description: 'Explore the galaxy with Roy Boy',
         likedScenes: [
@@ -264,7 +264,7 @@ export const performersData: Performer[] = [
         id: 'roy-dinosaur-discovery',
         title: 'Dinosaur Discovery',
         thumbnail: 'https://images.pexels.com/photos/3264723/pexels-photo-3264723.jpeg?auto=compress&cs=tinysrgb&w=300',
-        url: 'https://www.youtube.com/watch?v=example6',
+        url: 'https://www.youtube.com/watch?v=y6120QOlsfU',
         duration: 340, // 5 minutes 40 seconds
         description: 'Travel back in time to meet dinosaurs',
         likedScenes: [
@@ -302,7 +302,7 @@ export const performersData: Performer[] = [
         id: 'roy-ocean-exploration',
         title: 'Ocean Exploration',
         thumbnail: 'https://images.pexels.com/photos/1001682/pexels-photo-1001682.jpeg?auto=compress&cs=tinysrgb&w=300',
-        url: 'https://www.youtube.com/watch?v=example7',
+        url: 'https://www.youtube.com/watch?v=d1YBv2mWll0',
         duration: 380, // 6 minutes 20 seconds
         description: 'Dive deep into ocean adventures',
         likedScenes: [
@@ -348,7 +348,7 @@ export const performersData: Performer[] = [
         id: 'haim-comedy-sketches',
         title: 'Comedy Sketches',
         thumbnail: 'https://images.pexels.com/photos/1115804/pexels-photo-1115804.jpeg?auto=compress&cs=tinysrgb&w=300',
-        url: 'https://www.youtube.com/watch?v=example8',
+        url: 'https://www.youtube.com/watch?v=ZjjvFP2-PKs',
         duration: 360, // 6 minutes
         description: 'Funny comedy sketches and entertainment',
         likedScenes: [
@@ -386,7 +386,7 @@ export const performersData: Performer[] = [
         id: 'haim-musical-fun',
         title: 'Musical Fun',
         thumbnail: 'https://images.pexels.com/photos/164821/pexels-photo-164821.jpeg?auto=compress&cs=tinysrgb&w=300',
-        url: 'https://www.youtube.com/watch?v=example9',
+        url: 'https://www.youtube.com/watch?v=rTgj1HxmUbg',
         duration: 480, // 8 minutes
         description: 'Musical entertainment and sing-alongs',
         likedScenes: [
@@ -424,7 +424,7 @@ export const performersData: Performer[] = [
         id: 'haim-story-time',
         title: 'Story Time',
         thumbnail: 'https://images.pexels.com/photos/159711/books-bookstore-book-reading-159711.jpeg?auto=compress&cs=tinysrgb&w=300',
-        url: 'https://www.youtube.com/watch?v=example10',
+        url: 'https://www.youtube.com/watch?v=SLMJpHihykI',
         duration: 600, // 10 minutes
         description: 'Engaging storytelling sessions',
         likedScenes: [
@@ -462,7 +462,7 @@ export const performersData: Performer[] = [
         id: 'haim-learning-games',
         title: 'Learning Games',
         thumbnail: 'https://images.pexels.com/photos/1148998/pexels-photo-1148998.jpeg?auto=compress&cs=tinysrgb&w=300',
-        url: 'https://www.youtube.com/watch?v=example11',
+        url: 'https://www.youtube.com/watch?v=hFcLyDb7niM',
         duration: 400, // 6 minutes 40 seconds
         description: 'Educational games and brain exercises',
         likedScenes: [
