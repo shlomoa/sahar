@@ -70,22 +70,106 @@ function createServerOnPort(port) {
           console.log(`\n[${new Date().toISOString()}] Message from ${clientId} on port ${port}:`);
           console.log(JSON.stringify(message, null, 2));
 
-          // Update client info based on message
+          // Handle different message types with proper responses
           if (message.type === 'discovery' && message.payload) {
             clientInfo.deviceType = message.payload.deviceType || 'unknown';
             clientInfo.deviceName = message.payload.deviceName || 'Unknown Device';
             console.log(`  Updated device info: ${clientInfo.deviceType} - ${clientInfo.deviceName}`);
+            
+            // Send back server discovery info for Remote devices
+            if (message.payload.deviceType === 'remote') {
+              const serverDiscovery = {
+                type: 'discovery',
+                timestamp: Date.now(),
+                payload: {
+                  deviceType: 'tv',
+                  deviceId: `tv-test-${port}`,
+                  deviceName: `SAHAR TV Test (Port ${port})`,
+                  capabilities: ['navigation', 'playback', 'status'],
+                  networkInfo: {
+                    ip: 'localhost',
+                    port: port
+                  }
+                }
+              };
+              ws.send(JSON.stringify(serverDiscovery));
+            }
           }
-
-          // Echo the message back to sender
-          const response = {
-            type: 'echo',
-            timestamp: Date.now(),
-            original: message,
-            serverPort: port
-          };
-
-          ws.send(JSON.stringify(response));
+          
+          // Handle navigation commands with proper status responses
+          if (message.type === 'navigation') {
+            const navAction = message.payload.action;
+            console.log(`  Processing navigation: ${navAction}`);
+            
+            // Send status update based on navigation command
+            let statusResponse = {
+              type: 'status',
+              timestamp: Date.now(),
+              payload: {
+                message: `Navigation to ${navAction} completed`,
+                currentState: {
+                  level: 'performers',
+                  breadcrumb: ['Performers'],
+                  canGoBack: false
+                }
+              }
+            };
+            
+            // Customize status based on navigation action
+            if (navAction === 'go_to_performers') {
+              statusResponse.payload.currentState.level = 'performers';
+            } else if (navAction === 'select_performer') {
+              statusResponse.payload.currentState = {
+                level: 'videos',
+                breadcrumb: ['Performers', 'Videos'],
+                canGoBack: true,
+                selectedPerformerId: message.payload.performerId || 1
+              };
+            } else if (navAction === 'select_video') {
+              statusResponse.payload.currentState = {
+                level: 'scenes',
+                breadcrumb: ['Performers', 'Videos', 'Scenes'],
+                canGoBack: true,
+                selectedPerformerId: message.payload.performerId || 1,
+                selectedVideoId: message.payload.videoId || 1
+              };
+            }
+            
+            ws.send(JSON.stringify(statusResponse));
+          }
+          
+          // Handle control commands
+          if (message.type === 'control') {
+            const controlAction = message.payload.action;
+            console.log(`  Processing control: ${controlAction}`);
+            
+            const controlResponse = {
+              type: 'status',
+              timestamp: Date.now(),
+              payload: {
+                message: `Control ${controlAction} executed`,
+                playerState: {
+                  isPlaying: controlAction === 'play' ? true : controlAction === 'pause' ? false : true,
+                  currentTime: 0,
+                  duration: 300,
+                  volume: message.payload.value || 50
+                }
+              }
+            };
+            
+            ws.send(JSON.stringify(controlResponse));
+          }
+          
+          // Echo for other message types
+          if (!['discovery', 'navigation', 'control'].includes(message.type)) {
+            const response = {
+              type: 'echo',
+              timestamp: Date.now(),
+              original: message,
+              serverPort: port
+            };
+            ws.send(JSON.stringify(response));
+          }
 
           // Broadcast to other clients (optional)
           if (message.type === 'navigation' || message.type === 'control') {

@@ -32,8 +32,11 @@ export class DeviceConnectionComponent {
   @Output() refreshDevices = new EventEmitter<void>();
 
   onDeviceSelected(event: any) {
-    const selectedDevice = event.option.value;
-    if (selectedDevice) {
+    // Handle MatSelectionListChange event - get the selected option's value
+    const selectedOptions = event.options;
+    if (selectedOptions && selectedOptions.length > 0) {
+      const selectedDevice = selectedOptions[0].value;
+      console.log('📱 Device selected in component:', selectedDevice);
       this.deviceSelected.emit(selectedDevice);
     }
   }
