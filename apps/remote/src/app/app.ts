@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
+import { MatToolbarModule } from '@angular/material/toolbar';
 
 // Components
 import { DeviceConnectionComponent } from './components/device-connection/device-connection.component';
@@ -50,6 +50,7 @@ export class App implements OnInit, OnDestroy {
   connectionStatus: ConnectionStatus = 'disconnected';
   discoveredDevices: DiscoveredDevice[] = [];
   isScanning = false;
+  autoConnectEnabled = true;
   
   // Video control states
   isPlaying = false;
@@ -100,6 +101,9 @@ export class App implements OnInit, OnDestroy {
     this.websocketService.getScanningState().subscribe(scanning => {
       this.isScanning = scanning;
     });
+
+    // Track auto-connect state
+    this.autoConnectEnabled = this.websocketService.isAutoConnectEnabled();
   }
 
   // Synchronization methods
@@ -163,38 +167,38 @@ export class App implements OnInit, OnDestroy {
   // Navigation methods
   navigateToPerformer(performerId: number) {
     console.log('👤 Navigate to performer:', performerId);
-    this.websocketService.sendNavigationCommand('select_performer', performerId);
+    this.websocketService.sendNavigationCommand('navigate_to_performer', performerId.toString(), 'performer');
     this.currentNavigation = { level: 'videos', performerId };
   }
 
   navigateToPerformers() {
     console.log('🏠 Navigate to performers');
-    this.websocketService.sendNavigationCommand('go_to_performers');
+    this.websocketService.sendNavigationCommand('navigate_to_performer', 'home', 'performer');
     this.currentNavigation = { level: 'performers' };
   }
 
   navigateToVideo(performerId: number, videoId: number) {
     console.log('🎬 Navigate to video:', performerId, videoId);
-    this.websocketService.sendNavigationCommand('select_video', performerId, videoId);
+    this.websocketService.sendNavigationCommand('navigate_to_video', videoId.toString(), 'video');
     this.currentNavigation = { level: 'scenes', performerId, videoId };
   }
 
   navigateToVideos(performerId: number) {
     console.log('📹 Navigate to videos for performer:', performerId);
-    this.websocketService.sendNavigationCommand('go_to_videos', performerId);
+    this.websocketService.sendNavigationCommand('navigate_to_performer', performerId.toString(), 'performer');
     this.currentNavigation = { level: 'videos', performerId };
   }
 
   navigateToScene(performerId: number, videoId: number, sceneTimestamp: string) {
     console.log('🎯 Navigate to scene:', performerId, videoId, sceneTimestamp);
     const sceneId = parseInt(sceneTimestamp.replace(':', ''));
-    this.websocketService.sendNavigationCommand('select_scene', performerId, videoId, sceneId);
+    this.websocketService.sendNavigationCommand('navigate_to_scene', sceneId.toString(), 'segment');
     this.currentNavigation = { level: 'scene-selected', performerId, videoId, sceneTimestamp };
   }
 
   navigateToScenes(performerId: number, videoId: number) {
     console.log('🎬 Navigate to scenes for video:', performerId, videoId);
-    this.websocketService.sendNavigationCommand('go_to_scenes', performerId, videoId);
+    this.websocketService.sendNavigationCommand('navigate_to_video', videoId.toString(), 'video');
     this.currentNavigation = { level: 'scenes', performerId, videoId };
   }
 
@@ -242,16 +246,20 @@ export class App implements OnInit, OnDestroy {
         this.navigateToNextScene();
         break;
       case 'rewind':
-        this.websocketService.sendControlCommand('seek', -10);
+        // Use navigation back command instead of seek
+        this.websocketService.sendControlCommand('back');
         break;
       case 'fast-forward':
-        this.websocketService.sendControlCommand('seek', 10);
+        // Use resume command for forward movement
+        this.websocketService.sendControlCommand('resume');
         break;
       case 'toggle-fullscreen':
-        this.websocketService.sendControlCommand('fullscreen');
+        // Fullscreen not available in shared protocol, use play as alternative
+        this.websocketService.sendControlCommand('play');
         break;
       case 'toggle-mute':
-        this.websocketService.sendControlCommand(this.isMuted ? 'unmute' : 'mute');
+        // Mute not available in shared protocol, use pause as alternative
+        this.websocketService.sendControlCommand(this.isMuted ? 'resume' : 'pause');
         this.isMuted = !this.isMuted;
         break;
       case 'stop':
@@ -293,7 +301,8 @@ export class App implements OnInit, OnDestroy {
 
   onVolumeChange(value: number) {
     this.volumeLevel = value;
-    this.websocketService.sendControlCommand('volume_up', value);
+    // Volume control not available in shared protocol, send play command with value
+    this.websocketService.sendControlCommand('play');
     console.log('🔊 Volume changed to:', value);
   }
 

@@ -13,6 +13,7 @@ export interface Video {
   title: string;
   thumbnail: string;
   duration: number;
+  youtubeId?: string; // YouTube video ID for playback
   scenes: LikedScene[];
 }
 
@@ -60,6 +61,7 @@ export const performersData: Performer[] = [
         title: 'Morning Routine',
         thumbnail: 'https://picsum.photos/400/300?random=101',
         duration: 1800, // 30 minutes
+        youtubeId: 'dQw4w9WgXcQ', // Sample YouTube video ID
         scenes: [
           { id: 1, title: 'Wake Up', thumbnail: 'https://picsum.photos/200/150?random=1001', timestamp: 0, duration: 300, videoId: 1 },
           { id: 2, title: 'Coffee Time', thumbnail: 'https://picsum.photos/200/150?random=1002', timestamp: 300, duration: 420, videoId: 1 },
@@ -73,6 +75,7 @@ export const performersData: Performer[] = [
         title: 'Evening Relaxation',
         thumbnail: 'https://picsum.photos/400/300?random=102',
         duration: 2100, // 35 minutes
+        youtubeId: 'M7lc1UVf-VE', // Sample YouTube video ID
         scenes: [
           { id: 6, title: 'Coming Home', thumbnail: 'https://picsum.photos/200/150?random=1006', timestamp: 0, duration: 360, videoId: 2 },
           { id: 7, title: 'Dinner Prep', thumbnail: 'https://picsum.photos/200/150?random=1007', timestamp: 360, duration: 540, videoId: 2 },
@@ -86,6 +89,7 @@ export const performersData: Performer[] = [
         title: 'Weekend Adventure',
         thumbnail: 'https://picsum.photos/400/300?random=103',
         duration: 2700, // 45 minutes
+        youtubeId: 'jNQXAC9IVRw', // Sample YouTube video ID
         scenes: [
           { id: 11, title: 'Early Start', thumbnail: 'https://picsum.photos/200/150?random=1011', timestamp: 0, duration: 300, videoId: 3 },
           { id: 12, title: 'Road Trip', thumbnail: 'https://picsum.photos/200/150?random=1012', timestamp: 300, duration: 900, videoId: 3 },
@@ -106,6 +110,7 @@ export const performersData: Performer[] = [
         title: 'Jazz Night',
         thumbnail: 'https://picsum.photos/400/300?random=104',
         duration: 1980, // 33 minutes
+        youtubeId: 'VMmp3wfCWKQ', // Sample YouTube video ID
         scenes: [
           { id: 16, title: 'Sound Check', thumbnail: 'https://picsum.photos/200/150?random=1016', timestamp: 0, duration: 360, videoId: 4 },
           { id: 17, title: 'First Set', thumbnail: 'https://picsum.photos/200/150?random=1017', timestamp: 360, duration: 600, videoId: 4 },
@@ -119,6 +124,7 @@ export const performersData: Performer[] = [
         title: 'City Drive',
         thumbnail: 'https://picsum.photos/400/300?random=105',
         duration: 1620, // 27 minutes
+        youtubeId: 'ZbZSe6N_BXs', // Sample YouTube video ID
         scenes: [
           { id: 21, title: 'Downtown', thumbnail: 'https://picsum.photos/200/150?random=1021', timestamp: 0, duration: 420, videoId: 5 },
           { id: 22, title: 'Traffic Lights', thumbnail: 'https://picsum.photos/200/150?random=1022', timestamp: 420, duration: 360, videoId: 5 },

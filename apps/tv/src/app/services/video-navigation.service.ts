@@ -1,29 +1,55 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { Performer, Video, LikedScene, VideoItem, NavigationState, performersData } from '../models/video-navigation';
+import { Performer, Video, LikedScene, VideoItem, NavigationState, emptyNavigationState } from '../models/video-navigation';
 
 @Injectable({
   providedIn: 'root'
 })
 export class VideoNavigationService {
-  private navigationState: NavigationState = {
-    currentLevel: [],
-    breadcrumb: [],
-    canGoBack: false,
-    currentPerformer: undefined,
-    currentVideo: undefined
-  };
+  private navigationState: NavigationState = emptyNavigationState;
+  private performersData: Performer[] = []; // Data received from Remote
 
   private navigationSubject = new BehaviorSubject<NavigationState>(this.navigationState);
   public navigation$ = this.navigationSubject.asObservable();
 
   constructor() {
-    this.goHome();
+    // TV starts empty - waiting for data from Remote
+    this.showWaitingState();
+  }
+
+  // Called by WebSocket service when Remote sends data
+  setPerformersData(performers: Performer[]): void {
+    console.log('📺 TV received performers data from Remote:', performers);
+    this.performersData = performers;
+    this.goHome(); // Show performers once data is received
+  }
+
+  private showWaitingState(): void {
+    this.navigationState = {
+      currentLevel: [
+        {
+          id: 'waiting',
+          title: 'Waiting for Remote Connection...',
+          thumbnail: '',
+          type: 'category'
+        }
+      ],
+      breadcrumb: ['Waiting for Remote...'],
+      canGoBack: false,
+      currentPerformer: undefined,
+      currentVideo: undefined
+    };
+    this.navigationSubject.next(this.navigationState);
   }
 
   goHome(): void {
+    if (this.performersData.length === 0) {
+      this.showWaitingState();
+      return;
+    }
+
     this.navigationState = {
-      currentLevel: performersData.map(performer => ({
+      currentLevel: this.performersData.map(performer => ({
         id: performer.id,
         title: performer.name,
         thumbnail: performer.thumbnail,
@@ -38,8 +64,11 @@ export class VideoNavigationService {
   }
 
   navigateToPerformer(performerId: string): void {
-    const performer = performersData.find(p => p.id === performerId);
-    if (!performer) return;
+    const performer = this.performersData.find(p => p.id === performerId);
+    if (!performer) {
+      console.error('📺 TV: Performer not found:', performerId);
+      return;
+    }
 
     this.navigationState = {
       currentLevel: performer.videos.map(video => ({
@@ -59,10 +88,16 @@ export class VideoNavigationService {
 
   navigateToVideo(videoId: string): void {
     const currentPerformer = this.navigationState.currentPerformer;
-    if (!currentPerformer) return;
+    if (!currentPerformer) {
+      console.error('📺 TV: No current performer');
+      return;
+    }
 
     const video = currentPerformer.videos.find(v => v.id === videoId);
-    if (!video) return;
+    if (!video) {
+      console.error('📺 TV: Video not found:', videoId);
+      return;
+    }
 
     this.navigationState = {
       currentLevel: video.likedScenes.map(scene => ({
@@ -102,11 +137,16 @@ export class VideoNavigationService {
     if (!scene) return;
 
     const url = `${currentVideo.url}&t=${scene.startTime}`;
-    console.log('Playing scene:', scene.title, 'at', url);
+    console.log('📺 TV: Playing scene:', scene.title, 'at', url);
     // Here you would integrate with video player
   }
 
   getCurrentState(): NavigationState {
     return this.navigationState;
+  }
+
+  // Check if TV has received data from Remote
+  hasData(): boolean {
+    return this.performersData.length > 0;
   }
 }

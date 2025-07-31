@@ -9,7 +9,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { VideoNavigationService } from './services/video-navigation.service';
 import { WebSocketService } from './services/websocket.service';
-import { NavigationState, VideoItem } from './models/video-navigation';
+import { NavigationState, VideoItem, Video, LikedScene } from './models/video-navigation';
+import { VideoPlayerComponent } from './components/video-player/video-player.component';
 import { Observable, Subscription } from 'rxjs';
 
 @Component({
@@ -22,7 +23,8 @@ import { Observable, Subscription } from 'rxjs';
     MatCardModule,
     MatButtonModule,
     MatIconModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    VideoPlayerComponent
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss'
@@ -31,6 +33,10 @@ export class App implements OnInit, OnDestroy {
   protected title = 'Sahar TV';
   navigation$: Observable<NavigationState>;
   private subscriptions: Subscription[] = [];
+
+  // Video playback state
+  currentVideo: Video | null = null;
+  currentScene: LikedScene | null = null;
 
   constructor(
     private navigationService: VideoNavigationService,
@@ -115,9 +121,49 @@ export class App implements OnInit, OnDestroy {
         this.navigationService.navigateToVideo(item.id);
         break;
       case 'segment':
+        // When a scene is clicked, find the current video and scene data
+        const nav = this.navigationService.getCurrentState();
+        if (nav.currentVideo) {
+          this.currentVideo = nav.currentVideo;
+          // Find the specific scene in the current video
+          const scene = nav.currentVideo.likedScenes.find(s => s.id === item.id);
+          if (scene) {
+            this.currentScene = scene;
+            console.log('Starting video playback:', {
+              video: this.currentVideo.title,
+              scene: this.currentScene.title,
+              youtubeId: this.currentVideo.youtubeId
+            });
+          }
+        }
         this.navigationService.playScene(item.id);
         break;
     }
+  }
+
+  // Video Player Event Handlers
+  onPlayerReady(): void {
+    console.log('Video player is ready');
+  }
+
+  onVideoStarted(): void {
+    console.log('Video playback started');
+  }
+
+  onVideoPaused(): void {
+    console.log('Video playback paused');
+  }
+
+  onVideoEnded(): void {
+    console.log('Video playback ended');
+    // Optionally return to scene list or play next scene
+    this.currentVideo = null;
+    this.currentScene = null;
+  }
+
+  onTimeUpdate(currentTime: number): void {
+    // Handle time updates if needed for progress tracking
+    console.log('Video time update:', currentTime);
   }
 
   onImageError(event: Event): void {

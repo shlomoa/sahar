@@ -1,4 +1,4 @@
-<!-- TV Application Layout (80% data view) -->
+<!-- TV Application Layout -->
 <div class="tv-container">
   <!-- Navigation Bar (10%) -->
   <mat-toolbar class="nav-bar" color="primary">
@@ -21,27 +21,47 @@
     </button>
   </mat-toolbar>
 
-  <!-- Data View Area (80%) -->
-  <div class="data-view" *ngIf="navigation$ | async as nav">
-    <mat-grid-list cols="4" rowHeight="300px" gutterSize="16px">
-      <mat-grid-tile *ngFor="let item of nav.currentLevel">
-        <mat-card class="content-card" (click)="onItemClick(item)">
-          <div class="card-image">
-            <img [src]="item.thumbnail" 
-                 [alt]="item.title" 
-                 (error)="onImageError($event)"
-                 onerror="this.src='https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg?auto=compress&cs=tinysrgb&w=300'" />
-          </div>
-          <mat-card-content>
-            <h3>{{ item.title }}</h3>
-            <p *ngIf="item.startTime !== undefined" class="time-info">
-              {{ item.startTime }}s
-              <span *ngIf="item.endTime"> - {{ item.endTime }}s</span>
-            </p>
-          </mat-card-content>
-        </mat-card>
-      </mat-grid-tile>
-    </mat-grid-list>
+  <!-- Main Content Area (80%) -->
+  <div class="main-content">
+    <!-- Video Player (when playing) -->
+    <div class="video-player-area" *ngIf="currentVideo && currentScene">
+      <app-video-player
+        [currentVideo]="currentVideo"
+        [currentScene]="currentScene"
+        [autoplay]="true"
+        [showControls]="true"
+        (playerReady)="onPlayerReady()"
+        (videoStarted)="onVideoStarted()"
+        (videoPaused)="onVideoPaused()"
+        (videoEnded)="onVideoEnded()"
+        (timeUpdate)="onTimeUpdate($event)">
+      </app-video-player>
+    </div>
+
+    <!-- Data View (when browsing) -->
+    <div class="data-view" *ngIf="!currentVideo || !currentScene">
+      <div *ngIf="navigation$ | async as nav">
+        <mat-grid-list cols="4" rowHeight="300px" gutterSize="16px">
+          <mat-grid-tile *ngFor="let item of nav.currentLevel">
+            <mat-card class="content-card" (click)="onItemClick(item)">
+              <div class="card-image">
+                <img [src]="item.thumbnail" 
+                     [alt]="item.title" 
+                     (error)="onImageError($event)"
+                     onerror="this.src='https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg?auto=compress&cs=tinysrgb&w=300'" />
+              </div>
+              <mat-card-content>
+                <h3>{{ item.title }}</h3>
+                <p *ngIf="item.startTime !== undefined" class="time-info">
+                  {{ item.startTime }}s
+                  <span *ngIf="item.endTime"> - {{ item.endTime }}s</span>
+                </p>
+              </mat-card-content>
+            </mat-card>
+          </mat-grid-tile>
+        </mat-grid-list>
+      </div>
+    </div>
   </div>
 
   <!-- Status Bar (10%) -->
@@ -53,6 +73,7 @@
       <span class="spacer"></span>
       <span *ngIf="nav.currentPerformer">Performer: {{ nav.currentPerformer.name }}</span>
       <span *ngIf="nav.currentVideo">Video: {{ nav.currentVideo.title }}</span>
+      <span *ngIf="currentScene">Scene: {{ currentScene.title }}</span>
     </div>
   </mat-toolbar>
 </div>

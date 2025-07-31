@@ -16,33 +16,25 @@
 📤 Status response generation: ✅ Enhanced
 ```
 
-## 🎯 **User Story Verification**
+## 🎯 **System Architecture - CORRECTED**
 
-### **Story 1: Connection Protocol**
+### **Data Ownership Model:**
+- 📱 **Remote App (Tablet)**: Owns all content data (performers, videos, scenes)
+- 📺 **TV App**: Dumb display - receives data via WebSocket, has no local content
+- 🔌 **WebSocket Communication**: Data flows from Remote → TV after connection
+
+### **Story 2: Data Navigation - UPDATED REQUIREMENTS**
 **Requirements:**
-- [x] IP discovery across gateway (192.168.1.x)
-- [x] Port scanning on 5544, 5545, 5546, 5547
-- [x] WebSocket connection establishment
-- [x] Device discovery UI
+- [x] Remote app holds all performer/video/scene data
+- [x] TV app starts empty until connection established
+- [x] Data transmitted from Remote to TV via WebSocket after connection
+- [x] Navigation commands sent from Remote trigger TV display updates
+- [x] TV displays content received from Remote, not local data
 
-**Test Results:**
-- ✅ **Multi-Port Discovery**: Server listening on all specified ports
-- ✅ **Real Connection Testing**: WebSocket service implements actual connection attempts
-- ✅ **Gateway Scanning**: Service scans 192.168.1.1-254 range
-- 🔍 **UI Testing**: Remote app opened - verifying device connection screen display
-
-### **Story 2: Data Navigation**
-**Requirements:**
-- [x] Start with device connection screen (not performers)
-- [x] Show performers after connection established
-- [x] Drill-down: Performers → Videos → Scenes
-- [x] Back navigation and home actions
-
-**Test Results:**
-- 🔍 **Connection Screen**: Verifying Remote app starts with connection UI
-- 🔍 **Post-Connection Navigation**: Testing performers grid display after WebSocket connection
-- 🔍 **Drill-Down Navigation**: Testing multi-level navigation flow
-- 🔍 **Synchronization**: Verifying TV and Remote stay synchronized
+**Current Implementation Issue:** ❌ **INCORRECT ARCHITECTURE**
+- TV app currently has static `performersData` in local models
+- TV app should receive data from Remote app via WebSocket
+- Need to refactor TV to be data-less display layer
 
 ## 🔧 **Technical Verification**
 

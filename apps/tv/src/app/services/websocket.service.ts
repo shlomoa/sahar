@@ -7,6 +7,7 @@ import {
   StatusMessage,
   DiscoveryMessage,
   DiscoveryPayload,
+  DataMessage,
   NetworkDevice,
   WebSocketError,
   WEBSOCKET_CONFIG,
@@ -182,7 +183,7 @@ export class WebSocketService {
   }
 
   private handleIncomingMessage(message: RemoteMessage): void {
-    console.log('Received message:', message);
+    console.log('📺 TV received message:', message);
     this.messagesSubject.next(message);
 
     switch (message.type) {
@@ -199,9 +200,72 @@ export class WebSocketService {
         break;
       
       case 'status':
-        // Remote is sending status, we can respond or update our state
+        // Handle status updates from Remote (including data)
+        this.handleStatusMessage(message as StatusMessage);
+        break;
+
+      case 'data':
+        // Handle data transmission from Remote
+        this.handleDataMessage(message as DataMessage);
         break;
     }
+  }
+
+  private handleDataMessage(message: DataMessage): void {
+    console.log('📺 TV receiving data from Remote:', message);
+    
+    if (message.payload && message.payload.performers) {
+      // Convert Remote's data format to TV's expected format
+      const performersData = message.payload.performers.map((p: any) => ({
+        id: p.id.toString(),
+        name: p.name,
+        thumbnail: p.thumbnail,
+        description: p.description || '',
+        videos: p.videos.map((v: any) => ({
+          id: v.id.toString(),
+          title: v.title,
+          thumbnail: v.thumbnail,
+          url: `https://www.youtube.com/watch?v=example${v.id}`, // Convert to YouTube URL
+          duration: v.duration,
+          description: v.description || '',
+          likedScenes: v.scenes.map((s: any) => ({
+            id: s.id.toString(),
+            title: s.title,
+            startTime: s.timestamp,
+            endTime: s.timestamp + s.duration,
+            thumbnail: s.thumbnail,
+            description: s.description || ''
+          }))
+        }))
+      }));
+
+      // Pass data to navigation service
+      this.navigationService.setPerformersData(performersData);
+      
+      // Send confirmation back to Remote
+      this.sendDataConfirmation();
+    }
+  }
+
+  private handleStatusMessage(message: StatusMessage): void {
+    // Remote is sending status updates, we can use this for synchronization
+    console.log('📺 TV received status from Remote:', message.payload);
+  }
+
+  private sendDataConfirmation(): void {
+    const message: StatusMessage = {
+      type: 'status',
+      timestamp: Date.now(),
+      payload: {
+        currentState: {
+          level: 'performers',
+          breadcrumb: ['Home'],
+          canGoBack: false
+        }
+      }
+    };
+    
+    this.sendMessage(message);
   }
 
   private handleNavigationMessage(message: NavigationMessage): void {

@@ -1,7 +1,7 @@
 // WebSocket Communication Protocol for TV-Remote System
 
 export interface WebSocketMessage {
-  type: 'navigation' | 'control' | 'discovery' | 'status';
+  type: 'navigation' | 'control' | 'discovery' | 'status' | 'data';
   timestamp: number;
   payload: any;
 }
@@ -29,6 +29,31 @@ export interface DiscoveryPayload {
     ip: string;
     port: number;
   };
+}
+
+// Data Transfer - for sending performer/video data from Remote to TV
+export interface DataPayload {
+  performers: Array<{
+    id: string;
+    name: string;
+    thumbnail: string;
+    description?: string;
+    videos: Array<{
+      id: string;
+      title: string;
+      thumbnail: string;
+      duration: string;
+      description?: string;
+      scenes: Array<{
+        id: string;
+        title: string;
+        timestamp: number;
+        duration: number;
+        thumbnail: string;
+        description?: string;
+      }>;
+    }>;
+  }>;
 }
 
 // Status Updates - for keeping devices in sync
@@ -70,8 +95,13 @@ export interface StatusMessage extends WebSocketMessage {
   payload: StatusUpdate;
 }
 
+export interface DataMessage extends WebSocketMessage {
+  type: 'data';
+  payload: DataPayload;
+}
+
 // Union type for all possible messages
-export type RemoteMessage = NavigationMessage | ControlMessage | DiscoveryMessage | StatusMessage;
+export type RemoteMessage = NavigationMessage | ControlMessage | DiscoveryMessage | StatusMessage | DataMessage;
 
 // Protocol Configuration
 export const WEBSOCKET_CONFIG = {

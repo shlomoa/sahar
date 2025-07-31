@@ -1,93 +1,16 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable, Subject, interval, of } from 'rxjs';
-import { takeUntil, retry, delay, startWith, switchMap, catchError } from 'rxjs/operators';
-
-// WebSocket Protocol Types
-export type MessageType = 'navigation' | 'control' | 'discovery' | 'status' | 'error' | 'heartbeat';
-
-export interface BaseMessage {
-  type: MessageType;
-  timestamp: number;
-}
-
-export interface NavigationCommand extends BaseMessage {
-  type: 'navigation';
-  payload: {
-    action: 'go_to_performers' | 'go_to_videos' | 'go_to_scenes' | 'select_performer' | 'select_video' | 'select_scene' | 'go_back';
-    performerId?: number;
-    videoId?: number;
-    sceneId?: number;
-  };
-}
-
-export interface ControlCommand extends BaseMessage {
-  type: 'control';
-  payload: {
-    action: 'play' | 'pause' | 'stop' | 'seek' | 'volume_up' | 'volume_down' | 'mute' | 'unmute' | 'fullscreen' | 'exit_fullscreen';
-    value?: number; // For seek position or volume level
-  };
-}
-
-export interface DiscoveryMessage extends BaseMessage {
-  type: 'discovery';
-  payload: {
-    deviceType: 'tv' | 'remote' | 'server';
-    deviceId: string;
-    deviceName: string;
-    capabilities: string[];
-    networkInfo?: {
-      ip: string;
-      port: number;
-    };
-  };
-}
-
-export interface StatusUpdate extends BaseMessage {
-  type: 'status';
-  payload: {
-    message?: string;
-    currentState?: {
-      level: 'performers' | 'videos' | 'scenes';
-      breadcrumb: string[];
-      canGoBack: boolean;
-      selectedPerformerId?: number;
-      selectedVideoId?: number;
-      selectedSceneId?: number;
-    };
-    playerState?: {
-      isPlaying: boolean;
-      currentTime: number;
-      duration: number;
-      volume: number;
-      selectedVideoId?: number;
-      selectedSceneId?: number;
-    };
-    deviceInfo?: {
-      deviceType: string;
-      deviceName: string;
-      capabilities: string[];
-    };
-  };
-}
-
-export interface ErrorMessage extends BaseMessage {
-  type: 'error';
-  payload: {
-    error: string;
-    code?: string;
-    details?: any;
-  };
-}
-
-export interface HeartbeatMessage extends BaseMessage {
-  type: 'heartbeat';
-  payload: {
-    timestamp: number;
-    deviceId: string;
-  };
-}
-
-export type RemoteMessage = NavigationCommand | ControlCommand | DiscoveryMessage | StatusUpdate | ErrorMessage | HeartbeatMessage;
+import { takeUntil, retry, delay, startWith, switchMap, catchError, filter, map } from 'rxjs/operators';
+import { 
+  RemoteMessage, 
+  NavigationMessage, 
+  ControlMessage, 
+  DiscoveryMessage, 
+  StatusMessage,
+  DataMessage,
+  DataPayload,
+  WEBSOCKET_CONFIG 
+} from '../../../../../shared/websocket/websocket-protocol';
 
 // Connection states
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
@@ -117,7 +40,7 @@ export class WebSocketService implements OnDestroy {
   // Observables
   private connectionState$ = new BehaviorSubject<ConnectionState>('disconnected');
   private messages$ = new Subject<RemoteMessage>();
-  private tvStatus$ = new BehaviorSubject<StatusUpdate | null>(null);
+  private tvStatus$ = new BehaviorSubject<StatusMessage | null>(null);
   private discoveredDevices$ = new BehaviorSubject<DiscoveredDevice[]>([]);
 
   // Device info
@@ -130,6 +53,9 @@ export class WebSocketService implements OnDestroy {
     
     // Auto-discover devices when service starts
     this.startDeviceDiscovery();
+    
+    // Auto-connect to first discovered device
+    this.setupAutoConnect();
   }
 
   ngOnDestroy(): void {
@@ -147,7 +73,7 @@ export class WebSocketService implements OnDestroy {
     return this.messages$.asObservable();
   }
 
-  getTVStatus(): Observable<StatusUpdate | null> {
+  getTVStatus(): Observable<StatusMessage | null> {
     return this.tvStatus$.asObservable();
   }
 
@@ -204,9 +130,36 @@ export class WebSocketService implements OnDestroy {
   // Device discovery
   private isScanning = false;
   private scanningSubject = new BehaviorSubject<boolean>(false);
+  private autoConnectEnabled = true; // Enable automatic connection to first discovered device
 
   getScanningState(): Observable<boolean> {
     return this.scanningSubject.asObservable();
+  }
+
+  // Setup automatic connection to first discovered device
+  private setupAutoConnect(): void {
+    this.discoveredDevices$.pipe(
+      // Wait for scanning to complete
+      switchMap((devices: DiscoveredDevice[]) => 
+        this.scanningSubject.pipe(
+          filter((scanning: boolean) => !scanning), // Wait for scanning to finish
+          map(() => devices)
+        )
+      )
+    ).subscribe((devices: DiscoveredDevice[]) => {
+      if (this.autoConnectEnabled && 
+          devices.length > 0 && 
+          this.connectionState$.value === 'disconnected') {
+        
+        console.log('🔄 Auto-connecting to first discovered device after scan complete:', devices[0]);
+        this.autoConnectEnabled = false; // Prevent multiple auto-connect attempts
+        
+        // Small delay to ensure discovery scan is fully complete
+        setTimeout(() => {
+          this.connectToDevice(devices[0]);
+        }, 1000);
+      }
+    });
   }
 
   startDeviceDiscovery(): void {
@@ -346,12 +299,16 @@ export class WebSocketService implements OnDestroy {
       // Send discovery message
       this.sendDiscoveryMessage();
       
-      // Start heartbeat
+      // Start heartbeat - using status messages as heartbeat
       this.startHeartbeat();
+      
+      // Send data to TV when connection is first established
+      console.log('🎉 Connection established - sending data to TV');
+      this.sendDataToTV();
       
       // Initialize navigation when connection is first established
       console.log('🎉 Connection established - initializing navigation to performers');
-      this.sendNavigationCommand('go_to_performers');
+      this.sendNavigationCommand('navigate_to_performer', 'performer1');
     };
 
     this.ws.onmessage = (event) => {
@@ -375,6 +332,9 @@ export class WebSocketService implements OnDestroy {
         this.heartbeatTimer = null;
       }
 
+      // Re-enable auto-connect when disconnected
+      this.autoConnectEnabled = true;
+
       // Auto-reconnect if not intentional disconnect
       if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
         this.reconnectAttempts++;
@@ -383,8 +343,18 @@ export class WebSocketService implements OnDestroy {
         setTimeout(() => {
           if (this.ws && this.ws.url) {
             this.connect(this.ws.url);
+          } else {
+            // Try auto-discovery and connect again
+            console.log('🔍 Starting auto-discovery for reconnection...');
+            this.startDeviceDiscovery();
           }
         }, 2000 * this.reconnectAttempts);
+      } else if (event.code !== 1000) {
+        // Max reconnection attempts reached, try discovery again
+        console.log('🔍 Max reconnection attempts reached, starting fresh discovery...');
+        setTimeout(() => {
+          this.startDeviceDiscovery();
+        }, 5000);
       }
     };
 
@@ -397,7 +367,7 @@ export class WebSocketService implements OnDestroy {
   private handleIncomingMessage(message: RemoteMessage): void {
     switch (message.type) {
       case 'status':
-        this.tvStatus$.next(message as StatusUpdate);
+        this.tvStatus$.next(message as StatusMessage);
         break;
       
       case 'discovery':
@@ -423,10 +393,9 @@ export class WebSocketService implements OnDestroy {
           this.discoveredDevices$.next([...current]);
         }
         break;
-      
-      case 'error':
-        const error = message as ErrorMessage;
-        console.error('🚨 TV Error:', error.payload.error);
+
+      case 'data':
+        console.log('📱 Remote received data confirmation from TV');
         break;
     }
   }
@@ -439,7 +408,11 @@ export class WebSocketService implements OnDestroy {
         deviceType: 'remote',
         deviceId: this.deviceId,
         deviceName: this.deviceName,
-        capabilities: ['navigation', 'control']
+        capabilities: ['navigation', 'control'],
+        networkInfo: {
+          ip: 'localhost', // Will be updated by actual network detection
+          port: 4202 // Remote app port
+        }
       }
     };
     
@@ -448,46 +421,96 @@ export class WebSocketService implements OnDestroy {
 
   private startHeartbeat(): void {
     this.heartbeatTimer = setInterval(() => {
-      const heartbeat: HeartbeatMessage = {
-        type: 'heartbeat',
+      const statusMessage: StatusMessage = {
+        type: 'status',
         timestamp: Date.now(),
         payload: {
-          timestamp: Date.now(),
-          deviceId: this.deviceId
+          currentState: {
+            level: 'performers',
+            breadcrumb: ['Remote Control'],
+            canGoBack: false
+          }
         }
       };
       
-      this.sendMessage(heartbeat);
+      this.sendMessage(statusMessage);
     }, this.heartbeatInterval);
   }
 
   // Public methods for sending commands
-  sendNavigationCommand(action: NavigationCommand['payload']['action'], performerId?: number, videoId?: number, sceneId?: number): void {
-    const command: NavigationCommand = {
+  sendNavigationCommand(action: 'navigate_to_performer' | 'navigate_to_video' | 'navigate_to_scene', targetId: string, targetType: 'performer' | 'video' | 'segment' = 'performer'): void {
+    const command: NavigationMessage = {
       type: 'navigation',
       timestamp: Date.now(),
       payload: {
         action,
-        performerId,
-        videoId,
-        sceneId
+        targetId,
+        targetType
       }
     };
     
     this.sendMessage(command);
   }
 
-  sendControlCommand(action: ControlCommand['payload']['action'], value?: number): void {
-    const command: ControlCommand = {
+  sendControlCommand(action: 'play' | 'pause' | 'stop' | 'back' | 'home' | 'resume', targetId?: string): void {
+    const command: ControlMessage = {
       type: 'control',
       timestamp: Date.now(),
       payload: {
         action,
-        value
+        targetId
       }
     };
     
     this.sendMessage(command);
+  }
+
+  // Send data to TV when connection is established
+  sendDataToTV(): void {
+    // Import the actual performers data
+    import('../models/video-navigation').then(({ performersData }) => {
+      // Convert the Remote app data format to the shared protocol format
+      const dataPayload: DataPayload = {
+        performers: performersData.map(performer => ({
+          id: performer.id.toString(),
+          name: performer.name,
+          thumbnail: performer.thumbnail,
+          description: `${performer.videos.length} videos available`,
+          videos: performer.videos.map(video => ({
+            id: video.id.toString(),
+            title: video.title,
+            thumbnail: video.thumbnail,
+            duration: this.formatDuration(video.duration),
+            description: `${video.scenes.length} scenes • ${this.formatDuration(video.duration)}`,
+            scenes: video.scenes.map(scene => ({
+              id: scene.id.toString(),
+              title: scene.title,
+              timestamp: scene.timestamp,
+              duration: scene.duration,
+              thumbnail: scene.thumbnail,
+              description: `${this.formatDuration(scene.duration)} scene`
+            }))
+          }))
+        }))
+      };
+
+      const dataMessage: DataMessage = {
+        type: 'data',
+        timestamp: Date.now(),
+        payload: dataPayload
+      };
+
+      console.log('📤 Remote sending ACTUAL data to TV:', dataMessage);
+      this.sendMessage(dataMessage);
+    }).catch(error => {
+      console.error('❌ Failed to load performers data:', error);
+    });
+  }
+
+  private formatDuration(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   }
 
   private sendMessage(message: RemoteMessage): void {
@@ -501,11 +524,26 @@ export class WebSocketService implements OnDestroy {
   }
 
   // Utility methods
-  getCurrentTVState(): StatusUpdate | null {
+  getCurrentTVState(): StatusMessage | null {
     return this.tvStatus$.value;
   }
 
   isConnected(): boolean {
     return this.connectionState$.value === 'connected';
+  }
+
+  // Auto-connect control methods
+  enableAutoConnect(): void {
+    this.autoConnectEnabled = true;
+    console.log('✅ Auto-connect enabled');
+  }
+
+  disableAutoConnect(): void {
+    this.autoConnectEnabled = false;
+    console.log('❌ Auto-connect disabled');
+  }
+
+  isAutoConnectEnabled(): boolean {
+    return this.autoConnectEnabled;
   }
 }
