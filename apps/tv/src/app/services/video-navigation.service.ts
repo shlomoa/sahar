@@ -18,7 +18,9 @@ export class VideoNavigationService {
 
   constructor() {
     // TV starts with shared data immediately
-    console.log('📺 TV Navigation Service initialized with performers:', this.performersData.length);
+    console.log('📺 TV Navigation Service initialized');
+    console.log('📺 Performers data available:', this.performersData.length);
+    console.log('📺 First performer:', this.performersData[0]?.name || 'None');
     this.goHome(); // Show performers immediately
   }
 
