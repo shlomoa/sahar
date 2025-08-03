@@ -16,7 +16,8 @@
       "architect": {
         "build": {
           "builder": "@angular/build:application",
-          "options": {
+          "options": {                   
+            "preserveSymlinks": true,
             "browser": "src/main.ts",
             "polyfills": [
               "zone.js"
@@ -58,7 +59,7 @@
           "defaultConfiguration": "production"
         },
         "serve": {
-          "builder": "@angular/build:dev-server",
+          "builder": "@angular/build:dev-server",       
           "configurations": {
             "production": {
               "buildTarget": "tv:build:production"

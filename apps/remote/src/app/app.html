@@ -55,29 +55,34 @@
       @switch (currentNavigation.level) {
         
         @case ('performers') {
-          <performers-grid
+          <shared-performers-grid
             [performers]="performers"
             [selectedPerformerId]="currentNavigation.performerId"
+            [displayMode]="'remote'"
             (performerSelected)="navigateToPerformer($event)">
-          </performers-grid>
+          </shared-performers-grid>
         }
         
         @case ('videos') {
-          <videos-grid
+          <shared-videos-grid
             [videos]="getVideosForPerformer(currentNavigation.performerId!)"
             [selectedVideoId]="currentNavigation.videoId"
+            [displayMode]="'remote'"
+            [showBreadcrumb]="true"
             (videoSelected)="navigateToVideo(currentNavigation.performerId!, $event)"
             (backToPerformers)="navigateToPerformers()">
-          </videos-grid>
+          </shared-videos-grid>
         }
         
         @case ('scenes') {
-          <scenes-grid
+          <shared-scenes-grid
             [scenes]="getScenesForVideo(currentNavigation.performerId!, currentNavigation.videoId!)"
             [selectedSceneTimestamp]="currentNavigation.sceneTimestamp"
+            [displayMode]="'remote'"
+            [showBreadcrumb]="true"
             (sceneSelected)="navigateToScene(currentNavigation.performerId!, currentNavigation.videoId!, $event)"
             (backToVideos)="navigateToVideos(currentNavigation.performerId!)">
-          </scenes-grid>
+          </shared-scenes-grid>
         }
         
         @case ('scene-selected') {

@@ -5,14 +5,12 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 
 // Components
 import { DeviceConnectionComponent } from './components/device-connection/device-connection.component';
-import { PerformersGridComponent } from './components/performers-grid/performers-grid.component';
-import { VideosGridComponent } from './components/videos-grid/videos-grid.component';
-import { ScenesGridComponent } from './components/scenes-grid/scenes-grid.component';
+import { SharedPerformersGridComponent, SharedVideosGridComponent, SharedScenesGridComponent } from '@shared/components';
 import { VideoControlsComponent } from './components/video-controls/video-controls.component';
 
 // Services and Models
 import { WebSocketService, DiscoveredDevice } from './services/websocket.service';
-import { performersData, Performer, Video, LikedScene } from '../../../../shared/models/video-navigation';
+import { performersData, Performer, Video, LikedScene } from '@shared/models/video-navigation';
 
 interface NavigationState {
   level: 'performers' | 'videos' | 'scenes' | 'scene-selected';
@@ -31,9 +29,9 @@ type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
     MatToolbarModule,
     MatButtonModule,
     DeviceConnectionComponent,
-    PerformersGridComponent,
-    VideosGridComponent,
-    ScenesGridComponent,
+    SharedPerformersGridComponent,
+    SharedVideosGridComponent,
+    SharedScenesGridComponent,
     VideoControlsComponent
   ],
   templateUrl: './app.html',

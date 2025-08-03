@@ -9,8 +9,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { VideoNavigationService } from './services/video-navigation.service';
 import { WebSocketService } from './services/websocket.service';
-import { NavigationState, VideoItem, Video, LikedScene } from '../../../../shared/models/video-navigation';
+import { NavigationState, VideoItem, Video, LikedScene, Performer } from '@shared/models/video-navigation';
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
+import { SharedPerformersGridComponent, SharedVideosGridComponent, SharedScenesGridComponent } from '@shared/components';
 import { Observable, Subscription } from 'rxjs';
 
 @Component({
@@ -24,7 +25,10 @@ import { Observable, Subscription } from 'rxjs';
     MatButtonModule,
     MatIconModule,
     MatSnackBarModule,
-    VideoPlayerComponent
+    VideoPlayerComponent,
+    SharedPerformersGridComponent,
+    SharedVideosGridComponent,
+    SharedScenesGridComponent
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss'
@@ -37,6 +41,47 @@ export class App implements OnInit, OnDestroy {
   // Video playback state
   currentVideo: Video | null = null;
   currentScene: LikedScene | null = null;
+
+  // Current navigation level helpers for templates
+  get currentPerformers(): Performer[] {
+    const nav = this.navigationService.getCurrentState();
+    if (nav.breadcrumb.length === 1) { // Home level
+      return nav.currentLevel
+        .filter(item => item.type === 'performer')
+        .map(item => ({
+          id: item.id,
+          name: item.title,
+          thumbnail: item.thumbnail,
+          videos: [] // Will be populated when needed
+        }));
+    }
+    return [];
+  }
+
+  get currentVideos(): Video[] {
+    const nav = this.navigationService.getCurrentState();
+    if (nav.breadcrumb.length === 2 && nav.currentPerformer) { // Videos level
+      return nav.currentPerformer.videos;
+    }
+    return [];
+  }
+
+  get currentScenes(): LikedScene[] {
+    const nav = this.navigationService.getCurrentState();
+    if (nav.breadcrumb.length === 3 && nav.currentVideo) { // Scenes level
+      return nav.currentVideo.likedScenes;
+    }
+    return [];
+  }
+
+  get currentLevel(): 'performers' | 'videos' | 'scenes' | 'playing' {
+    const nav = this.navigationService.getCurrentState();
+    if (this.currentVideo && this.currentScene) return 'playing';
+    if (nav.breadcrumb.length === 1) return 'performers';
+    if (nav.breadcrumb.length === 2) return 'videos';
+    if (nav.breadcrumb.length === 3) return 'scenes';
+    return 'performers';
+  }
 
   constructor(
     private navigationService: VideoNavigationService,
@@ -130,6 +175,47 @@ export class App implements OnInit, OnDestroy {
     // Start the WebSocket connection
     this.webSocketService.connect();
     this.webSocketService.startDiscovery();
+  }
+
+  // Event handlers for shared components
+  onPerformerSelected(performerId: string): void {
+    console.log('📺 TV: Performer selected:', performerId);
+    this.navigationService.navigateToPerformer(performerId);
+  }
+
+  onVideoSelected(videoId: string): void {
+    console.log('📺 TV: Video selected:', videoId);
+    this.navigationService.navigateToVideo(videoId);
+  }
+
+  onSceneSelected(sceneId: string): void {
+    console.log('📺 TV: Scene selected:', sceneId);
+    // When a scene is clicked, find the current video and scene data
+    const nav = this.navigationService.getCurrentState();
+    if (nav.currentVideo) {
+      this.currentVideo = nav.currentVideo;
+      // Find the specific scene in the current video
+      const scene = nav.currentVideo.likedScenes.find(s => s.id === sceneId);
+      if (scene) {
+        this.currentScene = scene;
+        console.log('📺 TV: Starting video playback:', {
+          video: this.currentVideo.title,
+          scene: this.currentScene.title,
+          url: this.currentVideo.url
+        });
+      }
+    }
+    this.navigationService.playScene(sceneId);
+  }
+
+  onBackToPerformers(): void {
+    console.log('📺 TV: Back to performers');
+    this.navigationService.goHome();
+  }
+
+  onBackToVideos(): void {
+    console.log('📺 TV: Back to videos');
+    this.navigationService.goBack();
   }
 
   onItemClick(item: VideoItem): void {

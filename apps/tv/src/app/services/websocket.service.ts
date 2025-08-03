@@ -13,9 +13,9 @@ import {
   WebSocketError,
   WEBSOCKET_CONFIG,
   ERROR_CODES
-} from '../../../../../shared/websocket/websocket-protocol';
+} from '@shared/websocket/websocket-protocol';
 import { VideoNavigationService } from './video-navigation.service';
-import { NavigationState } from '../../../../../shared/models/video-navigation';
+import { NavigationState } from '@shared/models/video-navigation';
 
 @Injectable({
   providedIn: 'root'

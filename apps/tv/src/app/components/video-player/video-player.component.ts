@@ -2,7 +2,7 @@ import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, ViewChild, O
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { YouTubePlayerModule, YouTubePlayer } from '@angular/youtube-player';
-import { Video, LikedScene } from '../../../../../../shared/models/video-navigation';
+import { Video, LikedScene } from '@shared/models/video-navigation';
 
 @Component({
   selector: 'app-video-player',

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { Performer, Video, LikedScene, VideoItem, NavigationState, performersData } from '../../../../../shared/models/video-navigation';
+import { Performer, Video, LikedScene, VideoItem, NavigationState, performersData } from '@shared/models/video-navigation';
 
 @Injectable({
   providedIn: 'root'

@@ -10,7 +10,7 @@ import {
   DataMessage,
   DataPayload,
   WEBSOCKET_CONFIG 
-} from '../../../../../shared/websocket/websocket-protocol';
+} from '../../../shared/websocket/websocket-protocol';
 
 // Connection states
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
@@ -468,7 +468,7 @@ export class WebSocketService implements OnDestroy {
   // Send data to TV when connection is established
   sendDataToTV(): void {
     // Import the actual performers data
-    import('../../../../../shared/models/video-navigation').then(({ performersData }) => {
+    import('../../../shared/models/video-navigation').then(({ performersData }) => {
       // Convert the Remote app data format to the shared protocol format
       const dataPayload: DataPayload = {
         performers: performersData.map((performer: any) => ({

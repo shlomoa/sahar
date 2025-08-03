@@ -1,7 +1,7 @@
-<div class="performers-grid">
+<div [class]="getGridClasses()">
   <mat-card 
     *ngFor="let performer of performers; trackBy: trackByPerformerId" 
-    class="performer-card"
+    [class]="getCardClasses()"
     [class.selected]="selectedPerformerId === performer.id"
     (click)="selectPerformer(performer.id)">
     <img 

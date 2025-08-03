@@ -1,15 +1,15 @@
-<div class="videos-section">
-  <div class="breadcrumb">
+<div [class]="getSectionClasses()">
+  <div class="breadcrumb" *ngIf="showBreadcrumb">
     <button mat-button (click)="onBackToPerformers()">
       <mat-icon>arrow_back</mat-icon>
       Back to Performers
     </button>
   </div>
   
-  <div class="videos-grid">
+  <div [class]="getGridClasses()">
     <mat-card 
       *ngFor="let video of videos; trackBy: trackByVideoId"
-      class="video-card"
+      [class]="getCardClasses()"
       [class.selected]="video.id === selectedVideoId"
       (click)="onVideoSelected(video.id)">
       
@@ -21,7 +21,7 @@
         
       <mat-card-content>
         <h3>{{ video.title }}</h3>
-        <p>{{ video.duration }} min • {{ video.likedScenes.length }} scenes</p>
+        <p>{{ formatDuration(video.duration) }} min • {{ video.likedScenes.length }} scenes</p>
       </mat-card-content>
     </mat-card>
   </div>
