@@ -46,14 +46,8 @@ export class App implements OnInit, OnDestroy {
   get currentPerformers(): Performer[] {
     const nav = this.navigationService.getCurrentState();
     if (nav.breadcrumb.length === 1) { // Home level
-      return nav.currentLevel
-        .filter(item => item.type === 'performer')
-        .map(item => ({
-          id: item.id,
-          name: item.title,
-          thumbnail: item.thumbnail,
-          videos: [] // Will be populated when needed
-        }));
+      // Get the actual performers data with full video information
+      return this.navigationService.getPerformersData();
     }
     return [];
   }

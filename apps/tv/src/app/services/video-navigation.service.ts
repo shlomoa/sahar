@@ -31,6 +31,11 @@ export class VideoNavigationService {
     this.goHome(); // Show performers once data is received
   }
 
+  // Add getter for performers data
+  getPerformersData(): Performer[] {
+    return this.performersData;
+  }
+
   private showWaitingState(): void {
     this.navigationState = {
       currentLevel: [
