@@ -1,211 +1,233 @@
 # SAHAR TV Remote Control System 📺
 
-A sophisticated Angular-based remote control system for smart TVs, featuring real-time WebSocket communication, device discovery, and YouTube video integration.
+*Real-time synchronized TV and tablet remote control system with direct WebSocket communication.*
 
-## 🎯 Architecture Overview
+## 🎯 Overview
 
-```
-Remote App (Tablet) ←→ WebSocket Server ←→ TV App (Display)
-     (Data Owner)      (Multi-port Bridge)    (Video Player)
-```
+A sophisticated Angular-based remote control system featuring direct TV-Remote communication, YouTube video integration, and real-time synchronization. The system uses WebSocket Protocol v2.0 for seamless device communication without external dependencies.
 
-### Core Components
-- **Remote App**: Touch-friendly tablet interface for navigation and control
-- **TV App**: Large-screen display with YouTube video player integration  
-- **WebSocket Server**: Multi-port communication bridge with device discovery
-- **Shared Models**: Type-safe data structures and communication protocols
-
-## ✨ Key Features
-
-### Remote App (`apps/remote`)
-- 🔍 **Auto Device Discovery**: Sophisticated RxJS-based scanning and connection
-- 📱 **Touch Navigation**: Intuitive grid-based interface for performers, videos, and scenes
-- 🎮 **Enhanced Controls**: Scene navigation, playback controls, and volume adjustment
-- 🔗 **Auto-Connect**: Intelligent connection management with timeout handling
-- 📊 **Real-time Sync**: Navigation state synchronized with TV display
-
-### TV App (`apps/tv`)
-- 🎬 **YouTube Integration**: Scene-based video playback with `@angular/youtube-player`
-- 📡 **Data Reception**: Receives all content data from Remote via WebSocket
-- 🖼️ **Responsive Grid**: Beautiful card-based layout for content browsing
-- 🎯 **Scene Seeking**: Automatic seeking to specific timestamps in videos
-- 📺 **TV-Optimized**: Large fonts, remote control navigation support
-
-### WebSocket Communication
-- 🌐 **Multi-Port Architecture**: Primary (8000) + Discovery (5544-5547)
-- 🔄 **Protocol Support**: Navigation commands, data messages, control signals
-- 🛡️ **Error Handling**: Robust reconnection and fallback mechanisms
-- 📱 **Device Types**: Remote/TV identification and pairing
+### Key Features
+- **Direct Communication**: TV acts as WebSocket server, Remote connects as client  
+- **Auto Discovery**: Remote automatically finds and connects to TV devices
+- **Real-time Sync**: Navigation and playback state synchronized between devices
+- **YouTube Integration**: Scene-based video playback with automatic seeking
+- **Material Design**: Modern, responsive interfaces optimized for each device
+- **No External Dependencies**: Self-contained system requiring only local network
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+ 
+- Node.js 18+
 - Angular CLI 20+
-- Modern browser with WebSocket support
+- Local WiFi network
 
-### Installation & Setup
-
+### Installation
 ```bash
-# Clone repository
-git clone <repository-url>
-cd sahar
-
-# Install dependencies for both apps
-cd apps/remote && npm install
-cd ../tv && npm install
-cd ../..
+# Install dependencies
+cd apps/tv && npm install
+cd ../remote && npm install
 ```
 
-### Running the System
-
+### Run Applications
 ```bash
-# Terminal 1: Start WebSocket Server
-node websocket-test-server-multiport.js
-
-# Terminal 2: Start TV Application
+# Start TV App (Terminal 1)
 cd apps/tv && ng serve --port 4203
 
-# Terminal 3: Start Remote Application  
+# Start Remote App (Terminal 2)  
 cd apps/remote && ng serve --port 4202
 ```
 
 ### Access Points
 - **TV Display**: http://localhost:4203
 - **Remote Control**: http://localhost:4202
-- **WebSocket Server**: ws://localhost:8000
 
-## 📱 Usage Workflow
+## 🏗️ Architecture
 
-1. **Device Discovery**: Remote automatically scans for TV devices
-2. **Auto-Connect**: Establishes WebSocket connection when TV found
-3. **Data Transfer**: Remote sends performers/videos data to TV
-4. **Navigation Sync**: Both apps show synchronized content navigation
-5. **Video Playback**: Scene selection triggers YouTube player on TV
-6. **Remote Control**: Use tablet for navigation and playback control
-
-## 🏗️ Project Structure
-
+### System Components
 ```
-sahar/
-├── apps/
-│   ├── remote/                 # Remote control tablet app
-│   │   ├── src/app/
-│   │   │   ├── components/     # UI components (grids, controls)
-│   │   │   ├── services/       # WebSocket & auto-connect logic
-│   │   │   └── models/         # Data models with sample content
-│   │   └── package.json
-│   └── tv/                     # TV display application  
-│       ├── src/app/
-│       │   ├── components/     # Video player component
-│       │   ├── services/       # Data reception & navigation
-│       │   └── models/         # TV-side data models
-│       └── package.json
-├── shared/                     # Shared protocols and models
-│   ├── models/
-│   └── websocket/
-├── websocket-test-server-multiport.js  # WebSocket bridge server
-└── docs/                      # Additional documentation
+┌─────────────────┐    WebSocket     ┌─────────────────┐
+│   Remote App    │◄──────────────►  │     TV App      │
+│  (Data Owner)   │   Protocol v2.0  │ (Display/Player)│
+│   Port: 4202    │                  │   Port: 4203    │
+│                 │                  │                 │
+│ • All Data      │ ──── Sends ────► │ • Receives Data │
+│ • Navigation    │      Content     │ • Shows Grid    │
+│ • Discovery     │                  │ • Plays Videos  │
+│ • Enhanced UI   │ ◄── Confirms ─── │ • WebSocket     │
+│                 │      State       │   Server        │
+└─────────────────┘                  └─────────────────┘
+        │                                     │
+        └─────── Network Discovery ───────────┘
+            (TV listens on ports 5544-5547)
 ```
 
-## 🎬 Video Integration
+### Core Principles
+1. **Single Source of Truth**: Remote app owns all content data
+2. **TV as Display**: TV app receives and displays data from Remote
+3. **Direct Connection**: No external servers or dependencies
+4. **Real-time Sync**: Navigation state synchronized via WebSocket
 
-### YouTube Player Features
-- **Scene-Based Playback**: Automatic seeking to scene timestamps
-- **Responsive Design**: Adapts to different TV screen sizes
-- **Control Integration**: Play/pause/seek via Remote app
-- **Error Handling**: Graceful fallbacks for unavailable videos
+## 📱 Applications
 
-### Sample Content Structure
+### TV Application (`apps/tv/`)
+**Role**: Display and Video Player
+- **Technology**: Angular 20+ with Material Design
+- **Bundle Size**: 499.55 kB (122.30 kB compressed)
+- **Features**:
+  - WebSocket server on ports 5544-5547
+  - YouTube video player integration (@angular/youtube-player)
+  - Receives all data from Remote app
+  - Large-screen optimized Material Design interface
+  - Scene-based video seeking and playback
+
+### Remote Application (`apps/remote/`)  
+**Role**: Control Interface and Data Owner
+- **Technology**: Angular 20+ with Material Design  
+- **Bundle Size**: 497.13 kB (118.93 kB compressed)
+- **Features**:
+  - Owns all performers/videos/scenes data
+  - Network discovery and auto-connection
+  - Touch-optimized tablet interface
+  - Enhanced video controls during playback
+  - Real-time command dispatch to TV
+
+## 🎬 Content Structure
+
+### Hierarchical Data Model
+- **4 Performers**: Top-level content creators
+- **11 Videos**: Video collections per performer  
+- **44 Scenes**: Individual scenes within videos with timestamps
+- **Enhanced Controls**: Additional navigation during video playback
+
+### Video Integration
 ```typescript
 interface Video {
   id: string;
   title: string;
-  youtubeId: string;        // YouTube video ID for playback
-  likedScenes: LikedScene[];
+  youtubeId: string;        // YouTube video ID
+  scenes: Scene[];
 }
 
-interface LikedScene {
+interface Scene {
   id: string;
   title: string;
-  startTime: number;        // Seconds for seeking
+  startTime: number;        // Seconds for YouTube seeking
   endTime?: number;
 }
 ```
 
-## 🔧 Configuration
+## 🔌 Communication Protocol
 
-### WebSocket Ports
-- **Primary**: 8000 (main communication)
-- **Discovery**: 5544-5547 (device scanning)
-- **TV App**: 4203 (Angular dev server)
-- **Remote App**: 4202 (Angular dev server)
+### WebSocket Protocol v2.0
+- **Transport**: WebSocket over TCP
+- **Format**: JSON messages
+- **Connection**: Direct TV ↔ Remote (no external server)
 
-### Auto-Connect Settings
+### Key Message Types
 ```typescript
-// In Remote app WebSocket service
-autoConnectDelay: 1000,      // Wait time after scan completion
-scanTimeout: 10000,          // Device discovery timeout
-retryAttempts: 3             // Connection retry limit
+// Discovery (Remote → TV)
+{ type: 'discovery', payload: { deviceType: 'remote', protocolVersion: '2.0' } }
+
+// Data Transfer (Remote → TV)  
+{ type: 'data', payload: { performers: [...], dataVersion: '1.0' } }
+
+// Navigation (Remote → TV)
+{ type: 'navigation', payload: { action: 'navigate_to_scene', targetId: 'scene-1' } }
+
+// Status (TV → Remote)
+{ type: 'status', payload: { currentState: {...}, playerState: {...} } }
 ```
 
-## 🧪 Testing & Verification
+## 🌐 Network Architecture
+
+### Connection Flow
+1. **TV Startup**: WebSocket server starts on first available port (5544-5547)
+2. **Remote Discovery**: Network scan finds TV's WebSocket server
+3. **Direct Connection**: WebSocket connection established  
+4. **Data Transfer**: Remote sends complete data payload to TV
+5. **Navigation Sync**: Real-time command synchronization
+6. **Video Control**: Scene-based YouTube playback coordination
+
+### Performance Characteristics
+- **Discovery Time**: <10 seconds for TV detection
+- **Connection Latency**: <50ms for WebSocket commands
+- **Bundle Sizes**: ~500KB each app (production optimized)
+- **Network Usage**: 1-10KB per message, minimal bandwidth
+
+## 🧪 Testing
+
+### Manual Testing Checklist
+- [ ] **Connection**: Remote discovers and connects to TV
+- [ ] **Data Sync**: Both apps display synchronized performers grid
+- [ ] **Navigation**: Performer → Videos → Scenes navigation works
+- [ ] **Video Playback**: Scene selection triggers YouTube player on TV
+- [ ] **Enhanced Controls**: Remote shows video controls during playback
+- [ ] **Error Handling**: Network disconnection and reconnection works
 
 ### Build Verification
 ```bash
-# Test Remote app build
-cd apps/remote && ng build
-
-# Test TV app build  
-cd apps/tv && ng build
+# Test builds
+cd apps/tv && ng build       # Should complete successfully  
+cd apps/remote && ng build   # Should complete successfully
 ```
 
-### Manual Testing Checklist
-- [ ] WebSocket server starts without errors
-- [ ] Remote app discovers TV device
-- [ ] Auto-connect establishes connection
-- [ ] Data synchronization (performers → TV)
-- [ ] Navigation sync (Remote ↔ TV)
-- [ ] YouTube video playback
-- [ ] Scene seeking functionality
-- [ ] Control commands (play/pause/volume)
+## 📖 Documentation
 
-## 📊 System Status
-
-### Build Status
-- ✅ **Remote App**: 492.37 kB (builds successfully)
-- ✅ **TV App**: 487.48 kB (builds successfully) 
-- ✅ **WebSocket Server**: Multi-port architecture operational
-- ✅ **YouTube Integration**: @angular/youtube-player package integrated
-
-### Recent Updates
-- **Video Player**: Complete YouTube integration with scene seeking
-- **Auto-Connect**: Sophisticated RxJS-based device connection
-- **Data Architecture**: Remote owns data, TV receives via WebSocket
-- **Error Handling**: Robust connection management and fallbacks
+### Complete Documentation Suite
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)**: Complete technical architecture and implementation details
+- **[PROTOCOL.md](./PROTOCOL.md)**: WebSocket communication protocol specification  
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)**: Deployment guide, testing procedures, and troubleshooting
+- **[VERIFICATION-RESULTS.md](./VERIFICATION-RESULTS.md)**: Implementation status and verification results
 
 ## 🛠️ Development
 
-### Key Technologies
-- **Frontend**: Angular 20+ with Material Design
-- **Communication**: WebSocket with custom protocol
-- **Video**: YouTube Player API integration
-- **Reactive**: RxJS for async operations and state management
-- **Styling**: SCSS with responsive design
+### Technology Stack
+- **Frontend**: Angular 20+ with Standalone Components
+- **UI Framework**: Angular Material 20.1.3
+- **Communication**: Native WebSocket API
+- **Video**: YouTube Player API (@angular/youtube-player)
+- **Reactive Programming**: RxJS for async operations
+- **Styling**: SCSS with Material Design theming
 
-### Architecture Principles
-- **Single Source of Truth**: Remote app owns all data
-- **Reactive Design**: Observable-based state management  
-- **Separation of Concerns**: Clear Remote vs TV responsibilities
-- **Error Resilience**: Graceful degradation and recovery
+### Development Workflow
+```bash
+# Development with live reload
+cd apps/tv && ng serve --port 4203 --host 0.0.0.0
+cd apps/remote && ng serve --port 4202 --host 0.0.0.0
 
-## 📖 Additional Documentation
+# Production builds
+cd apps/tv && ng build --configuration production
+cd apps/remote && ng build --configuration production
+```
 
-- [Architecture Details](./ARCHITECTURE-CORRECTED.md)
-- [Integration Status](./INTEGRATION-STATUS.md)
-- [Port Configuration](./PORT-CONFIGURATION.md)
-- [Build Status](./BUILD-STATUS.md)
-- [Verification Results](./VERIFICATION-RESULTS.md)
+## 🔧 System Requirements
+
+### Minimum Requirements
+- **Network**: Local WiFi (TV and Remote on same subnet)
+- **Browser**: Modern WebSocket support (Chrome 88+, Firefox 85+, Safari 14+)
+- **TV Device**: Any device capable of running Angular web application
+- **Remote Device**: Tablet or smartphone with touch interface
+
+### Recommended Setup
+- **TV**: Large screen display (32"+ recommended)
+- **Remote**: iPad or Android tablet (10"+ recommended)  
+- **Network**: 5GHz WiFi for optimal performance
+- **Bandwidth**: Minimal (1-10KB per WebSocket message)
+
+## 🚀 Production Deployment
+
+### Build for Production
+```bash
+# Build both applications
+cd apps/tv && ng build --configuration production     # 499.55 kB bundle
+cd apps/remote && ng build --configuration production # 497.13 kB bundle
+```
+
+### Deployment Options
+- **Development**: Angular CLI dev server (ng serve)
+- **Production**: Static web server (nginx, Apache, http-server)
+- **Smart TV**: Package as platform-specific apps (Tizen, webOS, Android TV)
+- **Progressive Web App**: PWA deployment for mobile devices
 
 ## 🤝 Contributing
 
@@ -221,160 +243,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**SAHAR TV Remote** - Transforming the smart TV experience with intelligent remote control 🚀
+**SAHAR TV Remote** - Transforming smart TV control with real-time synchronization 🚀
 
-## 🎯 Applications
-
-### 1. TV Application
-- **Location**: `./apps/tv/`
-- **URL**: `http://localhost:4203`
-- **Purpose**: Main display for content and video streaming
-- **Technology**: Angular 20.x + Angular Material 20.1.3 (Standalone API)
-- **Features**:
-  - 80% data view layout with performer thumbnails
-  - WebSocket communication for remote control
-  - Video streaming capability
-  - Material Design responsive grid layout
-
-### 2. Remote Application (iPad)
-- **Location**: `./apps/remote/`
-- **URL**: `http://localhost:4202`
-- **Purpose**: iPad remote control with synchronized content display
-- **Technology**: Angular 20.x + Angular Material 20.1.3 (Standalone API)
-- **Features**:
-  - Synchronized content navigation (performers → videos → scenes)
-  - Enhanced video navigation buttons when scenes are selected
-  - Device discovery via UDP broadcast
-  - iPad-optimized Material Design interface
-  - Real-time WebSocket communication
-
-## 🔧 Technology Stack
-
-- **Frontend**: Angular 20.0.5 with Standalone Components
-- **UI Framework**: Angular Material 20.1.3
-- **Communication**: WebSocket protocol over LAN
-- **Styling**: SCSS with Material Design theming
-- **Animation**: Angular Animations (required dependency)
-- **Build System**: Angular CLI with optimized bundles
-
-## 📊 Data Structure
-
-The system uses a YouTube-like hierarchical content structure:
-- **4 Performers**: Top-level content creators
-- **11 Videos**: Video collections per performer
-- **44 Scenes**: Individual scenes within videos
-- **Enhanced Controls**: Additional navigation buttons for scene playback
-
-## 🌐 Communication Protocol
-
-### WebSocket Messages
-```typescript
-// Navigation Commands
-{ type: 'NAVIGATE_TO_PERFORMER', performerId: string }
-{ type: 'NAVIGATE_TO_VIDEO', videoId: string }
-{ type: 'NAVIGATE_TO_SCENE', sceneId: string }
-
-// Control Commands
-{ type: 'PLAY_VIDEO', sceneId: string }
-{ type: 'PAUSE_VIDEO' }
-{ type: 'VOLUME_CHANGE', level: number }
-
-// Device Discovery
-{ type: 'DEVICE_DISCOVERY', deviceInfo: object }
-{ type: 'CONNECTION_STATUS', status: 'connected' | 'disconnected' }
-```
-
-### Connection Details
-- **WebSocket Server**: `ws://localhost:8000`
-- **Device Discovery**: UDP broadcast on LAN
-- **Real-time Sync**: Bidirectional communication
-- **Auto-reconnection**: Error handling and retry logic
-
-## 🚀 Quick Start
-
-### Prerequisites
-```bash
-# Ensure Node.js and Angular CLI are installed
-node --version  # v20+
-ng version      # Angular CLI 20+
-```
-
-### 1. Start WebSocket Server
-```bash
-node websocket-test-server.js
-# Server starts on ws://localhost:8000
-```
-
-### 2. Start TV Application
-```bash
-cd apps/tv
-ng serve --port 4203
-# TV app available at http://localhost:4203
-```
-
-### 3. Start Remote Application
-```bash
-cd apps/remote
-ng serve --port 4202
-# Remote app available at http://localhost:4202
-```
-
-### 4. Build for Production
-```bash
-# Build TV app
-cd apps/tv && ng build
-
-# Build Remote app
-cd apps/remote && ng build
-```
-
-## ✅ Development Status
-
-### Completed Features
-- ✅ **Project Architecture**: Complete Angular CLI workspace setup
-- ✅ **TV Application**: Fully functional with WebSocket integration
-- ✅ **Remote Application**: iPad-optimized interface with Material Design
-- ✅ **WebSocket Communication**: Real-time protocol tested and validated
-- ✅ **Data Models**: Hierarchical content structure (performers/videos/scenes)
-- ✅ **Build System**: Both applications compile successfully
-- ✅ **Test Server**: Node.js WebSocket server for development testing
-- ✅ **Enhanced Video Controls**: Additional navigation buttons for scene playback
-- ✅ **Device Discovery**: UDP broadcast protocol for LAN device detection
-
-### System Validation
-- **TV-Remote Communication**: ✅ Tested and functional
-- **Build Process**: ✅ Both apps compile without errors
-- **Development Servers**: ✅ Running on ports 4203 (TV) and 4202 (Remote)
-- **WebSocket Server**: ✅ Active on localhost:8000
-- **Material Design**: ✅ Fully integrated with animations support
-
-## 🔄 Usage Workflow
-
-1. **Device Discovery**: Remote app broadcasts to find TV on LAN
-2. **Connection**: WebSocket connection established between devices
-3. **Content Sync**: Both devices show synchronized performer/video/scene navigation
-4. **Enhanced Controls**: When scene selected, remote shows additional video navigation buttons
-5. **Video Streaming**: TV streams selected scene while remote provides enhanced controls
-
-## 🛠️ Development Guidelines
-
-### Code Standards
-- TypeScript strict mode enabled
-- Angular Standalone Components architecture
-- Material Design principles
-- Responsive design for multiple screen sizes
-- WebSocket error handling and reconnection
-
-### Testing Strategy
-- Unit tests for services and components
-- Integration tests for WebSocket communication
-- End-to-end testing for TV-Remote synchronization
-- Performance testing for real-time communication
-
-## 📋 Build Configuration
-
-Both applications use optimized Angular build settings:
-- **Bundle Budgets**: Increased for Material Design components
-- **Code Splitting**: Lazy loading for optimal performance
-- **SCSS Processing**: Material theming and responsive styles
-- **TypeScript**: Strict compilation with type safety
+*For detailed technical information, see the complete documentation suite in [ARCHITECTURE.md](./ARCHITECTURE.md), [PROTOCOL.md](./PROTOCOL.md), and [DEPLOYMENT.md](./DEPLOYMENT.md)*

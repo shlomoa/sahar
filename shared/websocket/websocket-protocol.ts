@@ -111,7 +111,7 @@ export type RemoteMessage = NavigationMessage | ControlMessage | DiscoveryMessag
 
 // Protocol Configuration
 export const WEBSOCKET_CONFIG = {
-  DEFAULT_PORT: 8000,
+  DEFAULT_PORT: 5544, // TV listens on ports 5544-5547, start with first available
   DISCOVERY_PORT: 8001,
   DISCOVERY_INTERVAL: 5000, // 5 seconds
   HEARTBEAT_INTERVAL: 30000, // 30 seconds

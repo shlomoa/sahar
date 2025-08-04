@@ -1,0 +1,37 @@
+{
+  "name": "sahar-validation",
+  "version": "1.0.0",
+  "description": "Validation and testing suite for SAHAR TV-Remote communication system",
+  "main": "validate.js",
+  "scripts": {
+    "validate": "node validate.js",
+    "validate:env": "node validate.js --env",
+    "validate:services": "node validate.js --services",
+    "validate:integration": "node validate.js --integration",
+    "test:integration": "node test-drivers/tv-app-test-driver.js",
+    "test:websocket": "node websocket-mock-server.js",
+    "test:connection": "node connection-flow.js",
+    "test:server": "node websocket-test-server.js",
+    "test:server:dev": "nodemon websocket-test-server.js",
+    "start": "node websocket-test-server.js",
+    "dev": "nodemon websocket-test-server.js"
+  },
+  "dependencies": {
+    "ws": "^8.14.2",
+    "concurrently": "^8.2.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": [
+    "validation",
+    "testing",
+    "websocket",
+    "tv",
+    "remote",
+    "communication",
+    "sahar"
+  ],
+  "author": "Sahar Project",
+  "license": "MIT"
+}
