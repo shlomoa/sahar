@@ -10,7 +10,7 @@
     <mat-card 
       *ngFor="let scene of scenes; trackBy: trackBySceneId"
       class="scene-card"
-      [class.selected]="scene.id === selectedSceneTimestamp"
+      [class.selected]="scene.id === selectedSceneId"
       (click)="onSceneSelected(scene.id)">
       
       <img 

@@ -156,24 +156,7 @@ export class VideoNavigationService {
 
     const scene = currentVideo.likedScenes.find(s => s.id === sceneId);
     if (!scene) {
-      console.warn('📺 TV: Scene not found with ID:', sceneId);
-      console.warn('📺 TV: Available scene IDs:', currentVideo.likedScenes.map(s => s.id));
-      
-      // Try to find scene by index (in case sceneId is a numeric string)
-      const sceneIndex = parseInt(sceneId);
-      if (!isNaN(sceneIndex) && sceneIndex >= 0 && sceneIndex < currentVideo.likedScenes.length) {
-        const sceneByIndex = currentVideo.likedScenes[sceneIndex];
-        console.log('📺 TV: Found scene by index:', sceneIndex, '→', sceneByIndex.title);
-        return this.playSceneObject(sceneByIndex);
-      }
-      
-      // Try to find scene by startTime (in case sceneId is a timestamp)
-      const sceneByTime = currentVideo.likedScenes.find(s => s.startTime.toString() === sceneId);
-      if (sceneByTime) {
-        console.log('📺 TV: Found scene by startTime:', sceneId, '→', sceneByTime.title);
-        return this.playSceneObject(sceneByTime);
-      }
-      
+      console.error('📺 TV: Scene not found with ID:', sceneId);
       return;
     }
 

@@ -21,7 +21,7 @@ import { LikedScene, Video } from '../../../../../../shared/models/video-navigat
 export class VideoControlsComponent {
   @Input() currentVideo?: Video;
   @Input() currentScene?: LikedScene;
-  @Input() sceneTimestamp?: string;
+  @Input() sceneId?: string;
   @Input() isPlaying = false;
   @Input() isMuted = false;
   @Input() volumeLevel = 50;

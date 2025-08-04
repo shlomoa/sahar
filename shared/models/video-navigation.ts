@@ -55,10 +55,10 @@ export const performersData: Performer[] = [
     description: 'Children\'s music and educational content',
     videos: [
       {
-        id: 'yuval-birthday-song',
-        title: 'Happy Birthday Song',
+        id: 'israely-boy',
+        title: 'יובל המבולבל - אני ילד ישראלי המופע המלא',
         thumbnail: 'https://images.pexels.com/photos/1729931/pexels-photo-1729931.jpeg?auto=compress&cs=tinysrgb&w=300',
-        url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        url: 'https://www.youtube.com/watch?v=RLXswLCRG08',
         duration: 240, // 4 minutes
         description: 'A fun birthday celebration song',
         likedScenes: [
@@ -93,10 +93,10 @@ export const performersData: Performer[] = [
         ]
       },
       {
-        id: 'yuval-animal-sounds',
-        title: 'Animal Sounds',
+        id: 'space-travel',
+        title: 'יובל המבולבל - המסע אל הכוכב (ההצגה המלאה)',
         thumbnail: 'https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg?auto=compress&cs=tinysrgb&w=300',
-        url: 'https://www.youtube.com/watch?v=L_jWHffIx5E',
+        url: 'https://www.youtube.com/watch?v=teSXi_C2jNY',
         duration: 300, // 5 minutes
         description: 'Learn different animal sounds',
         likedScenes: [

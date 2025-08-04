@@ -19,7 +19,7 @@ import { LikedScene } from '../../models/video-navigation';
 })
 export class SharedScenesGridComponent {
   @Input() scenes: LikedScene[] = [];
-  @Input() selectedSceneTimestamp?: string;
+  @Input() selectedSceneId?: string;
   @Input() displayMode: 'remote' | 'tv' = 'remote';
   @Input() showBreadcrumb = true;
   

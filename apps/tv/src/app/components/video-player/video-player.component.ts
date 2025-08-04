@@ -34,13 +34,10 @@ export class VideoPlayerComponent implements OnInit, OnDestroy, OnChanges {
   isPlayerReady = false;
   currentTime = 0;
   duration = 0;
-  private player?: any; // YouTube player instance
 
   ngOnInit() {
-    // Load YouTube API if not already loaded
-    if (!window.YT) {
-      this.loadYouTubeAPI();
-    }
+    // Angular YouTubePlayerModule handles API loading automatically
+    console.log('📺 Video player component initialized');
   }
 
   ngOnDestroy() {
@@ -67,63 +64,38 @@ export class VideoPlayerComponent implements OnInit, OnDestroy, OnChanges {
     return this.currentVideo?.url ? this.extractYouTubeId(this.currentVideo.url) : null;
   }
 
-  private loadYouTubeAPI() {
-    const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    const firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
-    
-    (window as any).onYouTubeIframeAPIReady = () => {
-      console.log('📺 YouTube API loaded');
-    };
-  }
-
   onPlayerReady() {
     console.log('📺 YouTube player ready');
     this.isPlayerReady = true;
     this.playerReady.emit();
     
-    if (this.currentVideo?.url) {
-      const youtubeId = this.extractYouTubeId(this.currentVideo.url);
-      if (youtubeId) {
-        this.player = new YT.Player('youtube-player', {
-          height: '100%',
-          width: '100%',
-          videoId: youtubeId,
-          playerVars: {
-            autoplay: 0,
-            controls: 1,
-            disablekb: 0,
-            fs: 1,
-            modestbranding: 1,
-            rel: 0
-          },
-          events: {
-            onReady: this.onPlayerReady.bind(this),
-            onStateChange: this.onStateChange.bind(this)
-          }
-        });
-      }
+    // If we have a current scene, seek to it after the player is ready
+    if (this.currentScene) {
+      setTimeout(() => {
+        this.seekToScene();
+      }, 1000); // Wait for video to load
     }
   }
 
   onStateChange(event: any) {
     const playerState = event.data;
     
+    // Use YouTube API constants for player states
+    // YT.PlayerState.PLAYING = 1, PAUSED = 2, ENDED = 0
     switch (playerState) {
-      case window.YT?.PlayerState.PLAYING:
+      case 1: // YT.PlayerState.PLAYING
         console.log('▶️ Video started playing');
         this.videoStarted.emit();
         this.startTimeTracking();
         break;
         
-      case window.YT?.PlayerState.PAUSED:
+      case 2: // YT.PlayerState.PAUSED
         console.log('⏸️ Video paused');
         this.videoPaused.emit();
         this.stopTimeTracking();
         break;
         
-      case window.YT?.PlayerState.ENDED:
+      case 0: // YT.PlayerState.ENDED
         console.log('⏹️ Video ended');
         this.videoEnded.emit();
         this.stopTimeTracking();
@@ -153,20 +125,21 @@ export class VideoPlayerComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private loadVideo() {
-    if (!this.isPlayerReady || !this.currentVideo?.url) {
+    if (!this.currentVideo?.url) {
       return;
     }
 
     const youtubeId = this.extractYouTubeId(this.currentVideo.url);
     if (!youtubeId) {
+      console.error('❌ Invalid YouTube URL:', this.currentVideo.url);
       return;
     }
 
     console.log('📺 Loading YouTube video:', youtubeId);
     
-    // The video will load automatically via the videoId binding
-    // If we have a specific scene, seek to it after loading
-    if (this.currentScene) {
+    // Angular YouTube player handles video loading automatically via videoId binding
+    // If we have a specific scene, seek to it after the video loads
+    if (this.currentScene && this.isPlayerReady) {
       setTimeout(() => {
         this.seekToScene();
       }, 2000); // Wait for video to load
@@ -174,7 +147,8 @@ export class VideoPlayerComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private seekToScene() {
-    if (!this.isPlayerReady || !this.currentScene) {
+    if (!this.isPlayerReady || !this.currentScene || !this.youtubePlayer) {
+      console.warn('⚠️ Cannot seek to scene: player not ready or scene/player missing');
       return;
     }
 
@@ -183,6 +157,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy, OnChanges {
     
     try {
       this.youtubePlayer.seekTo(startTime, true);
+      console.log('✅ Successfully seeked to scene:', this.currentScene.title);
     } catch (error) {
       console.error('❌ Error seeking to scene:', error);
     }
@@ -197,40 +172,76 @@ export class VideoPlayerComponent implements OnInit, OnDestroy, OnChanges {
 
   // Public control methods
   play() {
-    if (this.isPlayerReady) {
-      this.youtubePlayer.playVideo();
+    if (this.isPlayerReady && this.youtubePlayer) {
+      try {
+        this.youtubePlayer.playVideo();
+      } catch (error) {
+        console.error('❌ Error playing video:', error);
+      }
     }
   }
 
   pause() {
-    if (this.isPlayerReady) {
-      this.youtubePlayer.pauseVideo();
+    if (this.isPlayerReady && this.youtubePlayer) {
+      try {
+        this.youtubePlayer.pauseVideo();
+      } catch (error) {
+        console.error('❌ Error pausing video:', error);
+      }
     }
   }
 
   stop() {
-    if (this.isPlayerReady) {
-      this.youtubePlayer.stopVideo();
+    if (this.isPlayerReady && this.youtubePlayer) {
+      try {
+        this.youtubePlayer.stopVideo();
+      } catch (error) {
+        console.error('❌ Error stopping video:', error);
+      }
     }
   }
 
   seekTo(seconds: number) {
-    if (this.isPlayerReady) {
-      this.youtubePlayer.seekTo(seconds, true);
+    if (this.isPlayerReady && this.youtubePlayer) {
+      try {
+        this.youtubePlayer.seekTo(seconds, true);
+      } catch (error) {
+        console.error('❌ Error seeking video:', error);
+      }
     }
   }
 
   setVolume(volume: number) {
-    if (this.isPlayerReady) {
-      this.youtubePlayer.setVolume(volume);
+    if (this.isPlayerReady && this.youtubePlayer) {
+      try {
+        this.youtubePlayer.setVolume(volume);
+      } catch (error) {
+        console.error('❌ Error setting volume:', error);
+      }
     }
   }
 
   getCurrentTime(): number {
-    return this.isPlayerReady ? this.youtubePlayer.getCurrentTime() : 0;
+    if (this.isPlayerReady && this.youtubePlayer) {
+      try {
+        return this.youtubePlayer.getCurrentTime();
+      } catch (error) {
+        console.error('❌ Error getting current time:', error);
+        return 0;
+      }
+    }
+    return 0;
   }
 
   getDuration(): number {
-    return this.isPlayerReady ? this.youtubePlayer.getDuration() : 0;
+    if (this.isPlayerReady && this.youtubePlayer) {
+      try {
+        return this.youtubePlayer.getDuration();
+      } catch (error) {
+        console.error('❌ Error getting duration:', error);
+        return 0;
+      }
+    }
+    return 0;
   }
 }

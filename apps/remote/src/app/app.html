@@ -45,9 +45,9 @@
           </button>
         }
         
-        @if (currentNavigation.sceneTimestamp) {
+        @if (currentNavigation.sceneId) {
           <span class="separator">›</span>
-          <span class="current-scene">🎯 Scene {{currentNavigation.sceneTimestamp}}</span>
+          <span class="current-scene">🎯 Scene {{currentNavigation.sceneId}}</span>
         }
       </div>
 
@@ -77,7 +77,7 @@
         @case ('scenes') {
           <shared-scenes-grid
             [scenes]="getScenesForVideo(currentNavigation.performerId!, currentNavigation.videoId!)"
-            [selectedSceneTimestamp]="currentNavigation.sceneTimestamp"
+            [selectedSceneId]="currentNavigation.sceneId"
             [displayMode]="'remote'"
             [showBreadcrumb]="true"
             (sceneSelected)="navigateToScene(currentNavigation.performerId!, currentNavigation.videoId!, $event)"
@@ -89,7 +89,7 @@
           <video-controls
             [currentVideo]="getCurrentVideo()"
             [currentScene]="getCurrentScene()"
-            [sceneTimestamp]="currentNavigation.sceneTimestamp"
+            [sceneId]="currentNavigation.sceneId"
             [isPlaying]="isPlaying"
             [isMuted]="isMuted"
             [volumeLevel]="volumeLevel"

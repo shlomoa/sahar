@@ -11,15 +11,7 @@ import { VideoControlsComponent } from './components/video-controls/video-contro
 // Services and Models
 import { WebSocketService, DiscoveredDevice } from './services/websocket.service';
 import { performersData, Performer, Video, LikedScene } from '@shared/models/video-navigation';
-
-interface NavigationState {
-  level: 'performers' | 'videos' | 'scenes' | 'scene-selected';
-  performerId?: string;
-  videoId?: string;
-  sceneTimestamp?: string;
-}
-
-type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
+import { RemoteNavigationState, ConnectionStatus } from './models/remote-navigation';
 
 @Component({
   selector: 'app-root',
@@ -42,7 +34,7 @@ export class App implements OnInit, OnDestroy {
   performers: Performer[] = performersData;
   
   // Navigation state (synced with TV) - starts undefined until connected
-  currentNavigation: NavigationState = { level: 'performers' };
+  currentNavigation: RemoteNavigationState = { level: 'performers' };
   
   // Connection management - starts disconnected
   connectionStatus: ConnectionStatus = 'disconnected';
@@ -126,7 +118,7 @@ export class App implements OnInit, OnDestroy {
         level: 'scene-selected', 
         performerId: tvState.selectedPerformerId?.toString(),
         videoId: tvState.selectedVideoId?.toString(),
-        sceneTimestamp: tvState.selectedSceneId?.toString()
+        sceneId: tvState.selectedSceneId?.toString()
       };
     }
     
@@ -145,7 +137,7 @@ export class App implements OnInit, OnDestroy {
         level: 'scene-selected',
         performerId: this.currentNavigation.performerId,
         videoId: playerState.selectedVideoId.toString(),
-        sceneTimestamp: playerState.selectedSceneId.toString()
+        sceneId: playerState.selectedSceneId.toString()
       };
     }
   }
@@ -190,7 +182,7 @@ export class App implements OnInit, OnDestroy {
   navigateToScene(performerId: string, videoId: string, sceneId: string) {
     console.log('🎯 Navigate to scene:', performerId, videoId, sceneId);
     this.websocketService.sendNavigationCommand('navigate_to_scene', sceneId, 'segment');
-    this.currentNavigation = { level: 'scene-selected', performerId, videoId, sceneTimestamp: sceneId };
+    this.currentNavigation = { level: 'scene-selected', performerId, videoId, sceneId: sceneId };
   }
 
   navigateToScenes(performerId: string, videoId: string) {
@@ -220,11 +212,11 @@ export class App implements OnInit, OnDestroy {
   }
 
   getCurrentScene(): LikedScene | undefined {
-    if (!this.currentNavigation.sceneTimestamp) {
+    if (!this.currentNavigation.sceneId) {
       return undefined;
     }
     const video = this.getCurrentVideo();
-    return video?.likedScenes.find((s: any) => s.id === this.currentNavigation.sceneTimestamp);
+    return video?.likedScenes.find((s: any) => s.id === this.currentNavigation.sceneId);
   }
 
   // Video control methods
@@ -268,9 +260,9 @@ export class App implements OnInit, OnDestroy {
 
   private navigateToPreviousScene() {
     const video = this.getCurrentVideo();
-    if (!video || !this.currentNavigation.sceneTimestamp) return;
+    if (!video || !this.currentNavigation.sceneId) return;
     
-    const currentIndex = video.likedScenes.findIndex((s: any) => s.id === this.currentNavigation.sceneTimestamp);
+    const currentIndex = video.likedScenes.findIndex((s: any) => s.id === this.currentNavigation.sceneId);
     if (currentIndex > 0) {
       const previousScene = video.likedScenes[currentIndex - 1];
       this.navigateToScene(
@@ -283,9 +275,9 @@ export class App implements OnInit, OnDestroy {
 
   private navigateToNextScene() {
     const video = this.getCurrentVideo();
-    if (!video || !this.currentNavigation.sceneTimestamp) return;
+    if (!video || !this.currentNavigation.sceneId) return;
     
-    const currentIndex = video.likedScenes.findIndex((s: any) => s.id === this.currentNavigation.sceneTimestamp);
+    const currentIndex = video.likedScenes.findIndex((s: any) => s.id === this.currentNavigation.sceneId);
     if (currentIndex < video.likedScenes.length - 1) {
       const nextScene = video.likedScenes[currentIndex + 1];
       this.navigateToScene(
@@ -311,15 +303,15 @@ export class App implements OnInit, OnDestroy {
 
   hasPreviousScene(): boolean {
     const video = this.getCurrentVideo();
-    if (!video || !this.currentNavigation.sceneTimestamp) return false;
-    const currentIndex = video.likedScenes.findIndex((s: any) => s.id === this.currentNavigation.sceneTimestamp);
+    if (!video || !this.currentNavigation.sceneId) return false;
+    const currentIndex = video.likedScenes.findIndex((s: any) => s.id === this.currentNavigation.sceneId);
     return currentIndex > 0;
   }
 
   hasNextScene(): boolean {
     const video = this.getCurrentVideo();
-    if (!video || !this.currentNavigation.sceneTimestamp) return false;
-    const currentIndex = video.likedScenes.findIndex((s: any) => s.id === this.currentNavigation.sceneTimestamp);
+    if (!video || !this.currentNavigation.sceneId) return false;
+    const currentIndex = video.likedScenes.findIndex((s: any) => s.id === this.currentNavigation.sceneId);
     return currentIndex < video.likedScenes.length - 1;
   }
 }

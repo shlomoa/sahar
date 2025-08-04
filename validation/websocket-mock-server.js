@@ -583,11 +583,11 @@ function createServerOnPort(port) {
             else if (navAction === 'select_scene') {
               const performerId = message.payload.performerId;
               const videoId = message.payload.videoId;
-              const sceneTimestamp = message.payload.sceneTimestamp;
+              const sceneId = message.payload.sceneId;
               
               const performer = findPerformer(performerId);
               const video = findVideo(performerId, videoId);
-              const scene = video?.likedScenes.find(s => s.startTime.toString() === sceneTimestamp);
+              const scene = findScene(performerId, videoId, sceneId);
               
               if (scene && video && performer) {
                 statusResponse.payload.currentState = {
@@ -596,7 +596,7 @@ function createServerOnPort(port) {
                   canGoBack: true,
                   selectedPerformerId: performerId,
                   selectedVideoId: videoId,
-                  selectedSceneTimestamp: sceneTimestamp,
+                  selectedSceneId: sceneId,
                   sceneInfo: {
                     id: scene.id,
                     title: scene.title,
@@ -616,7 +616,7 @@ function createServerOnPort(port) {
                   }
                 };
               } else {
-                statusResponse.payload.message = `Scene at ${sceneTimestamp}s not found`;
+                statusResponse.payload.message = `Scene with id ${sceneId} not found`;
                 statusResponse.payload.error = true;
               }
             }
