@@ -6,8 +6,10 @@ import {
   ControlMessage, 
   StatusMessage,
   DiscoveryMessage,
+  DiscoveryResponseMessage,
   DiscoveryPayload,
   DataMessage,
+  DataConfirmationMessage,
   BroadcastMessage,
   NetworkDevice,
   WebSocketError,
@@ -48,110 +50,76 @@ export class WebSocketService {
   private deviceName = 'Sahar TV';
 
   constructor(private navigationService: VideoNavigationService) {
-    this.initializeDeviceDiscovery();
     this.subscribeToNavigationChanges();
+    this.connectToLocalServer();
   }
 
-  // Initialize device discovery using UDP broadcast
-  private initializeDeviceDiscovery(): void {
-    if (typeof window !== 'undefined' && 'navigator' in window) {
-      // Browser environment - use WebRTC for discovery or fallback to known IPs
-      this.startWebDiscovery();
-    }
+  // TV connects to local WebSocket server (Protocol v2.0)
+  private connectToLocalServer(): void {
+    // TV app connects to localhost WebSocket server on ports 5544-5547
+    this.connectToFirstAvailablePort();
   }
 
-  private startWebDiscovery(): void {
-    // For browser environment, we'll use a polling approach to known ports
-    const commonIPs = this.generateLocalNetworkIPs();
+  // Protocol v2.0: TV connects to first available localhost port (5544-5547)
+  private async connectToFirstAvailablePort(): Promise<void> {
+    const ports = [5544, 5545, 5546, 5547, 8000]; // Include 8000 for development fallback
     
-    this.discoveryTimer = setInterval(() => {
-      this.discoverDevicesOnNetwork(commonIPs);
-    }, WEBSOCKET_CONFIG.DISCOVERY_INTERVAL);
-  }
-
-  private generateLocalNetworkIPs(): string[] {
-    // Generate common local network IP ranges
-    const baseIPs = [];
-    
-    // Common local network ranges
-    for (let i = 1; i < 255; i++) {
-      baseIPs.push(`192.168.1.${i}`);
-      baseIPs.push(`192.168.0.${i}`);
-      baseIPs.push(`10.0.0.${i}`);
+    for (const port of ports) {
+      try {
+        console.log(`📺 TV trying to connect to localhost:${port}`);
+        await this.tryConnectToPort(port);
+        console.log(`✅ TV connected to localhost:${port}`);
+        return; // Successfully connected
+      } catch (error) {
+        console.log(`❌ TV failed to connect to localhost:${port}:`, error);
+        continue; // Try next port
+      }
     }
     
-    // Always include localhost for testing
-    baseIPs.unshift('localhost', '127.0.0.1');
-    
-    return baseIPs;
+    // If all ports failed, retry after delay
+    console.log('🔄 TV retrying connection in 5 seconds...');
+    setTimeout(() => {
+      this.connectToFirstAvailablePort();
+    }, 5000);
   }
 
-  private async discoverDevicesOnNetwork(ips: string[]): Promise<void> {
-    const discoveryPromises = ips.map(ip => this.pingDevice(ip));
-    
-    // Check a batch of IPs at a time to avoid overwhelming the network
-    const batchSize = 10;
-    for (let i = 0; i < discoveryPromises.length; i += batchSize) {
-      const batch = discoveryPromises.slice(i, i + batchSize);
-      await Promise.allSettled(batch);
-    }
-  }
-
-  private async pingDevice(ip: string): Promise<void> {
-    try {
-      // Try to establish a quick WebSocket connection to detect devices
-      const testWs = new WebSocket(`ws://${ip}:${WEBSOCKET_CONFIG.DEFAULT_PORT}`);
+  private tryConnectToPort(port: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const url = `ws://localhost:${port}`;
+      const testWs = new WebSocket(url);
       
       const timeout = setTimeout(() => {
         testWs.close();
-      }, 1000); // 1 second timeout
-
+        reject(new Error(`Connection timeout for port ${port}`));
+      }, 2000);
+      
       testWs.onopen = () => {
         clearTimeout(timeout);
-        // Send discovery message
-        const discoveryMsg: DiscoveryMessage = {
-          type: 'discovery',
-          timestamp: Date.now(),
-          payload: {
-            deviceType: 'tv',
-            deviceId: this.deviceId,
-            deviceName: this.deviceName,
-            capabilities: ['navigation', 'playback', 'status'],
-            networkInfo: {
-              ip: window.location.hostname,
-              port: WEBSOCKET_CONFIG.DEFAULT_PORT
-            }
-          }
-        };
-        testWs.send(JSON.stringify(discoveryMsg));
-        testWs.close();
+        testWs.close(); // Close test connection
+        this.connect(url); // Establish real connection
+        resolve();
       };
-
+      
       testWs.onerror = () => {
         clearTimeout(timeout);
+        reject(new Error(`Connection failed for port ${port}`));
       };
-
-    } catch (error) {
-      // Device not reachable, ignore
-    }
+    });
   }
 
-  // Connect to a specific remote device
-  public connectToDevice(device: NetworkDevice): void {
-    this.disconnect();
-    this.connect(`ws://${device.ip}:${device.port}`);
-  }
-
-  // Connect to WebSocket server (for testing with localhost:8000)
+  // TV connects to localhost WebSocket server (Protocol v2.0)
   public connect(url: string = `ws://localhost:${WEBSOCKET_CONFIG.DEFAULT_PORT}`): void {
     try {
       this.ws = new WebSocket(url);
       
       this.ws.onopen = () => {
-        console.log('WebSocket connected to:', url);
+        console.log('📺 TV WebSocket connected to local server:', url);
         this.connectedSubject.next(true);
         this.reconnectAttempts = 0;
         this.startHeartbeat();
+        
+        // Send TV discovery/identification to local server
+        this.sendTVIdentification();
         this.sendStatusUpdate();
       };
 
@@ -166,21 +134,41 @@ export class WebSocketService {
       };
 
       this.ws.onclose = () => {
-        console.log('WebSocket disconnected');
+        console.log('📺 TV WebSocket disconnected from local server');
         this.connectedSubject.next(false);
         this.stopHeartbeat();
-        this.attemptReconnect();
+        this.attemptReconnectToLocalServer();
       };
 
       this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        this.emitError(ERROR_CODES.CONNECTION_FAILED, 'WebSocket connection failed');
+        console.error('📺 TV WebSocket error:', error);
+        this.emitError(ERROR_CODES.CONNECTION_FAILED, 'TV WebSocket connection failed');
       };
 
     } catch (error) {
-      console.error('Failed to create WebSocket connection:', error);
-      this.emitError(ERROR_CODES.CONNECTION_FAILED, 'Failed to create WebSocket connection');
+      console.error('❌ TV failed to create WebSocket connection:', error);
+      this.emitError(ERROR_CODES.CONNECTION_FAILED, 'Failed to create TV WebSocket connection');
     }
+  }
+
+  // Send TV identification to local server
+  private sendTVIdentification(): void {
+    const identificationMsg: DiscoveryMessage = {
+      type: 'discovery',
+      timestamp: Date.now(),
+      payload: {
+        deviceType: 'tv',
+        deviceId: this.deviceId,
+        deviceName: this.deviceName,
+        capabilities: ['display', 'video', 'audio', 'navigation'],
+        networkInfo: {
+          ip: 'localhost',
+          port: 4203 // TV app development port
+        }
+      }
+    };
+    
+    this.sendMessage(identificationMsg);
   }
 
   private handleIncomingMessage(message: any): void {
@@ -206,6 +194,11 @@ export class WebSocketService {
       
       case 'discovery':
         this.handleDiscoveryMessage(message as DiscoveryMessage);
+        break;
+      
+      case 'discovery_response':
+        // Handle discovery response from other TVs (not typically needed)
+        console.log('📺 TV received discovery response:', message);
         break;
       
       case 'status':
@@ -262,14 +255,16 @@ export class WebSocketService {
   }
 
   private sendDataConfirmation(): void {
-    const message: StatusMessage = {
-      type: 'status',
+    const message: DataConfirmationMessage = {
+      type: 'data_confirmation',
       timestamp: Date.now(),
       payload: {
-        currentState: {
-          level: 'performers',
-          breadcrumb: ['Home'],
-          canGoBack: false
+        status: 'received',
+        dataVersion: '1.0',
+        itemsReceived: {
+          performers: this.navigationService.getPerformersCount(),
+          videos: this.navigationService.getVideosCount(),
+          scenes: this.navigationService.getScenesCount()
         }
       }
     };
@@ -451,17 +446,19 @@ export class WebSocketService {
     }
   }
 
-  private attemptReconnect(): void {
+  private attemptReconnectToLocalServer(): void {
     if (this.reconnectAttempts < WEBSOCKET_CONFIG.MAX_RECONNECT_ATTEMPTS) {
       this.reconnectAttempts++;
-      console.log(`Attempting to reconnect (${this.reconnectAttempts}/${WEBSOCKET_CONFIG.MAX_RECONNECT_ATTEMPTS})`);
+      console.log(`🔄 TV attempting to reconnect to local server (${this.reconnectAttempts}/${WEBSOCKET_CONFIG.MAX_RECONNECT_ATTEMPTS})`);
       
+      // Exponential backoff for reconnection
+      const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 30000);
       this.reconnectTimer = setTimeout(() => {
-        this.connect();
-      }, WEBSOCKET_CONFIG.RECONNECT_INTERVAL);
+        this.connectToFirstAvailablePort();
+      }, delay);
     } else {
-      console.error('Max reconnection attempts reached');
-      this.emitError(ERROR_CODES.CONNECTION_FAILED, 'Failed to reconnect after maximum attempts');
+      console.error('❌ TV max reconnection attempts reached');
+      this.emitError(ERROR_CODES.CONNECTION_FAILED, 'TV failed to reconnect to local server after maximum attempts');
     }
   }
 
@@ -484,11 +481,6 @@ export class WebSocketService {
     
     this.stopHeartbeat();
     
-    if (this.discoveryTimer) {
-      clearInterval(this.discoveryTimer);
-      this.discoveryTimer = null;
-    }
-    
     if (this.ws) {
       this.ws.close();
       this.ws = null;
@@ -497,16 +489,10 @@ export class WebSocketService {
     this.connectedSubject.next(false);
   }
 
-  // Public methods for manual device discovery
-  public startDiscovery(): void {
-    this.startWebDiscovery();
-  }
-
-  public stopDiscovery(): void {
-    if (this.discoveryTimer) {
-      clearInterval(this.discoveryTimer);
-      this.discoveryTimer = null;
-    }
+  // Public method to manually reconnect to local server
+  public reconnectToLocalServer(): void {
+    this.disconnect();
+    this.connectToFirstAvailablePort();
   }
 
   public getDeviceInfo() {

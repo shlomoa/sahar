@@ -147,28 +147,17 @@ export class App implements OnInit, OnDestroy {
       this.snackBar.open(`Connection error: ${error.message}`, 'Close', { duration: 5000 });
     });
 
-    // Subscribe to discovered devices
+    // Subscribe to discovered devices (TV doesn't discover devices anymore in Protocol v2.0)
+    // TV connects to local server automatically
     const devicesSub = this.webSocketService.devices$.subscribe(devices => {
-      console.log('Discovered devices:', devices);
-      if (devices.length > 0) {
-        const remoteDevices = devices.filter(d => d.deviceType === 'remote');
-        if (remoteDevices.length > 0) {
-          const snackBarRef = this.snackBar.open(`Found ${remoteDevices.length} remote(s)`, 'Connect', {
-            duration: 10000
-          });
-          snackBarRef.onAction().subscribe(() => {
-            // Connect to the first available remote
-            this.webSocketService.connectToDevice(remoteDevices[0]);
-          });
-        }
-      }
+      console.log('📺 Local server discovered devices:', devices);
+      // TV doesn't need to act on discovered devices in Protocol v2.0
     });
 
     this.subscriptions.push(connectionSub, errorSub, devicesSub);
 
-    // Start the WebSocket connection
-    this.webSocketService.connect();
-    this.webSocketService.startDiscovery();
+    // Protocol v2.0: TV connects to local server automatically (no manual connect needed)
+    console.log('📺 TV starting - will auto-connect to local WebSocket server');
   }
 
   // Event handlers for shared components

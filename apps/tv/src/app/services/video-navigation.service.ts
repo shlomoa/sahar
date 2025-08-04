@@ -188,4 +188,19 @@ export class VideoNavigationService {
   hasData(): boolean {
     return this.performersData.length > 0;
   }
+
+  // Count methods for data confirmation
+  getPerformersCount(): number {
+    return this.performersData.length;
+  }
+
+  getVideosCount(): number {
+    return this.performersData.reduce((total, performer) => total + performer.videos.length, 0);
+  }
+
+  getScenesCount(): number {
+    return this.performersData.reduce((total, performer) => 
+      total + performer.videos.reduce((videoTotal, video) => 
+        videoTotal + video.likedScenes.length, 0), 0);
+  }
 }

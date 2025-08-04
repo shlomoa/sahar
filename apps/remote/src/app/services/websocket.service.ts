@@ -6,8 +6,10 @@ import {
   NavigationMessage, 
   ControlMessage, 
   DiscoveryMessage, 
+  DiscoveryResponseMessage,
   StatusMessage,
   DataMessage,
+  DataConfirmationMessage,
   DataPayload,
   WEBSOCKET_CONFIG 
 } from '../../../shared/websocket/websocket-protocol';
@@ -172,38 +174,31 @@ export class WebSocketService implements OnDestroy {
     this.scanningSubject.next(true);
     this.discoveredDevices$.next([]); // Clear previous devices
     
-    console.log('🔍 Starting device discovery...');
+    console.log('🔍 Starting Protocol v2.0 device discovery...');
+    
+    // Protocol v2.0: Scan specific ports (5544-5547) + development fallback (8000)
+    const targetPorts = [5544, 5545, 5546, 5547, 8000];
     
     // Get the local network gateway IP range
     const gatewayBase = this.getGatewayBaseIP();
-    const targetPorts = [5544, 5545, 5546, 5547];
     
-    console.log(`🌐 Scanning ${gatewayBase}.x on ports:`, targetPorts);
+    console.log(`🌐 Scanning ${gatewayBase}.x on Protocol v2.0 ports:`, targetPorts);
     
-    // Scan the gateway IP range for TV devices on specified ports
-    this.scanNetworkForTVDevices(gatewayBase, targetPorts);
+    // Enhanced network scanning with proper timeouts
+    this.scanNetworkForTVDevicesEnhanced(gatewayBase, targetPorts);
     
+    // Complete discovery after reasonable timeout
     setTimeout(() => {
       this.isScanning = false;
       this.scanningSubject.next(false);
       
       if (this.discoveredDevices$.value.length === 0) {
-        // Fallback for local testing (development convenience)
-        // Uses port 8000 for immediate connectivity testing
-        const testDevice: DiscoveredDevice = {
-          id: 'local-test-tv',
-          name: 'Local TV (Test - Port 8000)',
-          type: 'tv',
-          ip: 'localhost',
-          port: 8000,
-          capabilities: ['navigation', 'control', 'status'],
-          lastSeen: Date.now()
-        };
-        this.discoveredDevices$.next([testDevice]);
-        console.log('📺 Added fallback device for testing (development port 8000)');
+        console.log('❌ No TV devices found on network');
+        // Add localhost fallback for development
+        this.addLocalhostFallbackDevices(targetPorts);
       }
       console.log(`✅ Device discovery complete. Found ${this.discoveredDevices$.value.length} devices`);
-    }, 5000);
+    }, 10000); // 10 second discovery timeout
   }
 
   private getGatewayBaseIP(): string {
@@ -212,58 +207,78 @@ export class WebSocketService implements OnDestroy {
     return '192.168.1';
   }
 
-  private async scanNetworkForTVDevices(gatewayBase: string, ports: number[]) {
+  private addLocalhostFallbackDevices(targetPorts: number[]): void {
+    // Add localhost devices for development testing
+    const localhostDevices: DiscoveredDevice[] = targetPorts.map(port => ({
+      id: `localhost-tv-${port}`,
+      name: `SAHAR TV (localhost:${port})`,
+      type: 'tv' as const,
+      ip: 'localhost',
+      port: port,
+      capabilities: ['navigation', 'control', 'status'],
+      lastSeen: Date.now()
+    }));
+    
+    this.discoveredDevices$.next(localhostDevices);
+    console.log(`📺 Added ${localhostDevices.length} localhost fallback devices for development`);
+  }
+
+  private async scanNetworkForTVDevicesEnhanced(gatewayBase: string, ports: number[]) {
     const promises: Promise<void>[] = [];
     
-    // Scan IP range 192.168.1.1 to 192.168.1.254 on specified ports
-    // Primary: 5544-5547 (per user story requirements)
-    // Fallback: 8000 (development convenience)
+    // Scan IP range 192.168.x.1 to 192.168.x.254 on Protocol v2.0 ports
+    // Enhanced with proper timeout and error handling
     for (let ip = 1; ip <= 254; ip++) {
       const targetIP = `${gatewayBase}.${ip}`;
       
       for (const port of ports) {
-        promises.push(this.checkTVDevice(targetIP, port));
+        promises.push(this.checkTVDeviceEnhanced(targetIP, port));
       }
     }
     
-    // Wait for all scans to complete (but don't block the UI)
-    Promise.allSettled(promises).then(results => {
-      const successful = results.filter(r => r.status === 'fulfilled').length;
-      console.log(`🔍 Network scan completed: ${successful}/${results.length} checks successful`);
-    });
+    // Also check localhost specifically for development
+    for (const port of ports) {
+      promises.push(this.checkTVDeviceEnhanced('localhost', port));
+      promises.push(this.checkTVDeviceEnhanced('127.0.0.1', port));
+    }
+    
+    // Wait for all scans to complete with progress tracking
+    const results = await Promise.allSettled(promises);
+    const successful = results.filter(r => r.status === 'fulfilled').length;
+    console.log(`🔍 Enhanced network scan completed: ${successful}/${results.length} checks successful`);
   }
 
-  private async checkTVDevice(ip: string, port: number): Promise<void> {
+  private async checkTVDeviceEnhanced(ip: string, port: number): Promise<void> {
     return new Promise((resolve) => {
       const testUrl = `ws://${ip}:${port}`;
       
       try {
-        // Real WebSocket connection test with timeout
+        // Protocol v2.0: Real WebSocket connection test with 2-second timeout
         const testWs = new WebSocket(testUrl);
         const timeout = setTimeout(() => {
           testWs.close();
           resolve(); // Silently fail for discovery
-        }, 2000); // 2 second timeout
+        }, 2000); // Protocol v2.0: 2-second timeout per port
         
         testWs.onopen = () => {
           clearTimeout(timeout);
           console.log(`✅ Found TV device at: ${testUrl}`);
           
-          // Add device to discovered list
-          if (!this.discoveredDevices$.value.find(d => d.ip === ip && d.port === port)) {
+          // Add device to discovered list if not already present
+          const existingDevices = this.discoveredDevices$.value;
+          if (!existingDevices.find(d => d.ip === ip && d.port === port)) {
             const device: DiscoveredDevice = {
               id: `sahar-tv-${ip}-${port}`,
-              name: `SAHAR TV (${ip})`,
+              name: `SAHAR TV (${ip}:${port})`,
               type: 'tv',
               ip: ip,
               port: port,
-              capabilities: ['navigation', 'control', 'status'],
+              capabilities: ['navigation', 'control', 'status', 'display'],
               lastSeen: Date.now()
             };
             
-            const current = this.discoveredDevices$.value;
-            this.discoveredDevices$.next([...current, device]);
-            console.log(`📺 Added TV device: ${device.name} at ${ip}:${port}`);
+            this.discoveredDevices$.next([...existingDevices, device]);
+            console.log(`📺 Added TV device: ${device.name}`);
           }
           
           testWs.close();
@@ -335,10 +350,13 @@ export class WebSocketService implements OnDestroy {
       // Re-enable auto-connect when disconnected
       this.autoConnectEnabled = true;
 
-      // Auto-reconnect if not intentional disconnect
+      // Protocol v2.0: Auto-reconnect with exponential backoff if not intentional disconnect
       if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
         this.reconnectAttempts++;
-        console.log(`🔄 Reconnecting... Attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
+        
+        // Exponential backoff: 1s, 2s, 4s, 8s, 16s, max 30s
+        const backoffDelay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 30000);
+        console.log(`🔄 Reconnecting... Attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} (delay: ${backoffDelay}ms)`);
         
         setTimeout(() => {
           if (this.ws && this.ws.url) {
@@ -348,13 +366,14 @@ export class WebSocketService implements OnDestroy {
             console.log('🔍 Starting auto-discovery for reconnection...');
             this.startDeviceDiscovery();
           }
-        }, 2000 * this.reconnectAttempts);
+        }, backoffDelay);
       } else if (event.code !== 1000) {
-        // Max reconnection attempts reached, try discovery again
+        // Max reconnection attempts reached, try discovery again after longer delay
         console.log('🔍 Max reconnection attempts reached, starting fresh discovery...');
         setTimeout(() => {
+          this.reconnectAttempts = 0; // Reset for fresh discovery
           this.startDeviceDiscovery();
-        }, 5000);
+        }, 10000); // 10 second delay before fresh discovery
       }
     };
 
@@ -394,6 +413,20 @@ export class WebSocketService implements OnDestroy {
         }
         break;
 
+      case 'discovery_response':
+        // Handle discovery response from TV
+        const discoveryResponse = message as DiscoveryResponseMessage;
+        console.log('📱 Remote received discovery response from TV:', discoveryResponse);
+        break;
+
+      case 'data_confirmation':
+        const dataConfirmation = message as DataConfirmationMessage;
+        console.log('📱 Remote received data confirmation from TV:', dataConfirmation);
+        if (dataConfirmation.payload.status === 'received') {
+          console.log(`✅ TV confirmed receipt of ${dataConfirmation.payload.itemsReceived?.performers} performers`);
+        }
+        break;
+
       case 'data':
         console.log('📱 Remote received data confirmation from TV');
         break;
@@ -412,7 +445,8 @@ export class WebSocketService implements OnDestroy {
         networkInfo: {
           ip: 'localhost', // Will be updated by actual network detection
           port: 4202 // Remote app port
-        }
+        },
+        protocolVersion: '2.0' // Protocol v2.0 support
       }
     };
     

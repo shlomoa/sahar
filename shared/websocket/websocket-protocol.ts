@@ -1,9 +1,10 @@
 // WebSocket Communication Protocol for TV-Remote System
 
 export interface WebSocketMessage {
-  type: 'navigation' | 'control' | 'discovery' | 'status' | 'data' | 'broadcast';
+  type: 'navigation' | 'control' | 'discovery' | 'discovery_response' | 'status' | 'data' | 'data_confirmation' | 'broadcast' | 'error' | 'heartbeat';
   timestamp: number;
   payload: any;
+  messageId?: string; // Optional for tracking
   original?: WebSocketMessage; // For broadcast messages containing original message
 }
 
@@ -30,6 +31,7 @@ export interface DiscoveryPayload {
     ip: string;
     port: number;
   };
+  protocolVersion?: string; // Protocol v2.0 support
 }
 
 // Data Transfer - for sending performer/video data from Remote to TV
@@ -91,6 +93,11 @@ export interface DiscoveryMessage extends WebSocketMessage {
   payload: DiscoveryPayload;
 }
 
+export interface DiscoveryResponseMessage extends WebSocketMessage {
+  type: 'discovery_response';
+  payload: DiscoveryPayload;
+}
+
 export interface StatusMessage extends WebSocketMessage {
   type: 'status';
   payload: StatusUpdate;
@@ -101,13 +108,59 @@ export interface DataMessage extends WebSocketMessage {
   payload: DataPayload;
 }
 
+export interface DataConfirmationMessage extends WebSocketMessage {
+  type: 'data_confirmation';
+  payload: {
+    status: 'received' | 'error';
+    dataVersion?: string;
+    checksum?: string;
+    itemsReceived?: {
+      performers: number;
+      videos: number;
+      scenes: number;
+    };
+    error?: string;
+  };
+}
+
+export interface ErrorMessage extends WebSocketMessage {
+  type: 'error';
+  payload: {
+    errorCode: string;
+    errorMessage: string;
+    originalMessage?: WebSocketMessage;
+    suggestions?: string[];
+    retryAttempt?: number;
+    nextRetryIn?: number;
+  };
+}
+
+export interface HeartbeatMessage extends WebSocketMessage {
+  type: 'heartbeat';
+  payload: {
+    deviceId: string;
+    status: 'alive';
+    timestamp?: number;
+  };
+}
+
 export interface BroadcastMessage extends WebSocketMessage {
   type: 'broadcast';
   original: NavigationMessage | ControlMessage | DiscoveryMessage | StatusMessage | DataMessage;
 }
 
 // Union type for all possible messages
-export type RemoteMessage = NavigationMessage | ControlMessage | DiscoveryMessage | StatusMessage | DataMessage | BroadcastMessage;
+export type RemoteMessage = 
+  | NavigationMessage 
+  | ControlMessage 
+  | DiscoveryMessage 
+  | DiscoveryResponseMessage
+  | StatusMessage 
+  | DataMessage 
+  | DataConfirmationMessage
+  | ErrorMessage
+  | HeartbeatMessage
+  | BroadcastMessage;
 
 // Protocol Configuration
 export const WEBSOCKET_CONFIG = {
