@@ -1,6 +1,10 @@
 # SAHAR Validation Suite
 
-Comprehensive validation and testing framework for the SAHAR TV-Remote communication system.
+Validation and testing framework for the SAHAR TV-Remote communication system.
+
+> **📖 For complete testing procedures and validation strategy, see [DEPLOYMENT.md](../DEPLOYMENT.md)**  
+> **🔧 For technical implementation details, see [ARCHITECTURE.md](../ARCHITECTURE.md)**  
+> **📋 For current validation status, see [VERIFICATION-RESULTS.md](../VERIFICATION-RESULTS.md)**
 
 ## 🚀 Quick Start
 
@@ -9,7 +13,7 @@ Comprehensive validation and testing framework for the SAHAR TV-Remote communica
 cd validation
 npm install
 
-# Run full validation
+# Run full validation (see DEPLOYMENT.md for details)
 npm run validate
 
 # Start WebSocket test server
@@ -17,6 +21,8 @@ npm start
 ```
 
 ## 📋 Available Commands
+
+All validation procedures are documented in [DEPLOYMENT.md](../DEPLOYMENT.md). Available npm scripts:
 
 ### Validation Scripts
 ```bash
@@ -35,7 +41,7 @@ npm run test:server           # Start WebSocket test server
 npm run test:server:dev       # Start test server with auto-reload
 ```
 
-## 📁 Structure
+## 📁 File Structure
 
 ```
 validation/
@@ -48,12 +54,4 @@ validation/
     └── tv-app-test-driver.js # TV application test driver
 ```
 
-## 🔧 Dependencies
-
-- **ws**: WebSocket implementation for testing
-- **concurrently**: Run multiple validation processes
-- **nodemon**: Development server with auto-reload
-
-## 📖 Usage
-
-This validation suite is completely self-contained and independent of the Angular applications in `apps/`. Run validation from this directory to test the entire SAHAR system.
+> **Note**: This validation suite is self-contained and independent of the Angular applications in `apps/`. For complete testing strategy and procedures, refer to [DEPLOYMENT.md](../DEPLOYMENT.md).
