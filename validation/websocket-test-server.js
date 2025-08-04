@@ -160,15 +160,34 @@ function createServerOnPort(port) {
             ws.send(JSON.stringify(controlResponse));
           }
           
-          // Echo for other message types
-          if (!['discovery', 'navigation', 'control'].includes(message.type)) {
-            const response = {
-              type: 'echo',
+          // Handle data messages with proper confirmation
+          if (message.type === 'data') {
+            console.log(`  Processing data transfer with ${message.payload.performers?.length || 0} performers`);
+            
+            // Count received data
+            const performersCount = message.payload.performers?.length || 0;
+            const videosCount = message.payload.performers?.reduce((acc, p) => acc + (p.videos?.length || 0), 0) || 0;
+            const scenesCount = message.payload.performers?.reduce((acc, p) => 
+              acc + (p.videos?.reduce((vAcc, v) => vAcc + (v.scenes?.length || 0), 0) || 0), 0) || 0;
+            
+            // Send Protocol v2.0 data confirmation
+            const dataConfirmation = {
+              type: 'data_confirmation',
               timestamp: Date.now(),
-              original: message,
-              serverPort: port
+              payload: {
+                status: 'received',
+                dataVersion: '1.0',
+                checksum: 'abc123def456', // Would be real checksum in production
+                itemsReceived: {
+                  performers: performersCount,
+                  videos: videosCount,
+                  scenes: scenesCount
+                }
+              }
             };
-            ws.send(JSON.stringify(response));
+            
+            ws.send(JSON.stringify(dataConfirmation));
+            console.log(`  ✅ Sent data confirmation: ${performersCount} performers, ${videosCount} videos, ${scenesCount} scenes`);
           }
 
           // Broadcast to other clients (optional)
