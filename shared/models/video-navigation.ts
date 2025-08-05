@@ -1,4 +1,6 @@
 // Performer data structure for YouTube-like content
+import { getYoutubeVideoId, getYoutubeThumbnailUrl } from '../utils/youtube-helpers';
+
 export interface Performer {
   id: string;
   name: string;
@@ -10,7 +12,6 @@ export interface Performer {
 export interface Video {
   id: string;
   title: string;
-  thumbnail: string;
   url: string; // YouTube video URL
   duration: number; // Video duration in seconds
   description?: string;
@@ -57,7 +58,6 @@ export const performersData: Performer[] = [
       {
         id: 'israely-boy',
         title: 'יובל המבולבל - אני ילד ישראלי המופע המלא',
-        thumbnail: 'https://images.pexels.com/photos/1729931/pexels-photo-1729931.jpeg?auto=compress&cs=tinysrgb&w=300',
         url: 'https://www.youtube.com/watch?v=RLXswLCRG08',
         duration: 240, // 4 minutes
         description: 'A fun birthday celebration song',
@@ -95,7 +95,6 @@ export const performersData: Performer[] = [
       {
         id: 'space-travel',
         title: 'יובל המבולבל - המסע אל הכוכב (ההצגה המלאה)',
-        thumbnail: 'https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg?auto=compress&cs=tinysrgb&w=300',
         url: 'https://www.youtube.com/watch?v=teSXi_C2jNY',
         duration: 300, // 5 minutes
         description: 'Learn different animal sounds',
@@ -141,7 +140,6 @@ export const performersData: Performer[] = [
       {
         id: 'michal-abc-song',
         title: 'ABC Learning Song',
-        thumbnail: 'https://images.pexels.com/photos/207691/pexels-photo-207691.jpeg?auto=compress&cs=tinysrgb&w=300',
         url: 'https://www.youtube.com/watch?v=kffacxfA7G4',
         duration: 180, // 3 minutes
         description: 'Learn the alphabet with songs',
@@ -187,7 +185,6 @@ export const performersData: Performer[] = [
       {
         id: 'roy-superhero-training',
         title: 'Superhero Training',
-        thumbnail: 'https://images.pexels.com/photos/163036/mario-luigi-yoschi-figures-163036.jpeg?auto=compress&cs=tinysrgb&w=300',
         url: 'https://www.youtube.com/watch?v=YQHsXMglC9A',
         duration: 320, // 5 minutes 20 seconds
         description: 'Join Roy Boy in superhero training adventures',
@@ -225,7 +222,6 @@ export const performersData: Performer[] = [
       {
         id: 'roy-space-adventure',
         title: 'Space Adventure',
-        thumbnail: 'https://images.pexels.com/photos/73873/star-clusters-rosette-nebula-star-galaxies-73873.jpeg?auto=compress&cs=tinysrgb&w=300',
         url: 'https://www.youtube.com/watch?v=Ct6BUPvE2sM',
         duration: 400, // 6 minutes 40 seconds
         description: 'Explore the galaxy with Roy Boy',
@@ -263,7 +259,6 @@ export const performersData: Performer[] = [
       {
         id: 'roy-dinosaur-discovery',
         title: 'Dinosaur Discovery',
-        thumbnail: 'https://images.pexels.com/photos/3264723/pexels-photo-3264723.jpeg?auto=compress&cs=tinysrgb&w=300',
         url: 'https://www.youtube.com/watch?v=y6120QOlsfU',
         duration: 340, // 5 minutes 40 seconds
         description: 'Travel back in time to meet dinosaurs',
@@ -301,7 +296,6 @@ export const performersData: Performer[] = [
       {
         id: 'roy-ocean-exploration',
         title: 'Ocean Exploration',
-        thumbnail: 'https://images.pexels.com/photos/1001682/pexels-photo-1001682.jpeg?auto=compress&cs=tinysrgb&w=300',
         url: 'https://www.youtube.com/watch?v=d1YBv2mWll0',
         duration: 380, // 6 minutes 20 seconds
         description: 'Dive deep into ocean adventures',
@@ -347,7 +341,6 @@ export const performersData: Performer[] = [
       {
         id: 'haim-comedy-sketches',
         title: 'Comedy Sketches',
-        thumbnail: 'https://images.pexels.com/photos/1115804/pexels-photo-1115804.jpeg?auto=compress&cs=tinysrgb&w=300',
         url: 'https://www.youtube.com/watch?v=ZjjvFP2-PKs',
         duration: 360, // 6 minutes
         description: 'Funny comedy sketches and entertainment',
@@ -385,7 +378,6 @@ export const performersData: Performer[] = [
       {
         id: 'haim-musical-fun',
         title: 'Musical Fun',
-        thumbnail: 'https://images.pexels.com/photos/164821/pexels-photo-164821.jpeg?auto=compress&cs=tinysrgb&w=300',
         url: 'https://www.youtube.com/watch?v=rTgj1HxmUbg',
         duration: 480, // 8 minutes
         description: 'Musical entertainment and sing-alongs',
@@ -423,7 +415,6 @@ export const performersData: Performer[] = [
       {
         id: 'haim-story-time',
         title: 'Story Time',
-        thumbnail: 'https://images.pexels.com/photos/159711/books-bookstore-book-reading-159711.jpeg?auto=compress&cs=tinysrgb&w=300',
         url: 'https://www.youtube.com/watch?v=SLMJpHihykI',
         duration: 600, // 10 minutes
         description: 'Engaging storytelling sessions',
@@ -461,7 +452,6 @@ export const performersData: Performer[] = [
       {
         id: 'haim-learning-games',
         title: 'Learning Games',
-        thumbnail: 'https://images.pexels.com/photos/1148998/pexels-photo-1148998.jpeg?auto=compress&cs=tinysrgb&w=300',
         url: 'https://www.youtube.com/watch?v=hFcLyDb7niM',
         duration: 400, // 6 minutes 40 seconds
         description: 'Educational games and brain exercises',
@@ -506,20 +496,25 @@ export const inputVideoData: VideoItem[] = performersData.map(performer => ({
   title: performer.name,
   thumbnail: performer.thumbnail,
   type: 'performer' as const,
-  children: performer.videos.map(video => ({
-    id: video.id,
-    title: video.title,
-    thumbnail: video.thumbnail,
-    type: 'video' as const,
-    url: video.url,
-    children: video.likedScenes.map(scene => ({
-      id: scene.id,
-      title: scene.title,
-      thumbnail: video.thumbnail, // Use video thumbnail if scene doesn't have one
-      type: 'segment' as const,
-      url: `${video.url}&t=${scene.startTime}`, // YouTube URL with time parameter
-      startTime: scene.startTime,
-      endTime: scene.endTime
-    }))
-  }))
+  children: performer.videos.map(video => {
+    const videoId = getYoutubeVideoId(video.url);
+    const videoThumbnail = videoId ? getYoutubeThumbnailUrl(videoId, 'hqdefault') : 'https://via.placeholder.com/320x180?text=No+Thumbnail';
+    
+    return {
+      id: video.id,
+      title: video.title,
+      thumbnail: videoThumbnail,
+      type: 'video' as const,
+      url: video.url,
+      children: video.likedScenes.map(scene => ({
+        id: scene.id,
+        title: scene.title,
+        thumbnail: videoThumbnail, // Use calculated video thumbnail for scenes
+        type: 'segment' as const,
+        url: `${video.url}&t=${scene.startTime}`, // YouTube URL with time parameter
+        startTime: scene.startTime,
+        endTime: scene.endTime
+      }))
+    };
+  })
 }));

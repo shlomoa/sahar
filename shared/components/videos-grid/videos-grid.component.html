@@ -15,7 +15,7 @@
       
       <img 
         mat-card-image 
-        [src]="video.thumbnail" 
+        [src]="getVideoThumbnail(video) || 'https://via.placeholder.com/320x180?text=No+Thumbnail'" 
         [alt]="video.title"
         loading="lazy">
         

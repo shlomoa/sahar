@@ -8,9 +8,13 @@ import {
   DiscoveryMessage, 
   StatusMessage,
   DataMessage,
-  DataPayload,
-  WEBSOCKET_CONFIG 
-} from '../../../shared/websocket/websocket-protocol';
+  DataPayload
+} from '@shared/websocket/websocket-protocol';
+import { 
+  WEBSOCKET_CONFIG,
+  WebSocketUtils,
+  NetworkDevice
+} from '@shared/utils/websocket-utils';
 
 // Connection states
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
@@ -44,7 +48,7 @@ export class WebSocketService implements OnDestroy {
   private discoveredDevices$ = new BehaviorSubject<DiscoveredDevice[]>([]);
 
   // Device info
-  private deviceId = `remote-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  private deviceId = WebSocketUtils.generateDeviceId('remote');
   private deviceName = 'iPad Remote Control';
 
   constructor() {
@@ -175,7 +179,7 @@ export class WebSocketService implements OnDestroy {
     console.log('🔍 Starting device discovery...');
     
     // Get the local network gateway IP range
-    const gatewayBase = this.getGatewayBaseIP();
+    const gatewayBase = WebSocketUtils.getGatewayBaseIP();
     const targetPorts = [5544, 5545, 5546, 5547];
     
     console.log(`🌐 Scanning ${gatewayBase}.x on ports:`, targetPorts);
@@ -204,12 +208,6 @@ export class WebSocketService implements OnDestroy {
       }
       console.log(`✅ Device discovery complete. Found ${this.discoveredDevices$.value.length} devices`);
     }, 5000);
-  }
-
-  private getGatewayBaseIP(): string {
-    // In a real implementation, this would detect the actual gateway
-    // For now, assume common home network range
-    return '192.168.1';
   }
 
   private async scanNetworkForTVDevices(gatewayBase: string, ports: number[]) {
@@ -480,15 +478,15 @@ export class WebSocketService implements OnDestroy {
             id: video.id.toString(),
             title: video.title,
             thumbnail: video.thumbnail,
-            duration: this.formatDuration(video.duration),
-            description: `${video.likedScenes.length} scenes • ${this.formatDuration(video.duration)}`,
+            duration: WebSocketUtils.formatDuration(video.duration),
+            description: `${video.likedScenes.length} scenes • ${WebSocketUtils.formatDuration(video.duration)}`,
             scenes: video.likedScenes.map((scene: any) => ({
               id: scene.id.toString(),
               title: scene.title,
               timestamp: scene.startTime,
               duration: (scene.endTime || scene.startTime + 60) - scene.startTime,
               thumbnail: scene.thumbnail,
-              description: `${this.formatDuration(scene.duration)} scene`
+              description: `${WebSocketUtils.formatDuration(scene.duration)} scene`
             }))
           }))
         }))
@@ -505,12 +503,6 @@ export class WebSocketService implements OnDestroy {
     }).catch(error => {
       console.error('❌ Failed to load performers data:', error);
     });
-  }
-
-  private formatDuration(seconds: number): string {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   }
 
   private sendMessage(message: RemoteMessage): void {

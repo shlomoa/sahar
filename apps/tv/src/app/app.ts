@@ -7,7 +7,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
-import { VideoNavigationService } from './services/video-navigation.service';
+import { VideoNavigationService } from '@shared/services/video-navigation.service';
 import { WebSocketService } from './services/websocket.service';
 import { NavigationState, VideoItem, Video, LikedScene, Performer } from '@shared/models/video-navigation';
 import { VideoPlayerComponent } from './components/video-player/video-player.component';

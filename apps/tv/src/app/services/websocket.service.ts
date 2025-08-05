@@ -1,20 +1,23 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, Subject } from 'rxjs';
+import { BehaviorSubject, Subject, takeUntil } from 'rxjs';
 import { 
-  RemoteMessage, 
-  NavigationMessage, 
-  ControlMessage, 
-  StatusMessage,
+  WebSocketMessage,
+  NavigationMessage,
+  ControlMessage,
   DiscoveryMessage,
-  DiscoveryPayload,
-  DataMessage,
-  BroadcastMessage,
-  NetworkDevice,
-  WebSocketError,
-  WEBSOCKET_CONFIG,
-  ERROR_CODES
+  StatusMessage,
+  DataMessage
 } from '@shared/websocket/websocket-protocol';
-import { VideoNavigationService } from './video-navigation.service';
+import { VideoNavigationService } from '@shared/services/video-navigation.service';
+import { WebSocketBaseService } from '@shared/services/websocket-base.service';
+import { 
+  WEBSOCKET_CONFIG, 
+  ERROR_CODES, 
+  NetworkDevice, 
+  WebSocketError, 
+  RemoteMessage,
+  WebSocketUtils 
+} from '@shared/utils/websocket-utils';
 import { NavigationState } from '@shared/models/video-navigation';
 
 @Injectable({
@@ -44,7 +47,7 @@ export class WebSocketService {
   private errorsSubject = new Subject<WebSocketError>();
   public errors$ = this.errorsSubject.asObservable();
 
-  private deviceId = `tv-${Date.now()}`;
+  private deviceId = WebSocketUtils.generateDeviceId('tv');
   private deviceName = 'Sahar TV';
 
   constructor(private navigationService: VideoNavigationService) {
@@ -62,28 +65,11 @@ export class WebSocketService {
 
   private startWebDiscovery(): void {
     // For browser environment, we'll use a polling approach to known ports
-    const commonIPs = this.generateLocalNetworkIPs();
+    const commonIPs = WebSocketUtils.generateLocalNetworkIPs();
     
     this.discoveryTimer = setInterval(() => {
       this.discoverDevicesOnNetwork(commonIPs);
     }, WEBSOCKET_CONFIG.DISCOVERY_INTERVAL);
-  }
-
-  private generateLocalNetworkIPs(): string[] {
-    // Generate common local network IP ranges
-    const baseIPs = [];
-    
-    // Common local network ranges
-    for (let i = 1; i < 255; i++) {
-      baseIPs.push(`192.168.1.${i}`);
-      baseIPs.push(`192.168.0.${i}`);
-      baseIPs.push(`10.0.0.${i}`);
-    }
-    
-    // Always include localhost for testing
-    baseIPs.unshift('localhost', '127.0.0.1');
-    
-    return baseIPs;
   }
 
   private async discoverDevicesOnNetwork(ips: string[]): Promise<void> {
@@ -339,9 +325,12 @@ export class WebSocketService {
     if (device.deviceType === 'remote') {
       // Add discovered remote device to our list
       const networkDevice: NetworkDevice = {
-        deviceType: device.deviceType,
+        id: device.deviceId,
         deviceId: device.deviceId,
+        name: device.deviceName,
         deviceName: device.deviceName,
+        type: device.deviceType,
+        deviceType: device.deviceType,
         ip: device.networkInfo.ip,
         port: device.networkInfo.port,
         lastSeen: Date.now(),

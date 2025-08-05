@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { Performer, Video, LikedScene, VideoItem, NavigationState, performersData } from '@shared/models/video-navigation';
-import { getYoutubeVideoId, getYoutubeThumbnailUrl } from '@shared/utils/youtube-helpers';
+import { Performer, Video, LikedScene, VideoItem, NavigationState, performersData } from '../models/video-navigation';
+import { getYoutubeThumbnailUrl } from '../utils/youtube-helpers';
 
 @Injectable({
   providedIn: 'root'
@@ -12,8 +12,8 @@ export class VideoNavigationService {
     breadcrumb: [],
     canGoBack: false
   };
-  private performersData: Performer[] = performersData; // Use shared data directly
 
+  private performersData: Performer[] = performersData; // Use shared data directly
   private navigationSubject = new BehaviorSubject<NavigationState>(this.navigationState);
   public navigation$ = this.navigationSubject.asObservable();
 
@@ -23,12 +23,6 @@ export class VideoNavigationService {
     console.log('📺 Performers data available:', this.performersData.length);
     console.log('📺 First performer:', this.performersData[0]?.name || 'None');
     this.goHome(); // Show performers immediately
-  }
-
-  // Helper method to get video thumbnail from YouTube URL
-  private getVideoThumbnail(video: Video): string {
-    const videoId = getYoutubeVideoId(video.url);
-    return videoId ? getYoutubeThumbnailUrl(videoId, 'hqdefault') : 'https://via.placeholder.com/320x180?text=No+Thumbnail';
   }
 
   // Called by WebSocket service when Remote sends data
@@ -41,6 +35,16 @@ export class VideoNavigationService {
   // Add getter for performers data
   getPerformersData(): Performer[] {
     return this.performersData;
+  }
+
+  // Helper method for getting YouTube thumbnails
+  getVideoThumbnail(videoUrl: string, quality: 'default' | 'mqdefault' | 'hqdefault' | 'sddefault' | 'maxresdefault' = 'hqdefault'): string | null {
+    // Extract video ID from URL and generate thumbnail
+    const videoIdMatch = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+    if (videoIdMatch && videoIdMatch[1]) {
+      return getYoutubeThumbnailUrl(videoIdMatch[1], quality);
+    }
+    return null;
   }
 
   private showWaitingState(): void {
@@ -63,6 +67,7 @@ export class VideoNavigationService {
 
   goHome(): void {
     console.log('📺 Going home with performers:', this.performersData.length);
+    
     if (this.performersData.length === 0) {
       console.warn('📺 No performers data available');
       this.showWaitingState();
@@ -95,7 +100,7 @@ export class VideoNavigationService {
       currentLevel: performer.videos.map(video => ({
         id: video.id,
         title: video.title,
-        thumbnail: this.getVideoThumbnail(video),
+        thumbnail: this.getVideoThumbnail(video.url) || '',
         type: 'video' as const,
         url: video.url
       })),
@@ -120,13 +125,11 @@ export class VideoNavigationService {
       return;
     }
 
-    const videoThumbnail = this.getVideoThumbnail(video);
-
     this.navigationState = {
       currentLevel: video.likedScenes.map(scene => ({
         id: scene.id,
         title: scene.title,
-        thumbnail: scene.thumbnail || videoThumbnail,
+        thumbnail: scene.thumbnail || this.getVideoThumbnail(video.url) || '',
         type: 'segment' as const,
         url: `${video.url}&t=${scene.startTime}`,
         startTime: scene.startTime,
@@ -175,17 +178,17 @@ export class VideoNavigationService {
 
   private playSceneObject(scene: LikedScene): void {
     console.log('📺 TV: Playing scene object:', scene.title, 'at time:', scene.startTime);
-    
+
     // Update navigation state to indicate we're playing a scene
     this.navigationState = {
       ...this.navigationState,
       breadcrumb: [...this.navigationState.breadcrumb, `▶️ ${scene.title}`],
       canGoBack: true
     };
-    
+
     // Emit the updated state so the main component can respond
     this.navigationSubject.next(this.navigationState);
-    
+
     console.log('📺 TV: Scene playback initiated for:', scene.title, 'at time:', scene.startTime);
   }
 

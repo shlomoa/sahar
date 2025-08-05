@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { YouTubePlayerModule, YouTubePlayer } from '@angular/youtube-player';
 import { Video, LikedScene } from '@shared/models/video-navigation';
+import { getYoutubeVideoId, getYoutubeThumbnailUrl } from '@shared/utils/youtube-helpers';
 
 @Component({
   selector: 'app-video-player',
@@ -55,13 +56,18 @@ export class VideoPlayerComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private extractYouTubeId(url: string): string | null {
-    const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
-    const match = url.match(regex);
-    return match ? match[1] : null;
+    // Use shared utility function
+    return getYoutubeVideoId(url);
   }
 
   getYouTubeId(): string | null {
     return this.currentVideo?.url ? this.extractYouTubeId(this.currentVideo.url) : null;
+  }
+
+  // Get YouTube thumbnail for current video
+  getVideoThumbnail(quality: 'default' | 'mqdefault' | 'hqdefault' | 'sddefault' | 'maxresdefault' = 'hqdefault'): string | null {
+    const videoId = this.getYouTubeId();
+    return videoId ? getYoutubeThumbnailUrl(videoId, quality) : null;
   }
 
   onPlayerReady() {
