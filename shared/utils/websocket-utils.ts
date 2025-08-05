@@ -1,45 +1,4 @@
-import { WebSocketMessage } from '../websocket/websocket-protocol';
-
-export const WEBSOCKET_CONFIG = {
-  DEFAULT_PORT: 8080,
-  DISCOVERY_INTERVAL: 5000,
-  HEARTBEAT_INTERVAL: 30000,
-  RECONNECT_INTERVAL: 5000, // Added for compatibility
-  MAX_RECONNECT_ATTEMPTS: 5,
-  RECONNECT_DELAY_BASE: 1000,
-  RECONNECT_DELAY_MAX: 10000
-};
-
-export const ERROR_CODES = {
-  CONNECTION_FAILED: 'CONNECTION_FAILED',
-  INVALID_MESSAGE: 'INVALID_MESSAGE',
-  DEVICE_NOT_FOUND: 'DEVICE_NOT_FOUND',
-  TIMEOUT: 'TIMEOUT'
-};
-
-export interface NetworkDevice {
-  id: string;
-  deviceId: string; // Alias for id for compatibility
-  name: string;
-  deviceName?: string; // Alias for name for compatibility
-  type: 'tv' | 'remote';
-  deviceType: 'tv' | 'remote'; // Alias for type for compatibility
-  ip: string;
-  port: number;
-  capabilities: string[];
-  lastSeen: number;
-}
-
-export interface WebSocketError {
-  code: string;
-  message: string;
-  timestamp: number;
-  deviceId?: string; // Added for compatibility
-}
-
-export interface RemoteMessage extends WebSocketMessage {
-  deviceId?: string;
-}
+import { WEBSOCKET_CONFIG, WebSocketMessage, WebSocketError } from '../websocket/websocket-protocol';
 
 // Utility functions for WebSocket operations
 export class WebSocketUtils {
@@ -56,6 +15,15 @@ export class WebSocketUtils {
     };
   }
 
+  static generateLocalHostUrls(): string[] {
+    const ips: string[] = [];
+    WEBSOCKET_CONFIG.PORT_RANGE.forEach(base => {        
+        ips.push(`ws://localhost:${base}`);
+    });
+      
+    return ips;
+  }
+
   static generateLocalNetworkIPs(): string[] {
     const ips: string[] = [];
     
@@ -66,7 +34,7 @@ export class WebSocketUtils {
     ];
 
     ranges.forEach(base => {
-      for (let i = 1; i <= 254; i++) {
+      for (let i = 1; i <= 25; i++) {
         ips.push(`${base}.${i}`);
       }
     });

@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { DiscoveredDevice } from '../../services/websocket.service';
+import { NetworkDevice } from '@shared/websocket/websocket-protocol';
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -25,10 +25,10 @@ type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 })
 export class DeviceConnectionComponent {
   @Input() connectionStatus: ConnectionStatus = 'disconnected';
-  @Input() discoveredDevices: DiscoveredDevice[] = [];
+  @Input() discoveredDevices: NetworkDevice[] = [];
   @Input() isScanning = false;
   
-  @Output() deviceSelected = new EventEmitter<DiscoveredDevice>();
+  @Output() deviceSelected = new EventEmitter<NetworkDevice>();
   @Output() refreshDevices = new EventEmitter<void>();
 
   onDeviceSelected(event: any) {

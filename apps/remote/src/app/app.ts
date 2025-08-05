@@ -9,8 +9,10 @@ import { SharedPerformersGridComponent, SharedVideosGridComponent, SharedScenesG
 import { VideoControlsComponent } from './components/video-controls/video-controls.component';
 
 // Services and Models
-import { WebSocketService, DiscoveredDevice } from './services/websocket.service';
-import { performersData, Performer, Video, LikedScene } from '@shared/models/video-navigation';
+import { WebSocketService } from './services/websocket.service';
+import { NetworkDevice } from '@shared/websocket/websocket-protocol';
+import { VideoNavigationService } from '@shared/services/video-navigation.service';
+import { Performer, Video, LikedScene } from '@shared/models/video-navigation';
 import { RemoteNavigationState, ConnectionStatus } from './models/remote-navigation';
 
 @Component({
@@ -31,14 +33,14 @@ import { RemoteNavigationState, ConnectionStatus } from './models/remote-navigat
 })
 export class App implements OnInit, OnDestroy {
   // Data
-  performers: Performer[] = performersData;
+  performers: Performer[] = [];
   
   // Navigation state (synced with TV) - starts undefined until connected
   currentNavigation: RemoteNavigationState = { level: 'performers' };
   
   // Connection management - starts disconnected
   connectionStatus: ConnectionStatus = 'disconnected';
-  discoveredDevices: DiscoveredDevice[] = [];
+  discoveredDevices: NetworkDevice[] = [];
   isScanning = false;
   autoConnectEnabled = true;
   
@@ -47,7 +49,12 @@ export class App implements OnInit, OnDestroy {
   isMuted = false;
   volumeLevel = 50;
 
-  constructor(private websocketService: WebSocketService) {}
+  constructor(
+    private websocketService: WebSocketService,
+    private videoNavigationService: VideoNavigationService
+  ) {
+    this.performers = this.videoNavigationService.getPerformersData();
+  }
 
   ngOnInit() {
     this.setupWebSocketListeners();
@@ -55,7 +62,8 @@ export class App implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.websocketService.disconnect();
+    // WebSocket service will handle its own cleanup in ngOnDestroy
+    // No need to manually call disconnect as it's now protected
   }
 
   // WebSocket event handlers
@@ -143,7 +151,7 @@ export class App implements OnInit, OnDestroy {
   }
 
   // Device connection methods
-  connectToDevice(device: DiscoveredDevice) {
+  connectToDevice(device: NetworkDevice) {
     console.log('🔌 Connecting to device:', device);
     this.connectionStatus = 'connecting';
     this.websocketService.connectToDevice(device);
@@ -181,7 +189,7 @@ export class App implements OnInit, OnDestroy {
 
   navigateToScene(performerId: string, videoId: string, sceneId: string) {
     console.log('🎯 Navigate to scene:', performerId, videoId, sceneId);
-    this.websocketService.sendNavigationCommand('navigate_to_scene', sceneId, 'segment');
+    this.websocketService.sendNavigationCommand('navigate_to_scene', sceneId, 'scene');
     this.currentNavigation = { level: 'scene-selected', performerId, videoId, sceneId: sceneId };
   }
 

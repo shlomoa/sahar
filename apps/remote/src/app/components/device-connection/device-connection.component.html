@@ -17,7 +17,7 @@
         <mat-selection-list #deviceList (selectionChange)="onDeviceSelected($event)">
           <mat-list-option *ngFor="let device of discoveredDevices" [value]="device">
             <mat-icon matListItemIcon>tv</mat-icon>
-            <div matListItemTitle>{{ device.name }}</div>
+            <div matListItemTitle>{{ device.deviceName }}</div>
             <div matListItemLine>{{ device.ip }}:{{ device.port }}</div>
           </mat-list-option>
         </mat-selection-list>

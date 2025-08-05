@@ -123,15 +123,22 @@ export class App implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
-    this.webSocketService.disconnect();
+    // Use public disconnect method if available, or handle cleanup differently
+    if (this.webSocketService.disconnect) {
+      try {
+        this.webSocketService.disconnect();
+      } catch (e) {
+        console.log('WebSocket already disconnected');
+      }
+    }
   }
 
   private initializeWebSocket(): void {
-    // Subscribe to WebSocket connection status
-    const connectionSub = this.webSocketService.connected$.subscribe(connected => {
-      if (connected) {
+    // Subscribe to WebSocket connection status from base class
+    const connectionSub = this.webSocketService.getConnectionState().subscribe(state => {
+      if (state === 'connected') {
         this.snackBar.open('Remote connected', 'Close', { duration: 3000 });
-      } else {
+      } else if (state === 'disconnected') {
         const snackBarRef = this.snackBar.open('Remote disconnected', 'Retry', { 
           duration: 5000
         });
@@ -141,8 +148,8 @@ export class App implements OnInit, OnDestroy {
       }
     });
 
-    // Subscribe to WebSocket errors
-    const errorSub = this.webSocketService.errors$.subscribe(error => {
+    // Subscribe to TV-specific WebSocket errors
+    const errorSub = this.webSocketService.tvErrors$.subscribe(error => {
       console.error('WebSocket error:', error);
       this.snackBar.open(`Connection error: ${error.message}`, 'Close', { duration: 5000 });
     });
@@ -168,7 +175,7 @@ export class App implements OnInit, OnDestroy {
 
     // Start the WebSocket connection
     this.webSocketService.connect();
-    this.webSocketService.startDiscovery();
+    
   }
 
   // Event handlers for shared components

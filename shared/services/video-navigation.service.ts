@@ -1,7 +1,9 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Inject, Optional, InjectionToken } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { Performer, Video, LikedScene, VideoItem, NavigationState, performersData } from '../models/video-navigation';
+import { Performer, Video, LikedScene, VideoItem, NavigationState } from '../models/video-navigation';
 import { getYoutubeThumbnailUrl } from '../utils/youtube-helpers';
+
+export const INITIAL_PERFORMERS = new InjectionToken<Performer[]>('Initial performers data');
 
 @Injectable({
   providedIn: 'root'
@@ -13,16 +15,24 @@ export class VideoNavigationService {
     canGoBack: false
   };
 
-  private performersData: Performer[] = performersData; // Use shared data directly
+  private performersData: Performer[] = [];
   private navigationSubject = new BehaviorSubject<NavigationState>(this.navigationState);
   public navigation$ = this.navigationSubject.asObservable();
 
-  constructor() {
-    // TV starts with shared data immediately
-    console.log('📺 TV Navigation Service initialized');
-    console.log('📺 Performers data available:', this.performersData.length);
-    console.log('📺 First performer:', this.performersData[0]?.name || 'None');
-    this.goHome(); // Show performers immediately
+  constructor(@Optional() @Inject(INITIAL_PERFORMERS) initialData: Performer[] | null) {
+    console.log('� Shared Navigation Service initialized');
+    
+    // Check if data was injected
+    if (initialData && initialData.length > 0) {
+      // This path is for the Remote app
+      console.log('� Service configured with initial data for Remote.');
+      this.performersData = initialData;
+      this.goHome(); // Show performers immediately
+    } else {
+      // This path is for the TV app
+      console.log('📺 Service configured with no data. Waiting for Remote.');
+      this.showWaitingState(); // Start in the waiting state
+    }
   }
 
   // Called by WebSocket service when Remote sends data
