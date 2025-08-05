@@ -10,9 +10,10 @@ A sophisticated Angular-based remote control system featuring direct TV-Remote c
 - **Direct Communication**: TV acts as WebSocket server, Remote connects as client  
 - **Auto Discovery**: Remote automatically finds and connects to TV devices
 - **Real-time Sync**: Navigation and playback state synchronized between devices
-- **YouTube Integration**: Scene-based video playback with automatic seeking
+- **YouTube Integration**: Scene-based video playbook with automatic seeking and dynamic thumbnail calculation
 - **Material Design**: Modern, responsive interfaces optimized for each device
 - **No External Dependencies**: Self-contained system requiring only local network
+- **Dynamic Thumbnails**: YouTube video thumbnails calculated dynamically using @angular/youtube-player
 
 ## 🚀 Quick Start
 
@@ -72,24 +73,28 @@ cd apps/remote && ng serve --port 4202
 ### TV Application (`apps/tv/`)
 **Role**: Display and Video Player
 - **Technology**: Angular 20+ with Material Design
-- **Bundle Size**: 499.55 kB (122.30 kB compressed)
+- **Bundle Size**: 500.27 kB (122.65 kB compressed)
 - **Features**:
   - WebSocket server on ports 5544-5547
   - YouTube video player integration (@angular/youtube-player)
+  - Dynamic YouTube thumbnail calculation
   - Receives all data from Remote app
   - Large-screen optimized Material Design interface
   - Scene-based video seeking and playback
+  - Shared service architecture with consolidated utilities
 
 ### Remote Application (`apps/remote/`)  
 **Role**: Control Interface and Data Owner
 - **Technology**: Angular 20+ with Material Design  
-- **Bundle Size**: 497.13 kB (118.93 kB compressed)
+- **Bundle Size**: 497.86 kB (120.15 kB compressed)
 - **Features**:
   - Owns all performers/videos/scenes data
   - Network discovery and auto-connection
   - Touch-optimized tablet interface
   - Enhanced video controls during playback
   - Real-time command dispatch to TV
+  - Dynamic YouTube thumbnail integration
+  - Shared service architecture with optimized utilities
 
 ## 🎬 Content Structure
 
@@ -104,8 +109,9 @@ cd apps/remote && ng serve --port 4202
 interface Video {
   id: string;
   title: string;
-  youtubeId: string;        // YouTube video ID
-  scenes: Scene[];
+  url: string;              // Full YouTube URL
+  youtubeId: string;        // Extracted YouTube video ID
+  likedScenes: Scene[];     // Renamed from scenes
 }
 
 interface Scene {
@@ -113,6 +119,13 @@ interface Scene {
   title: string;
   startTime: number;        // Seconds for YouTube seeking
   endTime?: number;
+  // thumbnail removed - calculated dynamically from YouTube
+}
+
+// Dynamic thumbnail calculation
+function getVideoThumbnail(videoUrl: string): string {
+  const videoId = extractYouTubeId(videoUrl);
+  return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 }
 ```
 
@@ -219,8 +232,8 @@ cd apps/remote && ng build --configuration production
 ### Build for Production
 ```bash
 # Build both applications
-cd apps/tv && ng build --configuration production     # 499.55 kB bundle
-cd apps/remote && ng build --configuration production # 497.13 kB bundle
+cd apps/tv && ng build --configuration production     # 500.27 kB bundle
+cd apps/remote && ng build --configuration production # 497.86 kB bundle
 ```
 
 ### Deployment Options
