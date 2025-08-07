@@ -5,7 +5,9 @@
 			"label": "Validation: Full System Check",
 			"type": "shell",
 			"command": ".\\sahar-validation.ps1",
-			"args": ["full"],
+			"args": [
+				"full"
+			],
 			"group": "test",
 			"isBackground": false,
 			"problemMatcher": [],
@@ -19,7 +21,9 @@
 			"label": "Validation: Environment Check",
 			"type": "shell",
 			"command": ".\\sahar-validation.ps1",
-			"args": ["check"],
+			"args": [
+				"check"
+			],
 			"group": "test",
 			"isBackground": false,
 			"problemMatcher": []
@@ -28,7 +32,9 @@
 			"label": "Validation: Start Applications",
 			"type": "shell",
 			"command": ".\\sahar-validation.ps1",
-			"args": ["start"],
+			"args": [
+				"start"
+			],
 			"group": "test",
 			"isBackground": false,
 			"problemMatcher": []
@@ -37,7 +43,9 @@
 			"label": "Validation: Integration Tests",
 			"type": "shell",
 			"command": ".\\sahar-validation.ps1",
-			"args": ["test"],
+			"args": [
+				"test"
+			],
 			"group": "test",
 			"isBackground": false,
 			"problemMatcher": []
@@ -46,7 +54,11 @@
 			"label": "Start TV App",
 			"type": "shell",
 			"command": "ng",
-			"args": ["serve", "--port", "4203"],
+			"args": [
+				"serve",
+				"--port",
+				"4203"
+			],
 			"options": {
 				"cwd": "${workspaceFolder}/apps/tv"
 			},
@@ -58,7 +70,11 @@
 			"label": "Start Remote App",
 			"type": "shell",
 			"command": "ng",
-			"args": ["serve", "--port", "4202"],
+			"args": [
+				"serve",
+				"--port",
+				"4202"
+			],
 			"options": {
 				"cwd": "${workspaceFolder}/apps/remote"
 			},
@@ -69,9 +85,21 @@
 		{
 			"label": "Start Both Apps",
 			"dependsOrder": "parallel",
-			"dependsOn": ["Start TV App", "Start Remote App"],
+			"dependsOn": [
+				"Start TV App",
+				"Start Remote App"
+			],
 			"group": "test",
 			"isBackground": true
+		},
+		{
+			"type": "typescript",
+			"tsconfig": "apps/remote/src/tsconfig.app.json",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build",
+			"label": "tsc: build - apps/remote/src/tsconfig.app.json"
 		}
 	]
 }

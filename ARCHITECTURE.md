@@ -87,81 +87,67 @@ The SAHAR TV Remote Control System is a real-time synchronized application suite
 -   Enhanced video controls with scene-level interaction 🔧 *Refactoring Needed*
 -   Dynamic YouTube thumbnail integration with shared utilities 🔧 *Refactoring Needed*
 
-## 4. Unified Communication Protocol (Integrated)
+## 4. Unified Communication Protocol
 
-### Protocol Version: 2.0
-**Transport:** WebSocket over TCP
-**Format:** JSON Messages
-**Architecture:** Gateway Server Model (see above)
+### Protocol Version: 3.0
+**Transport:** WebSocket
+**Format:** JSON
+**Architecture:** Centralized Server with a Finite State Machine (FSM)
+**Communication Model:** Synchronous "Stop-and-Wait"
 
-#### Connection Architecture & Flow
-1. **Server Startup:** The unified server starts, serving static files and listening for WebSocket connections (ports 5544-5547).
-2. **Client Initialization:** TV and Remote apps connect to the server, trying known ports in sequence.
-3. **State Synchronization:** Server immediately sends a `state_update` message to any new client, ensuring up-to-date state.
-4. **Command Handling:** Remote sends commands; server validates via FSM and updates state.
-5. **Broadcast:** Server broadcasts new state to all clients.
-6. **Disconnection Recovery:** Server and clients use heartbeat and exponential backoff for reconnection.
+The entire system operates on a strictly synchronous, server-centric communication model. All state is owned by the server's FSM. Clients are stateless and merely reflect the state broadcast by the server.
 
-#### Message Format & Types
+#### Connection and Registration Flow
+1.  **Server Startup:** The Unified Server starts, serving the client applications and listening for WebSocket connections on its designated port (e.g., 8080).
+2.  **Client Connection:** The TV and Remote apps connect to the server's WebSocket endpoint.
+3.  **Client Registration:** Upon connecting, each client **must** send a `register` message to identify itself (e.g., as 'tv' or 'remote'). The server will not accept any other messages from an unregistered client.
+4.  **Initial State Sync:** After a client successfully registers, the server sends a `state_sync` message containing the complete, current `ApplicationState`. The client then renders its UI based on this state.
+
+#### Synchronous "Stop-and-Wait" Acknowledgement Model
+This protocol enforces a strict, lock-step communication flow to guarantee message delivery and order.
+
+1.  **Message Sent:** A sender (client or server) sends a single message.
+2.  **Wait for Acknowledgement:** The sender enters a "waiting" state and **must not** send any further messages until it receives an `ack` from the receiver.
+3.  **Acknowledgement Received:** Upon receiving the `ack`, the sender is unblocked and can send its next message.
+4.  **Timeout:** If the sender does not receive an `ack` within a specified period (`ACK_TIMEOUT`), it must consider the connection lost and initiate reconnection procedures.
+5.  **Exception:** The `ack` message is the *only* message that is not acknowledged, which prevents an infinite loop.
+
+#### Message Format
+All messages adhere to the `WebSocketMessage` interface defined in `shared/websocket/websocket-protocol.ts`.
+
 ```typescript
 interface WebSocketMessage {
   type: MessageType;
   timestamp: number;
+  source: 'tv' | 'remote' | 'server';
   payload: any;
-  messageId?: string;  // Optional for tracking
-}
-type MessageType = 
-```
-
-**Example Messages:**
-```json
-// Discovery (Remote → Server)
-{
-  "type": "discovery",
-  "timestamp": 1722744000000,
-  "payload": {
-    "deviceType": "remote",
-    "deviceId": "remote-12345",
-    "protocolVersion": "2.0"
-  }
-}
-// State Update (Server → All Clients)
-{
-  "type": "state_update",
-  "timestamp": 1722744000000,
-  "payload": { ... }
 }
 ```
 
-#### State Synchronization & FSM
-- The server maintains a finite state machine (FSM) for each client type (remote, TV).
-- All incoming messages are validated against the FSM and protocol.
-- State changes are only accepted if they are valid transitions.
-- On reconnection, the server resends the current state to the client.
+#### Key Message Types & Flow Example (`play` command)
+1.  **`control_command` (Remote → Server):** The Remote sends a command to play a video.
+    - The Remote is now blocked, awaiting an `ack`.
+2.  **`ack` (Server → Remote):** The Server acknowledges receipt of the command.
+    - The Remote is now unblocked.
+3.  **FSM Update:** The Server processes the command, updates its internal FSM, and identifies that the TV client must perform an action.
+4.  **`control_command` (Server → TV):** The Server forwards the `play` command to the TV.
+    - The Server is now blocked, awaiting an `ack` from the TV.
+5.  **`ack` (TV → Server):** The TV acknowledges receipt of the command.
+    - The Server is now unblocked. The TV begins the action (e.g., loading the video).
+6.  **`action_confirmation` (TV → Server):** Once the video is actually playing, the TV sends a confirmation.
+    - The TV is now blocked, awaiting an `ack`.
+7.  **`ack` (Server → TV):** The Server acknowledges the confirmation.
+    - The TV is now unblocked.
+8.  **`state_sync` (Server → All Clients):** The Server broadcasts the new `ApplicationState` (which now reflects `isPlaying: true`) to all connected clients.
+    - The Server is now blocked, awaiting `ack`s from all clients.
+9.  **`ack` (Remote → Server) & `ack` (TV → Server):** The clients acknowledge the state update.
+    - The Server is now unblocked. The cycle is complete.
 
-#### Error Handling, Reconnection, and Heartbeat
-- **Auto-Reconnection:** Exponential backoff retry logic for clients
-- **Heartbeat:** 30s interval, 90s timeout (3 missed heartbeats)
-- **Error Scenarios:**
-  - Network loss: automatic reconnection
-  - Invalid commands: error response, ignored
-  - Protocol mismatch: version negotiation or graceful degradation
-  - Data corruption: request retransmission
-
-#### Security Considerations
-- Local network only (server binds to local interfaces)
-- No authentication (trusted environment)
-- Message size limits and rate limiting
-
-#### Performance Targets
-- <50ms command processing
-- <3s connection establishment
-- <10s discovery
-
-#### Debugging & Monitoring
-- Message logging (type, size, direction, errors)
-- Connection state and round-trip time
-- Debug commands for status and stats
+#### Error Handling and Connection Management
+-   **No Heartbeat:** Client liveness is determined implicitly by the `ack` mechanism. Failure to acknowledge a message within the `ACK_TIMEOUT` window signifies a dead connection.
+-   **Disconnection:** If a client disconnects, the server updates its FSM (`connectedClients`) and broadcasts the new state to the remaining client.
+-   **Reconnection:** Upon reconnecting, a client simply follows the registration flow again, receiving the latest state from the server.
+-   **Invalid Messages:** If the server receives an invalid message (e.g., wrong format, invalid state transition), it will send an `error` message to the originating client and the message will be discarded.
 
 ## 5. Video Integration
 

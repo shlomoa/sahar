@@ -23,8 +23,10 @@ This document outlines the development and implementation plan for refactoring t
 -   [x] **Task 1.4**: Configure the `express` app to serve the static files for the TV app from `apps/tv/dist/sahar-tv`. `(2025-08-07)`
 -   [x] **Task 1.5**: Configure the `express` app to serve the static files for the Remote app from `apps/remote/dist/sahar-remote`. `(2025-08-07)`
 -   [x] **Task 1.6**: Create an HTTP server from the `express` app and have it listen on a designated port (e.g., 8080). `(2025-08-07)`
--   [ ] **Task 1.7**: Attach the `ws` WebSocket server to the new HTTP server. `(YYYY-MM-DD)`
--   [ ] **Task 1.8**: Refactor the existing WebSocket connection logic to align with the new FSM and protocol defined in `ARCHITECTURE.md`. `(YYYY-MM-DD)`
+-   [x] **Task 1.7**: Attach the `ws` WebSocket server to the new HTTP server. `(2025-08-07)`
+-   [x] **Task 1.8**: Refactor `shared/websocket/websocket-protocol.ts` to align with the new synchronous, server-centric protocol. `(2025-08-07)`
+-   [x] **Task 1.8.1 (Documentation)**: Update `ARCHITECTURE.md` to reflect the new Unified Communication Protocol. `(2025-08-07)`
+-   [x] **Task 1.8.2 (Documentation)**: Update `VALIDATION.md` with a new testing strategy for the synchronous protocol. `(2025-08-07)`
 -   [ ] **Task 1.9**: Implement the server-side Finite State Machine (FSM) for managing application state. `(YYYY-MM-DD)`
 -   [ ] **Task 1.10**: Implement the `state_update` message broadcast to all clients on state change. `(YYYY-MM-DD)`
 -   [ ] **Task 1.11**: Implement the `data` message handler to receive and store data from the Remote app. `(YYYY-MM-DD)`
