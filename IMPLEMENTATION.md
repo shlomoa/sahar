@@ -19,10 +19,10 @@ This document outlines the development and implementation plan for refactoring t
 
 -   [x] **Task 1.1**: Set up the server development environment by installing dependencies. In the `/validation` directory, run `npm install` to get `express` and `ws`, and run `npm install --save-dev typescript ts-node @types/node @types/express @types/ws` for the TypeScript toolchain. `(2025-08-07)`
 -   [x] **Task 1.2**: Create a `tsconfig.json` file in the `server` directory to configure the TypeScript compiler options for the Node.js server. `(2025-08-07)`
--   [ ] **Task 1.3**: Modify `server/websocket-server.ts` to create an `express` app. `(YYYY-MM-DD)`
--   [ ] **Task 1.4**: Configure the `express` app to serve the static files for the TV app from `apps/tv/dist/sahar-tv`. `(YYYY-MM-DD)`
--   [ ] **Task 1.5**: Configure the `express` app to serve the static files for the Remote app from `apps/remote/dist/sahar-remote`. `(YYYY-MM-DD)`
--   [ ] **Task 1.6**: Create an HTTP server from the `express` app and have it listen on a designated port (e.g., 8080). `(YYYY-MM-DD)`
+-   [x] **Task 1.3**: Modify `server/websocket-server.ts` to create an `express` app. `(2025-08-07)`
+-   [x] **Task 1.4**: Configure the `express` app to serve the static files for the TV app from `apps/tv/dist/sahar-tv`. `(2025-08-07)`
+-   [x] **Task 1.5**: Configure the `express` app to serve the static files for the Remote app from `apps/remote/dist/sahar-remote`. `(2025-08-07)`
+-   [x] **Task 1.6**: Create an HTTP server from the `express` app and have it listen on a designated port (e.g., 8080). `(2025-08-07)`
 -   [ ] **Task 1.7**: Attach the `ws` WebSocket server to the new HTTP server. `(YYYY-MM-DD)`
 -   [ ] **Task 1.8**: Refactor the existing WebSocket connection logic to align with the new FSM and protocol defined in `ARCHITECTURE.md`. `(YYYY-MM-DD)`
 -   [ ] **Task 1.9**: Implement the server-side Finite State Machine (FSM) for managing application state. `(YYYY-MM-DD)`
@@ -64,3 +64,11 @@ This document outlines the development and implementation plan for refactoring t
 -   **Action A**: Update the `VALIDATION.md` document with new testing strategies relevant to the completed task.
 -   **Action B**: Update or create integration tests in the `/validation` directory.
 -   **Action C**: Update project documentation (`README.md`, `ARCHITECTURE.md`) to reflect changes.
+
+---
+
+## 5. Phase 3: Production Readiness
+
+**Goal**: To prepare the Unified Server for standalone deployment and improve maintainability.
+
+-   [ ] **Task 3.1**: Create a standalone `package.json` for the `server` directory to make it a self-contained, deployable application. `(YYYY-MM-DD)`
