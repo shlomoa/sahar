@@ -185,6 +185,7 @@ interface Scene {
 
 - **Frontend:** Angular 20+ with Standalone Components
 - **UI Framework:** Angular Material 20.1.3
+- **Implementation Directive: Standalone Material Components**: All Angular Material components **must** be imported as standalone components directly into the components that use them. Do not use `NgModule` for Material components. This approach improves tree-shaking and aligns with modern Angular practices.
 - **Communication:** Native WebSocket API
 - **Video:** YouTube Player API (@angular/youtube-player)
 - **Reactive Programming:** RxJS
