@@ -4,17 +4,13 @@
   "description": "Validation and testing suite for SAHAR TV-Remote communication system",
   "main": "validate.js",
   "scripts": {
-    "validate": "node validate.js",
-    "validate:env": "node validate.js --env",
-    "validate:services": "node validate.js --services",
-    "validate:integration": "node validate.js --integration",
-    "test:integration": "node test-drivers/tv-app-test-driver.js",
-    "test:websocket": "node websocket-mock-server.js",
-    "test:connection": "node connection-flow.js",
-    "test:server": "node websocket-test-server.js",
-    "test:server:dev": "nodemon websocket-test-server.js",
-    "start": "node websocket-test-server.js",
-    "dev": "nodemon websocket-test-server.js"
+    "check": "node -v && npm -v",
+    "start": "npm run build && ts-node ../server/websocket-server.ts",
+    "test": "node test-drivers/tv-app-test-driver.js",
+    "validate": "npm run check && npm run start && npm run test",
+    "build": "npm run build:tv && npm run build:remote",
+    "build:tv": "(cd .. && ng build tv)",
+    "build:remote": "(cd .. && ng build remote)"
   },
   "dependencies": {
     "concurrently": "^8.2.2",

@@ -1,57 +1,40 @@
 # SAHAR Validation Suite
 
-Validation and testing framework for the SAHAR TV-Remote communication system.
+This suite contains scripts and tools for testing the SAHAR "Unified Appliance Model".
 
-> **📖 For complete testing procedures and validation strategy, see [DEPLOYMENT.md](../DEPLOYMENT.md)**  
 > **🔧 For technical implementation details, see [ARCHITECTURE.md](../ARCHITECTURE.md)**  
-> **📋 For current validation status, see [VERIFICATION-RESULTS.md](../VERIFICATION-RESULTS.md)**
+> **� For the step-by-step plan, see [IMPLEMENTATION.md](../IMPLEMENTATION.md)**  
+> **✅ For testing strategies and status, see [VALIDATION.md](../VALIDATION.md)**
 
 ## 🚀 Quick Start
 
-```bash
-# Install dependencies
-cd validation
+All validation tasks are executed via the `sahar-validation.ps1` script.
+
+```powershell
+# Install dependencies (run from this directory)
 npm install
 
-# Run full validation (see DEPLOYMENT.md for details)
-npm run validate
-
-# Start WebSocket test server
-npm start
+# Run a full system check
+.\\sahar-validation.ps1 full
 ```
 
 ## 📋 Available Commands
 
-All validation procedures are documented in [DEPLOYMENT.md](../DEPLOYMENT.md). Available npm scripts:
+Use the `sahar-validation.ps1` script with one of the following arguments:
 
-### Validation Scripts
-```bash
-npm run validate              # Full system validation
-npm run validate:env          # Environment check only
-npm run validate:services     # Service validation only
-npm run validate:integration  # Integration tests only
-```
-
-### Testing Scripts
-```bash
-npm run test:integration      # TV app integration tests
-npm run test:websocket        # WebSocket mock server tests
-npm run test:connection       # Connection flow tests
-npm run test:server           # Start WebSocket test server
-npm run test:server:dev       # Start test server with auto-reload
-```
+-   `check`: Performs an environment check to ensure all required tools and dependencies are available.
+-   `start`: Builds the client applications and starts the Unified Server.
+-   `test`: Runs the integration test suite against the running applications.
+-   `full`: Executes `check`, `start`, and `test` in sequence.
 
 ## 📁 File Structure
 
 ```
 validation/
-├── validate.js               # Main validation script
-├── connection-flow.js        # Connection flow testing
-├── websocket-mock-server.js  # Mock WebSocket server
-├── websocket-test-server.js  # WebSocket test server
+├── sahar-validation.ps1      # Main validation script
+├── package.json              # Node.js dependencies
+├── README.md                 # This file
 ├── websocket-communication.js # WebSocket communication tests
 └── test-drivers/
     └── tv-app-test-driver.js # TV application test driver
 ```
-
-> **Note**: This validation suite is self-contained and independent of the Angular applications in `apps/`. For complete testing strategy and procedures, refer to [DEPLOYMENT.md](../DEPLOYMENT.md).
