@@ -4,52 +4,49 @@
 
 ## 🎯 Overview
 
-The SAHAR TV Remote Control System is a real-time synchronized application suite featuring direct TV-Remote communication over WebSocket Protocol v2.0.
+The SAHAR TV Remote Control System is a real-time synchronized application suite featuring a central gateway server architecture over WebSocket Protocol v2.0.
 
 ### Core Architecture Principles
 
-1. **Direct Communication**: TV acts as WebSocket server, Remote connects as client
-2. **Data Ownership**: Remote owns all content data, TV displays received data
-3. **Real-time Sync**: Navigation and playback state synchronized via WebSocket
-4. **No External Dependencies**: Self-contained system with no external servers required
+1. **Gateway Architecture**: A central Node.js server acts as a WebSocket gateway.
+2. **State Management**: The gateway server manages the shared application state.
+3. **Real-time Sync**: Navigation and playback state synchronized via the WebSocket gateway.
+4. **Core Dependency**: Requires a running Node.js gateway server for all communication.
 
 ## 🏗️ System Components
 
 ### Architecture Diagram
 ```
-┌─────────────────┐    WebSocket     ┌─────────────────┐
-│   Remote App    │◄──────────────►  │     TV App      │
-│  (Data Owner)   │   Protocol v2.0  │ (Display/Player)│
-│   Port: 4202    │                  │   Port: 4203    │
-│                 │                  │                 │
-│ • All Data      │ ──── Sends ────► │ • Receives Data │
-│ • Navigation    │      Content     │ • Shows Grid    │
-│ • Discovery     │                  │ • Plays Videos  │
-│ • Enhanced UI   │ ◄── Confirms ─── │ • WebSocket     │
-│                 │      State       │   Server        │
-└─────────────────┘                  └─────────────────┘
-        │                                     │
-        └─────── Network Discovery ───────────┘
-            (TV listens on ports 5544-5547)
+┌─────────────────┐      ┌──────────────────────┐      ┌─────────────────┐
+│   Remote App    │      │  WebSocket Gateway   │      │     TV App      │
+│  (Client)       │      │   (Node.js Server)   │      │  (Client)       │
+│   Port: 4202    │      │                      │      │   Port: 4203    │
+│                 │      │  Listens on Ports:   │      │                 │
+│ WebSocket       │ ◄───►│  5544-5547           │◄───► │ WebSocket       │
+│ Client          │      │                      │      │ Client          │
+│                 │      │  Relays Messages &   │      │                 │
+│ Connects to     │      │  Manages State       │      │ Connects to     │
+│ Gateway         │      │                      │      │ Gateway         │
+└─────────────────┘      └──────────────────────┘      └─────────────────┘
 ```
 
 ## 📱 Application Details
 
 ### TV Application (`apps/tv/`)
 
-**Role**: Display and Video Player
+**Role**: Display and Video Player (Client)
 - **URL**: `http://localhost:4203`
-- **WebSocket**: Server on ports 5544-5547
+- **WebSocket**: Client, connects to Gateway Server
 - **Technology**: Angular 20+ with Material Design
 - **Bundle Size**: 500.27 kB (122.65 kB compressed)
 
 **Responsibilities**:
-- Start WebSocket server on first available port (5544-5547) ✅ *Implemented*
-- Receive all content data from Remote app ✅ *Implemented*
+- Connect to the WebSocket Gateway Server ✅ *Implemented*
+- Receive all state updates from the Gateway Server ✅ *Implemented*
 - Display synchronized performers/videos/scenes grids ✅ *Implemented*
 - Play YouTube videos with @angular/youtube-player integration ✅ *Implemented*
 - Handle scene-based seeking and playback controls ✅ *Implemented*
-- Maintain navigation state synchronization ✅ *Implemented*
+- Render display based on the state received from the server ✅ *Implemented*
 - Calculate YouTube thumbnails dynamically ✅ *Implemented*
 
 **Key Features**:
@@ -61,19 +58,19 @@ The SAHAR TV Remote Control System is a real-time synchronized application suite
 
 ### Remote Application (`apps/remote/`)
 
-**Role**: Control Interface and Data Owner
+**Role**: Control Interface (Client)
 - **URL**: `http://localhost:4202`  
-- **WebSocket**: Client with network discovery
+- **WebSocket**: Client, connects to Gateway Server
 - **Technology**: Angular 20+ with Material Design
 - **Bundle Size**: 497.86 kB (120.15 kB compressed)
 
 **Responsibilities**:
 - Own and manage all performers/videos/scenes data ✅ *Implemented*
-- Discover TV devices via network scanning (ports 5544-5547) ✅ *Implemented*
-- Establish and maintain WebSocket connection to TV ✅ *Implemented*
-- Send complete data sets to TV upon connection ✅ *Implemented*
+- Connect to the WebSocket Gateway Server ✅ *Implemented*
+- Establish and maintain WebSocket connection to the Gateway ✅ *Implemented*
+- Send complete data sets to the Gateway upon connection ✅ *Implemented*
 - Provide touch-optimized navigation interface ✅ *Implemented*
-- Dispatch navigation and control commands ✅ *Implemented*
+- Dispatch navigation and control commands to the Gateway ✅ *Implemented*
 - Show enhanced video controls during scene playback ✅ *Implemented*
 - Calculate and display YouTube thumbnails dynamically ✅ *Implemented*
 
@@ -90,16 +87,16 @@ The SAHAR TV Remote Control System is a real-time synchronized application suite
 
 **Transport**: WebSocket over TCP  
 **Format**: JSON Messages  
-**Connection**: Direct TV ↔ Remote (no external server)
+**Connection**: Client-Server via Gateway
 
 ### Connection Flow
 
-1. **TV Startup**: WebSocket server starts on first available port (5544-5547)
-2. **Remote Discovery**: Network scan finds TV's WebSocket server  
-3. **Connection**: Direct WebSocket connection established
-4. **Data Transfer**: Remote sends complete data payload to TV
-5. **Navigation Sync**: Real-time command synchronization
-6. **Video Control**: Scene-based YouTube playback coordination
+1. **Gateway Startup**: The `websocket-server.js` starts, listening on ports 5544-5547.
+2. **Client Connection**: Both TV and Remote apps connect to the Gateway.
+3. **State Synchronization**: Gateway sends the current `sharedState` to the new client.
+4. **Command Handling**: Remote sends commands to the Gateway.
+5. **State Update**: Gateway updates its `sharedState`.
+6. **Broadcast**: Gateway broadcasts the new state to ALL connected clients.
 
 ### Message Types
 
@@ -180,15 +177,11 @@ interface Scene {
 ### Port Configuration
 - **TV App Development**: 4203 (ng serve)
 - **Remote App Development**: 4202 (ng serve)
-- **TV WebSocket Server**: 5544-5547 (first available)
-- **Discovery Scanning**: Remote scans TV on all WebSocket ports
+- **Gateway Server**: `websocket-server.js` listens on 5544-5547.
+- **Client Connection**: Remote and TV apps connect directly to the gateway.
 
 ### Network Discovery Process
-1. **Port Scanning**: Remote tests WebSocket connections on ports 5544-5547
-2. **Connection Testing**: Real WebSocket connection attempts (2s timeout per port)
-3. **Auto-Connect**: Successful connection triggers data transfer
-4. **Retry Logic**: Exponential backoff (1s, 2s, 4s, 8s, max 30s)
-5. **Error Handling**: Graceful fallback and user feedback
+The explicit network discovery/scanning process is no longer needed. Both clients are configured to know the gateway's potential IP (localhost for development) and the port range [5544-5547]. They attempt to connect to these ports sequentially until a connection is established.
 
 ## 🔧 Technical Implementation
 
@@ -201,10 +194,10 @@ interface Scene {
 - **Styling**: SCSS with Material Design theming
 
 ### State Management
-- **Remote App**: Manages complete application state
-- **TV App**: Stateless display layer (receives state from Remote)
-- **Synchronization**: Real-time state updates via WebSocket
-- **Persistence**: No local storage required (Remote is source of truth)
+- **Gateway Server**: Manages the complete, shared application state (`sharedState`). This is the single source of truth.
+- **Client Apps (TV & Remote)**: Are now stateless display/control layers. They receive state updates from the server and render the UI accordingly.
+- **Synchronization**: The server sends a `state_update` message to all clients whenever the state changes.
+- **Persistence**: No local storage is required. State is held in memory on the server. On restart, the Remote app must reconnect and send the initial `data` message to repopulate the server's state.
 
 ### Performance Characteristics
 - **WebSocket Latency**: <50ms target for command processing

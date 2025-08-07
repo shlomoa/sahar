@@ -43,7 +43,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
   }
 
   // Common WebSocket connection logic
-  protected connect(url: string): void {
+  protected connect(url: string): boolean {
     if (this.ws) {
       this.disconnect();
     }
@@ -53,12 +53,14 @@ export abstract class WebSocketBaseService implements OnDestroy {
 
     try {
       this.ws = new WebSocket(url);
-      this.setupWebSocketHandlers();
+      this.setupWebSocketHandlers();      
     } catch (error) {
       console.error(`❌ ${this.deviceType.toUpperCase()}: Failed to create WebSocket:`, error);
       this.connectionState$.next('error');
       this.scheduleReconnect(url);
+      return false
     }
+    return true;
   }
 
   protected disconnect(): void {

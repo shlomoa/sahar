@@ -185,9 +185,9 @@ export class WebSocketService extends WebSocketBaseService {
     this.connect(url);
   }
 
-  override connect(url: string): void {
+  override connect(url: string): boolean {
     this.lastConnectedUrl = url;
-    super.connect(url);
+    return super.connect(url);
   }
 
   // Device discovery

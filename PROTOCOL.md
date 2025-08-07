@@ -7,74 +7,60 @@
 **Version**: 2.0  
 **Transport**: WebSocket over TCP  
 **Format**: JSON Messages  
-**Architecture**: Direct TV ↔ Remote Communication  
+**Architecture**: Gateway Server Model  
 
 ## 🔌 Connection Architecture
 
-### Direct Communication Model
+### Gateway Server Model
 ```
-┌─────────────────┐         ┌─────────────────┐
-│   Remote App    │  ────>  │     TV App      │
-│  (Port 4202)    │         │  (Port 4203)    │
-│                 │         │                 │
-│ WebSocket       │         │ WebSocket       │
-│ Client          │         │ Server          │
-│                 │         │ Listening on:   │
-│ Discovers TV    │         │ 5544-5547       │
-└─────────────────┘         └─────────────────┘
+┌─────────────────┐      ┌──────────────────────┐      ┌─────────────────┐
+│   Remote App    │      │  WebSocket Gateway   │      │     TV App      │
+│  (Port 4202)    │      │   (Node.js Server)   │      │  (Port 4203)    │
+│                 │      │                      │      │                 │
+│ WebSocket       │ ◄───►│  Listens on Ports:   │◄───► │ WebSocket       │
+│ Client          │      │  5544-5547           │      │ Client          │
+│                 │      │                      │      │                 │
+│ Connects to     │      │  Relays Messages &   │      │ Connects to     │
+│ Gateway         │      │  Manages State       │      │ Gateway         │
+└─────────────────┘      └──────────────────────┘      └─────────────────┘
 ```
 
 ### Connection Establishment
 
-#### 1. TV App Initialization
-```typescript
-// TV starts WebSocket server on first available port
-const server = new WebSocket.Server({ 
-  port: firstAvailablePort(5544, 5547),
-  host: '0.0.0.0'
-});
+#### 1. Gateway Server Initialization
+The `websocket-server.js` script is started. It listens for WebSocket connections on ports 5544-5547.
 
-console.log(`📺 TV WebSocket server listening on port ${port}`);
-```
+#### 2. Client Initialization (TV and Remote)
+Both the TV and Remote apps attempt to connect to the Gateway Server by trying the known ports in sequence.
 
-#### 2. Remote Network Discovery
 ```typescript
-// Remote scans for TV WebSocket servers
-for (let port = 5544; port <= 5547; port++) {
-  try {
-    const ws = new WebSocket(`ws://${tvIP}:${port}`);
-    ws.onopen = () => {
-      // Send discovery message
-      ws.send(JSON.stringify({
-        type: 'discovery',
-        timestamp: Date.now(),
-        payload: {
-          deviceType: 'remote',
-          deviceId: 'remote-12345',
-          protocolVersion: '2.0'
-        }
-      }));
-    };
-  } catch (error) {
+// Both clients use similar logic
+const PORTS = [5544, 5545, 5546, 5547];
+
+function connectToServer(ports) {
+  if (ports.length === 0) {
+    console.error("Failed to connect to gateway.");
+    return;
+  }
+  const port = ports.shift();
+  const ws = new WebSocket(`ws://localhost:${port}`);
+
+  ws.onopen = () => {
+    console.log(`Connected to gateway on port ${port}`);
+    // Send discovery message, etc.
+  };
+
+  ws.onerror = () => {
     // Try next port
-  }
+    connectToServer(ports);
+  };
 }
+
+connectToServer([...PORTS]);
 ```
 
-#### 3. Connection Confirmation
-```typescript
-// TV responds to discovery
-{
-  "type": "discovery_response",
-  "timestamp": 1722744000000,
-  "payload": {
-    "deviceType": "tv",
-    "deviceId": "tv-67890",
-    "status": "ready",
-    "protocolVersion": "2.0"
-  }
-}
-```
+#### 3. State Synchronization
+Upon successful connection, the Gateway Server immediately sends a `state_update` message to the newly connected client, ensuring it has the latest application state.
 
 ## 📨 Message Format Specification
 
@@ -94,6 +80,7 @@ type MessageType =
   | 'navigation' 
   | 'control'
   | 'status'
+  | 'state_update'
   | 'error'
   | 'heartbeat';
 ```
@@ -352,7 +339,38 @@ type MessageType =
 }
 ```
 
-### 5. Status Messages
+### 5. State Synchronization Messages
+
+#### State Update (Server → All Clients)
+This message is the single source of truth. The server sends this to all clients whenever the shared state changes, and sends it to a new client immediately upon connection.
+
+```json
+{
+  "type": "state_update",
+  "timestamp": 1722744000000,
+  "payload": {
+    "lastUpdate": 1722744000000,
+    "navigation": {
+      "level": "videos",
+      "breadcrumb": ["Home", "Performer Yuval"],
+      "canGoBack": true,
+      "performerId": "yuval",
+      "videoId": null,
+      "sceneId": null
+    },
+    "player": {
+      "isPlaying": false,
+      "currentTime": 0,
+      "duration": 0,
+      "volume": 100,
+      "muted": false,
+      "youtubeId": null
+    }
+  }
+}
+```
+
+### 6. Status Messages
 
 #### Current State (TV → Remote)
 ```json

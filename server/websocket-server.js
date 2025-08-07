@@ -1,13 +1,12 @@
-// Enhanced WebSocket Test Server for TV-Remote Communication with Multi-Port Support
-// Run with: node websocket-test-server-multiport.js
+// WebSocket Gateway Server for SAHAR TV-Remote Communication
+// Run with: node websocket-server.js
 
 const WebSocket = require('ws');
 const http = require('http');
 
 // Port Configuration:
-// - Ports 5544-5547: Primary discovery range (per user story requirements)  
-// - Port 8000: Development fallback (for testing compatibility)
-const PORTS = [8000, 5544, 5545, 5546, 5547]; // Development fallback + Specified range
+// Ports 5544-5547 are the primary discovery range for the applications.
+const PORTS = [5544, 5545, 5546, 5547];
 const servers = new Map();
 const wsServers = new Map();
 
@@ -50,10 +49,10 @@ function createServerOnPort(port) {
         type: 'status',
         timestamp: Date.now(),
         payload: {
-          message: `Connected to test server on port ${port}`,
+          message: `Connected to gateway server on port ${port}`,
           clientId: clientId,
           serverInfo: {
-            name: 'WebSocket Test Server',
+            name: 'SAHAR WebSocket Gateway',
             version: '1.0.0',
             port: port,
             capabilities: ['echo', 'broadcast', 'discovery']
@@ -83,8 +82,8 @@ function createServerOnPort(port) {
                 timestamp: Date.now(),
                 payload: {
                   deviceType: 'tv',
-                  deviceId: `tv-test-${port}`,
-                  deviceName: `SAHAR TV Test (Port ${port})`,
+                  deviceId: `tv-server-${port}`,
+                  deviceName: `SAHAR TV (Port ${port})`,
                   capabilities: ['navigation', 'playback', 'status'],
                   networkInfo: {
                     ip: 'localhost',
@@ -171,7 +170,7 @@ function createServerOnPort(port) {
             ws.send(JSON.stringify(response));
           }
 
-          // Broadcast to other clients (optional)
+          // Broadcast to other clients
           if (message.type === 'navigation' || message.type === 'control') {
             broadcastToOthers(ws, message);
           }
@@ -208,7 +207,7 @@ function createServerOnPort(port) {
 
     // Start server
     server.listen(port, () => {
-      console.log(`✅ WebSocket Test Server running on ws://localhost:${port}`);
+      console.log(`✅ WebSocket Gateway running on ws://localhost:${port}`);
     });
 
     // Store references
@@ -236,7 +235,7 @@ function broadcastToOthers(senderWs, message) {
 }
 
 // Start servers on all ports
-console.log('🧪 SAHAR TV REMOTE TEST SERVER SUITE');
+console.log('🚀 SAHAR Communication Server');
 console.log('=====================================');
 console.log(`Starting WebSocket servers on ports: ${PORTS.join(', ')}`);
 console.log('');
@@ -249,7 +248,7 @@ PORTS.forEach(port => {
 setTimeout(() => {
   console.log('\n📊 SERVER STATUS:');
   console.log(`✅ ${servers.size}/${PORTS.length} servers started successfully`);
-  console.log('\n🔗 TEST CONNECTIONS:');
+  console.log('\n🔗 CONNECTION ENDPOINTS:');
   PORTS.forEach(port => {
     if (servers.has(port)) {
       console.log(`  ✅ ws://localhost:${port}`);
@@ -257,17 +256,17 @@ setTimeout(() => {
       console.log(`  ❌ ws://localhost:${port} (failed)`);
     }
   });
-  console.log('\n🧪 INTEGRATION TESTING:');
+  console.log('\n🚀 USAGE:');
   console.log('  1. Open Remote app: http://localhost:4202');
   console.log('  2. Open TV app: http://localhost:4203');
-  console.log('  3. Remote should discover TV devices automatically');
-  console.log('  4. Test connection and navigation sync');
+  console.log('  3. Both apps will connect to this server.');
+  console.log('  4. The server will relay messages between them.');
   console.log('\nPress Ctrl+C to stop all servers');
 }, 1000);
 
 // Graceful shutdown
 process.on('SIGINT', () => {
-  console.log('\n\n🛑 Shutting down all WebSocket Test Servers...');
+  console.log('\n\n🛑 Shutting down WebSocket Gateway Server...');
   
   // Close all client connections
   clients.forEach((info, ws) => {

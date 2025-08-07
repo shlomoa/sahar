@@ -71,8 +71,9 @@ export class WebSocketService extends WebSocketBaseService {
     this.deviceType = 'tv';
     const ips: string[] = WebSocketUtils.generateLocalHostUrls();
     ips.forEach(ip => {
-      this.connect(ip);
-      this.subscribeToNavigationChanges();
+      if (this.connect(ip)) {
+        this.subscribeToNavigationChanges();
+      }
     }); 
     
   }
@@ -153,9 +154,9 @@ export class WebSocketService extends WebSocketBaseService {
   }
 
   // Connect to WebSocket server (for testing with localhost:8000)
-  public override connect(url: string = `ws://localhost:${WEBSOCKET_CONFIG.DEFAULT_PORT}`): void {
+  public override connect(url: string = `ws://localhost:${WEBSOCKET_CONFIG.DEFAULT_PORT}`): boolean {
     console.log(`📺 TV connecting to WebSocket at ${url}`);
-    super.connect(url);
+    return super.connect(url);
   }  
   
   private handleIncomingMessage(message: any): void {
