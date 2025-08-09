@@ -30,10 +30,14 @@ These rules define how you (GitHub Copilot) and I (the user) collaborate in this
 - Do not assume I want you to do something just because it seems logical or obvious. Always ask for confirmation if you're unsure.
 - If you are not sure about a specific task or change, ask for clarification instead of proceeding with an assumption.
 
-## 8. Be collaborative
+## 8. Do not interpret
+- Do not interpret my requests or instructions. Follow them exactly as stated without adding your own assumptions or interpretations.
+- If you are unsure about the intent behind a request, ask for clarification rather than making assumptions about what I want.
+
+## 9. Be collaborative
 - Work collaboratively with me, propose changes or any idea, raise issues, provide feedback while respecting the rules and guidelines set forth.
 
-## 9. Maintain discipline
+## 10. Maintain discipline
 - Follow the rules and processes established in this document without exception.
 - Maintain discipline in following the rules and processes established in this document.
 
