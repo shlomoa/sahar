@@ -17,9 +17,9 @@ This document outlines the development and implementation plan for refactoring t
 
 ***Prerequisite Note:*** *Before starting the server, the Angular applications must be built using `ng build` to ensure the `apps/tv/dist/` and `apps/remote/dist/` directories exist.*
 
--   [x] **Task 1.1**: Set up the server development environment by installing dependencies. In the `/validation` directory, run `npm install` to get `express` and `ws`, and run `npm install --save-dev typescript ts-node @types/node @types/express @types/ws` for the TypeScript toolchain. `(2025-08-07)`
--   [x] **Task 1.2**: Create a `tsconfig.json` file in the `server` directory to configure the TypeScript compiler options for the Node.js server. `(2025-08-07)`
--   [x] **Task 1.3**: Modify `server/websocket-server.ts` to create an `express` app. `(2025-08-07)`
+-   [ ] **Task 1.1**: Initialize a standalone server environment under `/server`. Define its own dependency manifest and scripts for build/start/dev. The server must not depend on `/validation`. Acceptance: the server can be built and started from `/server` only. `(YYYY-MM-DD)`
+-   [ ] **Task 1.2**: Initialize a standalone validation framework under `/validation`. Provide its own dependency manifest and scripts to run tests and optional mock servers. It must not start or depend on the real server in `/server`. Acceptance: validation runs independently from `/validation` only. `(YYYY-MM-DD)`
+-   [ ] **Task 1.3**: Modify `server/websocket-server.ts` to create an `express` app.
 -   [x] **Task 1.4**: Configure the `express` app to serve the static files for the TV app from `apps/tv/dist/sahar-tv`. `(2025-08-07)`
 -   [x] **Task 1.5**: Configure the `express` app to serve the static files for the Remote app from `apps/remote/dist/sahar-remote`. `(2025-08-07)`
 -   [x] **Task 1.6**: Create an HTTP server from the `express` app and have it listen on a designated port (e.g., 8080). `(2025-08-07)`
