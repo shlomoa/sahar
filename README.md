@@ -1,18 +1,19 @@
 # SAHAR TV Remote Control System 📺
 
-*Real-time synchronized TV and tablet remote control system with direct WebSocket communication.*
+*Real-time synchronized TV and Remote controlled by a unified Node.js server (Express + ws) with a server-owned FSM.*
 
 ## 🎯 Overview
 
-A sophisticated Angular-based remote control system featuring direct TV-Remote communication, YouTube video integration, and real-time synchronization. The system uses WebSocket Protocol v2.0 for seamless device communication without external dependencies.
+A centralized, server-driven system where a Unified Server (Node.js + Express + ws) serves the Angular apps and owns all application state via a server-side FSM. Communication follows Protocol v3.0 using a synchronous Stop-and-Wait model; clients are stateless and render based on server `state_sync` updates.
+
+For complete architecture and protocol details, see the single source of truth: [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ### Key Features
-- **Direct Communication**: TV acts as WebSocket server, Remote connects as client  
+- **Unified Server**: Server-side FSM owns state; clients are stateless
 - **Auto Discovery**: Remote automatically finds and connects to TV devices
 - **Real-time Sync**: Navigation and playback state synchronized between devices
 - **YouTube Integration**: Scene-based video playbook with automatic seeking and dynamic thumbnail calculation
 - **Material Design**: Modern, responsive interfaces optimized for each device
-- **No External Dependencies**: Self-contained system requiring only local network
 - **Dynamic Thumbnails**: YouTube video thumbnails calculated dynamically using @angular/youtube-player
 
 ## 🚀 Quick Start
@@ -32,35 +33,29 @@ cd ../remote && npm install
 ### Run Applications
 ```bash
 # Start TV App (Terminal 1)
-cd apps/tv && ng serve --port 4203
+cd apps/tv && ng serve
 
-# Start Remote App (Terminal 2)  
-cd apps/remote && ng serve --port 4202
+# Start Remote App (Terminal 2)
+cd apps/remote && ng serve
 ```
 
-### Access Points
-- **TV Display**: http://localhost:4203
-- **Remote Control**: http://localhost:4202
+### Integrated run and validation
+- For end-to-end running and validation flows, see [VALIDATION.md](./VALIDATION.md).
 
 ## 🏗️ Architecture
 
 ### System Components
-```
-┌─────────────────┐    WebSocket     ┌─────────────────┐
-│   Remote App    │◄──────────────►  │     TV App      │
-│  (Data Owner)   │   Protocol v2.0  │ (Display/Player)│
-│   Port: 4202    │                  │   Port: 4203    │
-│                 │                  │                 │
-│ • All Data      │ ──── Sends ────► │ • Receives Data │
-│ • Navigation    │      Content     │ • Shows Grid    │
-│ • Discovery     │                  │ • Plays Videos  │
-│ • Enhanced UI   │ ◄── Confirms ─── │ • WebSocket     │
-│                 │      State       │   Server        │
-└─────────────────┘                  └─────────────────┘
-        │                                     │
-        └─────── Network Discovery ───────────┘
-            (TV listens on ports 5544-5547)
-```
+
+For the canonical diagram and detailed component breakdown, see:
+- [ARCHITECTURE.md — System Components & Architecture Diagram](./ARCHITECTURE.md#2-system-components--architecture-diagram)
+
+Roles at a glance (details in ARCHITECTURE.md → Application Details):
+- [Unified Server](./ARCHITECTURE.md#server-app-unified-nodejs-server): Serves apps, owns the FSM, manages protocol, relays messages.
+- [TV Application](./ARCHITECTURE.md#tv-application-appstv): Stateless display/player; renders based on `state_sync` from the server.
+- [Remote Application](./ARCHITECTURE.md#remote-application-appsremote): Control and data owner; connects to server and sends commands/data.
+
+Dev ports and discovery are defined here:
+- [ARCHITECTURE.md — Network Architecture & Discovery](./ARCHITECTURE.md#6-network-architecture--discovery)
 
 ### Core Principles
 1. **Single Source of Truth**: Remote app owns all content data
@@ -73,28 +68,23 @@ cd apps/remote && ng serve --port 4202
 ### TV Application (`apps/tv/`)
 **Role**: Display and Video Player
 - **Technology**: Angular 20+ with Material Design
-- **Bundle Size**: 500.27 kB (122.65 kB compressed)
-- **Features**:
-  - WebSocket server on ports 5544-5547
-  - YouTube video player integration (@angular/youtube-player)
-  - Dynamic YouTube thumbnail calculation
-  - Receives all data from Remote app
+- **Summary**:
+  - Displays synchronized performers → videos → scenes grids
+  - Stateless client that renders UI from server `state_sync` messages
+  - YouTube video player integration (@angular/youtube-player) and dynamic thumbnails
   - Large-screen optimized Material Design interface
-  - Scene-based video seeking and playback
-  - Shared service architecture with consolidated utilities
+  - No on-device user controls; all control comes from the Remote
+  - See details: [ARCHITECTURE.md — TV Application](./ARCHITECTURE.md#tv-application-appstv)
 
 ### Remote Application (`apps/remote/`)  
 **Role**: Control Interface and Data Owner
-- **Technology**: Angular 20+ with Material Design  
-- **Bundle Size**: 497.86 kB (120.15 kB compressed)
-- **Features**:
-  - Owns all performers/videos/scenes data
-  - Network discovery and auto-connection
-  - Touch-optimized tablet interface
-  - Enhanced video controls during playback
-  - Real-time command dispatch to TV
-  - Dynamic YouTube thumbnail integration
-  - Shared service architecture with optimized utilities
+- **Technology**: Angular 20+ with Material Design
+- **Summary**:
+  - Owns performers/videos/scenes data and provides it to the server on connection
+  - Navigates performers → videos → scenes; touch-optimized UI
+  - Sends navigation and control commands to the server and provides all playback controls
+  - Enhanced video controls during playback and dynamic thumbnail integration
+  - See details: [ARCHITECTURE.md — Remote Application](./ARCHITECTURE.md#remote-application-appsremote)
 
 ## 🎬 Content Structure
 
@@ -131,51 +121,22 @@ function getVideoThumbnail(videoUrl: string): string {
 
 ## 🔌 Communication Protocol
 
-### WebSocket Protocol v2.0
-- **Transport**: WebSocket over TCP
-- **Format**: JSON messages
-- **Connection**: Direct TV ↔ Remote (no external server)
+- Protocol v3.0 (Stop-and-Wait), centralized server-owned FSM; clients are stateless and render from `state_sync`.
+- See architecture and flows: [ARCHITECTURE.md — Unified Communication Protocol](./ARCHITECTURE.md#4-unified-communication-protocol)
+- Canonical message types and enums: [shared/websocket/websocket-protocol.ts](./shared/websocket/websocket-protocol.ts)
 
-### Key Message Types
-```typescript
-// Discovery (Remote → TV)
-{ type: 'discovery', payload: { deviceType: 'remote', protocolVersion: '2.0' } }
+## 🛠️ Implementation plan & progress
 
-// Data Transfer (Remote → TV)  
-{ type: 'data', payload: { performers: [...], dataVersion: '1.0' } }
-
-// Navigation (Remote → TV)
-{ type: 'navigation', payload: { action: 'navigate_to_scene', targetId: 'scene-1' } }
-
-// Status (TV → Remote)
-{ type: 'status', payload: { currentState: {...}, playerState: {...} } }
-```
+For the authoritative implementation tasks and current progress, see [IMPLEMENTATION.md](./IMPLEMENTATION.md).
 
 ## 🌐 Network Architecture
+See the authoritative flow and details in: [ARCHITECTURE.md — Network Architecture & Discovery](./ARCHITECTURE.md#6-network-architecture--discovery).
 
-### Connection Flow
-1. **TV Startup**: WebSocket server starts on first available port (5544-5547)
-2. **Remote Discovery**: Network scan finds TV's WebSocket server
-3. **Direct Connection**: WebSocket connection established  
-4. **Data Transfer**: Remote sends complete data payload to TV
-5. **Navigation Sync**: Real-time command synchronization
-6. **Video Control**: Scene-based YouTube playback coordination
-
-### Performance Characteristics
-- **Discovery Time**: <10 seconds for TV detection
-- **Connection Latency**: <50ms for WebSocket commands
-- **Bundle Sizes**: ~500KB each app (production optimized)
-- **Network Usage**: 1-10KB per message, minimal bandwidth
+Summary: both clients connect to the unified server; the server owns the FSM, pushes `state_sync` updates, and clients send navigation/control commands using the Stop-and-Wait protocol.
 
 ## 🧪 Testing
 
-### Manual Testing Checklist
-- [ ] **Connection**: Remote discovers and connects to TV
-- [ ] **Data Sync**: Both apps display synchronized performers grid
-- [ ] **Navigation**: Performer → Videos → Scenes navigation works
-- [ ] **Video Playback**: Scene selection triggers YouTube player on TV
-- [ ] **Enhanced Controls**: Remote shows video controls during playback
-- [ ] **Error Handling**: Network disconnection and reconnection works
+- For complete validation flows (Environment Check, Start Applications, Integration Tests), see [VALIDATION.md](./VALIDATION.md).
 
 ### Build Verification
 ```bash
@@ -188,9 +149,9 @@ cd apps/remote && ng build   # Should complete successfully
 
 ### Complete Documentation Suite
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)**: Complete technical architecture and implementation details
-- **[PROTOCOL.md](./PROTOCOL.md)**: WebSocket communication protocol specification  
+- **Unified Communication Protocol (in ARCHITECTURE.md)**: [Protocol v3.0 — Stop-and-Wait](./ARCHITECTURE.md#4-unified-communication-protocol)  
 - **[DEPLOYMENT.md](./DEPLOYMENT.md)**: Deployment guide, testing procedures, and troubleshooting
-- **[VERIFICATION-RESULTS.md](./VERIFICATION-RESULTS.md)**: Implementation status and verification results
+- **[VALIDATION.md](./VALIDATION.md)**: Validation flows, checks, and testing guidance
 
 ## 🛠️ Development
 
@@ -205,8 +166,8 @@ cd apps/remote && ng build   # Should complete successfully
 ### Development Workflow
 ```bash
 # Development with live reload
-cd apps/tv && ng serve --port 4203 --host 0.0.0.0
-cd apps/remote && ng serve --port 4202 --host 0.0.0.0
+cd apps/tv && ng serve
+cd apps/remote && ng serve
 
 # Production builds
 cd apps/tv && ng build --configuration production
@@ -229,18 +190,7 @@ cd apps/remote && ng build --configuration production
 
 ## 🚀 Production Deployment
 
-### Build for Production
-```bash
-# Build both applications
-cd apps/tv && ng build --configuration production     # 500.27 kB bundle
-cd apps/remote && ng build --configuration production # 497.86 kB bundle
-```
-
-### Deployment Options
-- **Development**: Angular CLI dev server (ng serve)
-- **Production**: Static web server (nginx, Apache, http-server)
-- **Smart TV**: Package as platform-specific apps (Tizen, webOS, Android TV)
-- **Progressive Web App**: PWA deployment for mobile devices
+For development, integrated validation, and production deployment, see: [DEPLOYMENT.md](./DEPLOYMENT.md).
 
 ## 🤝 Contributing
 
@@ -258,4 +208,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 **SAHAR TV Remote** - Transforming smart TV control with real-time synchronization 🚀
 
-*For detailed technical information, see the complete documentation suite in [ARCHITECTURE.md](./ARCHITECTURE.md), [PROTOCOL.md](./PROTOCOL.md), and [DEPLOYMENT.md](./DEPLOYMENT.md)*
+*For detailed technical information, see the complete documentation suite in [ARCHITECTURE.md](./ARCHITECTURE.md), [IMPLEMENTATION.md](./IMPLEMENTATION.md), [DEPLOYMENT.md](./DEPLOYMENT.md), and [VALIDATION.md](./VALIDATION.md)*
