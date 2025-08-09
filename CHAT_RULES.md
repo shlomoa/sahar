@@ -112,6 +112,40 @@ Command(s) to execute the task(s) — optional, include only when required
 # pwsh code block with one command per line, only if needed
 ```
 
+## Failure handling Message Format
+
+Use this structure for requesting change following a failed change do not repeat the same change, but rather analyze the failure and propose a new plan.
+
+```
+Title
+<concise failure title>
+
+The source of the issue:
+
+Details
+- <key observation 1>
+- <key observation 2>
+- <key observation 3>
+
+Proposed detailed step by step plan:
+Step 1 Title:
+- <what will change and why>
+- Files: <file(s) to edit>
+- Expected outcome: <result/verification>
+
+Step 2 Title:
+- <what will change and why>
+- Files: <file(s) to edit>
+- Expected outcome: <result/verification>
+
+Step 3 Title:
+- <what will change and why>
+- Files: <file(s) to edit>
+- Expected outcome: <result/verification>
+
+Command(s) to execute the task(s) — optional, include only when required
+# pwsh code block with one command per line, only if needed
+```
 ---
 
 *These rules are binding for all future work in this project until I explicitly change or remove them.*
