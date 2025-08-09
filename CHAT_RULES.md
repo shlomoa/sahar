@@ -26,6 +26,17 @@ These rules define how you (GitHub Copilot) and I (the user) collaborate in this
 ## 6. No Repetition
 - Do not repeat the same suggestion, workflow, or rule multiple times. If clarification is needed, ask for it.
 
+## 7. Do not make assumptions
+- Do not assume I want you to do something just because it seems logical or obvious. Always ask for confirmation if you're unsure.
+- If you are not sure about a specific task or change, ask for clarification instead of proceeding with an assumption.
+
+## 8. Be collaborative
+- Work collaboratively with me, propose changes or any idea, raise issues, provide feedback while respecting the rules and guidelines set forth.
+
+## 9. Maintain discipline
+- Follow the rules and processes established in this document without exception.
+- Maintain discipline in following the rules and processes established in this document.
+
 ---
 
 *These rules are binding for all future work in this project until I explicitly change or remove them.*
