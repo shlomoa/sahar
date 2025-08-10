@@ -11,28 +11,92 @@ This document outlines the development and implementation plan for refactoring t
 
 ---
 
-## 2. Phase 1: Server-Side Refactoring (Unified Server)
+## 2. Phase 1: Server-Side Refactoring (Unified Server + SSR Host)
 
-**Goal**: Adapt the existing `server/websocket-server.ts` to function as the Unified Server, serving static files and managing the WebSocket gateway.
+Goal: Evolve `server/websocket-server.ts` into the Unified Server and SSR host. In dev, proxy to Angular SSR servers. In prod, discover and run SSR bundles in child processes, proxy routes to them, and serve browser assets directly. Keep a single-origin WebSocket gateway at `/ws` and provide health endpoints.
 
-***Prerequisite Note:*** *Before starting the server, the Angular applications must be built using `ng build` to ensure the `apps/tv/dist/` and `apps/remote/dist/` directories exist.*
+Prerequisites
+- TV/Remote dev: When developing with SSR, each app runs `ng serve --ssr` on its own dev port (TV: 4203, Remote: 4202).
+- TV/Remote prod: `ng build` produces `apps/<app>/dist/<name>/{browser,server}`.
 
--   [ ] **Task 1.1**: Initialize a standalone server environment under `/server`. Define its own dependency manifest and scripts for build/start/dev. The server must not depend on `/validation`. Acceptance: the server can be built and started from `/server` only. `(YYYY-MM-DD)`
--   [ ] **Task 1.2**: Initialize a standalone validation framework under `/validation`. Provide its own dependency manifest and scripts to run tests and optional mock servers. It must not start or depend on the real server in `/server`. Acceptance: validation runs independently from `/validation` only. `(YYYY-MM-DD)`
--   [ ] **Task 1.3**: Implement the Express-based server entrypoint in `/server` using only `/server` dependencies and the local shared symlink. Import protocol/types via `@shared/websocket/websocket-protocol` (resolved to `/server/shared`), not from the repository root. Create the HTTP server, attach the WebSocket server, add a `/health` endpoint, read `PORT` from env with a default, and serve the built Angular apps at `/tv` and `/remote`. Acceptance: build/start from `/server` only; `/health` responds OK; no imports from root `/shared`; no scripts from `/validation`. `(YYYY-MM-DD)`
--   [x] **Task 1.4**: Configure the `express` app to serve the static files for the TV app from `apps/tv/dist/sahar-tv`. `(2025-08-07)`
--   [x] **Task 1.5**: Configure the `express` app to serve the static files for the Remote app from `apps/remote/dist/sahar-remote`. `(2025-08-07)`
--   [x] **Task 1.6**: Create an HTTP server from the `express` app and have it listen on a designated port (e.g., 8080). `(2025-08-07)`
--   [x] **Task 1.7**: Attach the `ws` WebSocket server to the new HTTP server. `(2025-08-07)`
--   [x] **Task 1.8**: Refactor `shared/websocket/websocket-protocol.ts` to align with the new synchronous, server-centric protocol. `(2025-08-07)`
--   [x] **Task 1.8.1 (Documentation)**: Update `ARCHITECTURE.md` to reflect the new Unified Communication Protocol. `(2025-08-07)`
--   [x] **Task 1.8.2 (Documentation)**: Update `VALIDATION.md` with a new testing strategy for the synchronous protocol. `(2025-08-07)`
--   [ ] **Task 1.9**: Implement the server-side Finite State Machine (FSM) for managing application state. `(YYYY-MM-DD)`
--   [ ] **Task 1.10**: Implement the `state_update` message broadcast to all clients on state change. `(YYYY-MM-DD)`
--   [ ] **Task 1.11**: Implement the `data` message handler to receive and store data from the Remote app. `(YYYY-MM-DD)`
--   [ ] **Task 1.12**: Implement the `navigation` and `control` message handlers to update the FSM. `(YYYY-MM-DD)`
--   [ ] **Task 1.13**: Implement the heartbeat mechanism for connection monitoring and recovery. `(YYYY-MM-DD)`
--   [ ] **Task 1.14**: Add comprehensive logging for all server events, messages, and errors. `(YYYY-MM-DD)`
+Detailed tasks
+
+-   [x] **Task 1.1**: Serve TV static files from `apps/tv/dist/sahar-tv` (2025-08-07)
+-   [x] **Task 1.2**: Serve Remote static files from `apps/remote/dist/sahar-remote` (2025-08-07)
+-   [x] **Task 1.3**: Create HTTP server, attach `ws` WebSocket server (2025-08-07)
+-   [x] **Task 1.4**: Protocol doc updates in ARCHITECTURE.md and VALIDATION.md (2025-08-07)
+-   [ ] **Task 1.5**: Centralized server config `(YYYY-MM-DD)`
+	-   Description: Add a config module to read environment variables and expose typed settings: PORT, DEV_SSR, TV_DEV_URL, REMOTE_DEV_URL, TV_SSR_PORT, REMOTE_SSR_PORT, SSL_CERT_FILE, SSL_KEY_FILE, LOG_LEVEL.
+	-   Files: `server/config.ts` (new), use in `server/websocket-server.ts`.
+	-   Acceptance: Server branches dev/prod behavior off config; values logged at startup.
+-   [ ] **Task 1.6**: Dev reverse proxies (SSR dev) `(YYYY-MM-DD)`
+	-   Description: Reverse proxy SSR HTML:
+		-   `/` (or `/tv`) → TV dev SSR at 4203
+		-   `/remote` → Remote dev SSR at 4202
+	-   Keep `/health` and WebSocket (`/ws`) on the main origin.
+	-   Files: `server/websocket-server.ts` (proxy middleware).
+	-   Acceptance: With SSR dev servers running, GET `/` (or `/tv`) and `/remote` via the Unified Server return SSR HTML; `/health` OK; WS unaffected.
+-   [ ] **Task 1.7**: Static assets passthrough `(YYYY-MM-DD)`
+	-   Description: Serve browser assets directly from built outputs while SSR HTML comes from SSR entries.
+	-   Mounts: `/assets` → `apps/tv/dist/sahar-tv/browser/assets`; `/remote/assets` → `apps/remote/dist/sahar-remote/browser/assets`.
+	-   Files: `server/websocket-server.ts` (express.static mounts, order-safe).
+	-   Acceptance: Static assets load from main server; SSR HTML remains correct in both dev and prod.
+-   [ ] **Task 1.8**: SSR bundle discovery (prod) `(YYYY-MM-DD)`
+	-   Description: On startup, discover SSR entry files without hard-coding names:
+		-   TV: `apps/tv/dist/sahar-tv/server/main*.mjs|js`
+		-   Remote: `apps/remote/dist/sahar-remote/server/main*.mjs|js`
+	-   Files: `server/ssr-discovery.ts` (new), used by server.
+	-   Acceptance: Discovered paths logged; clear error if missing.
+-   [ ] **Task 1.9**: SSR process manager (prod) `(YYYY-MM-DD)`
+	-   Description: Spawn each SSR bundle in a child process with env (dedicated PORTs, base paths). Add health checks and auto-restart with backoff.
+	-   Files: `server/ssr-manager.ts` (new), integrate in server lifecycle.
+	-   Acceptance: Children started and healthy; restarts on crash; status exposed via `/health`.
+-   [ ] **Task 1.10**: Prod proxy to SSR children `(YYYY-MM-DD)`
+	-   Description: Proxy `/` (or `/tv`) and `/remote` to the respective SSR child ports in production.
+	-   Files: `server/websocket-server.ts` (proxy rules, prod branch).
+	-   Acceptance: SSR HTML returned from children; WS stays on main origin.
+-   [ ] **Task 1.11**: HTTPS/WSS enablement `(YYYY-MM-DD)`
+	-   Description: If `SSL_CERT_FILE` and `SSL_KEY_FILE` are present, start HTTPS and WSS; otherwise start HTTP and WS.
+	-   Note: WS path fixed at `/ws`.
+	-   Files: `server/websocket-server.ts` (http/https server creation), `server/config.ts`.
+	-   Acceptance: Remote PWA can install over HTTPS; WSS used automatically when HTTPS on.
+-   [ ] **Task 1.12**: Health/readiness/logging `(YYYY-MM-DD)`
+	-   Description: Implement endpoints: `/health` (overall + SSR children), `/ready` (proxies + WS initialized), `/live` (heartbeat).
+	-   Introduce structured logging with levels; optional `/admin/logs` can follow later.
+	-   Files: `server/websocket-server.ts`, `server/ssr-manager.ts`, `server/logger.ts` (new).
+	-   Acceptance: Endpoints return JSON; logs show key lifecycle events.
+-   [ ] **Task 1.13**: Scripts and environment `(YYYY-MM-DD)`
+	-   Description: Scripts: `dev` (proxies; assumes dev SSR servers), `start:prod` (assumes built bundles/assets; starts process manager).
+	-   Files: `server/package.json` (scripts), `README.md` notes if needed.
+	-   Acceptance: One-command dev and prod flows.
+-   [ ] **Task 1.14**: Validation hooks `(YYYY-MM-DD)`
+	-   Description: Document validation steps for SSR proxy smoke, bundle discovery, child health, and WS register→ack→state_update.
+	-   Files: `VALIDATION.md` (add flows).
+	-   Acceptance: Clear validation instructions exist and can be executed independently from `/validation`.
+-   [ ] **Task 1.15**: FSM core `(YYYY-MM-DD)`
+	-   Description: Implement authoritative FSM for application state (clients, navigation/video state) on the server.
+	-   Files: `server/fsm.ts` (new), server integration.
+	-   Acceptance: Server maintains and exposes state transitions.
+-   [ ] **Task 1.16**: state_update broadcast `(YYYY-MM-DD)`
+	-   Description: Broadcast `state_update` on any state change to all clients with ack tracking.
+	-   Files: `server/websocket-server.ts`, `server/fsm.ts`.
+	-   Acceptance: All clients receive updates; stop-and-wait discipline enforced.
+-   [ ] **Task 1.17**: data handler `(YYYY-MM-DD)`
+	-   Description: Handle initial `data` from Remote; normalize/store in FSM.
+	-   Files: `server/websocket-server.ts`, `server/fsm.ts`.
+	-   Acceptance: After Remote connects and sends data, TV can render from server state.
+-   [ ] **Task 1.18**: navigation/control handlers `(YYYY-MM-DD)`
+	-   Description: Process Remote commands, update FSM, and drive TV via downstream messages with ack.
+	-   Files: `server/websocket-server.ts`, `server/fsm.ts`.
+	-   Acceptance: Commands update state and propagate correctly.
+-   [ ] **Task 1.19**: Heartbeat/recovery `(YYYY-MM-DD)`
+	-   Description: Detect dead connections via ack timeouts and optional pings; handle reconnection.
+	-   Files: `server/websocket-server.ts`, `server/fsm.ts`.
+	-   Acceptance: Disconnections are detected and recovered gracefully.
+-   [ ] **Task 1.20**: Structured logging `(YYYY-MM-DD)`
+	-   Description: Standardize logs (JSON or leveled text) including connection IDs, message types, timing, and proxy/child status.
+	-   Files: `server/logger.ts`, integration across server.
+	-   Acceptance: Logs support debugging and audits.
 
 ---
 
@@ -40,37 +104,126 @@ This document outlines the development and implementation plan for refactoring t
 
 **Goal**: Refactor the client applications to communicate exclusively with the Unified Server, leveraging shared services and components.
 
-### 2.1 Shared Client Components (`/shared`)
--   [ ] **Task 2.1.1**: Refactor the shared `websocket-base.service.ts` to handle the core logic of connecting to the Unified Server's WebSocket. `(YYYY-MM-DD)`
--   [ ] **Task 2.1.2**: Update the shared `websocket-protocol.ts` to match the final, unified protocol definition in `ARCHITECTURE.md`. `(YYYY-MM-DD)`
--   [ ] **Task 2.1.3**: Verify that shared utilities like `youtube-helpers.ts` are correctly integrated and used by both client apps. `(YYYY-MM-DD)`
+### 3.1 TV Application (`apps/tv/`)
 
-### 2.2 TV Application (`apps/tv/`)
--   [ ] **Task 2.2.1**: Refactor the TV app's `WebsocketService` to use the shared base service for its connection. `(YYYY-MM-DD)`
--   [ ] **Task 2.2.2**: Remove all peer-discovery and direct-connection logic from the TV app. `(YYYY-MM-DD)`
--   [ ] **Task 2.2.3**: Ensure the TV app is fully stateless and renders its entire UI based on `state_update` messages from the server. `(YYYY-MM-DD)`
--   [ ] **Task 2.2.4**: Remove all logic for sending `status` messages, as this is now managed by the server's FSM. `(YYYY-MM-DD)`
+Detailed tasks
 
-### 2.3 Remote Application (`apps/remote/`)
--   [ ] **Task 2.3.1**: Refactor the Remote app's `WebsocketService` to use the shared base service for its connection. `(YYYY-MM-DD)`
--   [ ] **Task 2.3.2**: Remove all peer-discovery and direct-connection logic from the Remote app. `(YYYY-MM-DD)`
--   [ ] **Task 2.3.3**: Implement the logic to send the initial `data` message to the server upon connection. `(YYYY-MM-DD)`
--   [ ] **Task 2.3.4**: Ensure all navigation and control commands are sent to the server, not directly to the TV. `(YYYY-MM-DD)`
+-   [ ] **Task 2.1**: Enable SSR in-place `(YYYY-MM-DD)`
+	-   Description: Add Angular Universal server entry (e.g., `main.server.ts`/`server.ts`) and builder config so `ng serve --ssr` and SSR build work for TV.
+	-   Files: `apps/tv/src/main.server.ts`, `apps/tv/server.ts` (or Angular equivalent), `apps/tv/angular.json` builder config.
+	-   Acceptance: `ng serve --ssr` for TV runs and serves SSR HTML.
+-   [ ] **Task 2.2**: Make TV code SSR-safe `(YYYY-MM-DD)`
+	-   Description: Guard all browser-only APIs (window/document); use `isPlatformBrowser`; lazy-load browser-only code.
+	-   Files: TV components/services using browser APIs.
+	-   Acceptance: SSR render succeeds without reference errors; hydration works in browser.
+-   [ ] **Task 2.3**: Refactor `WebsocketService` to use the shared base `(YYYY-MM-DD)`
+	-   Description: Replace TV-specific WebSocket code with composition over `websocket-base.service.ts`.
+	-   Files: `apps/tv/src/app/services/websocket.service.ts` (or equivalent path); imports from `shared/services/websocket-base.service.ts`.
+	-   Acceptance: TV app compiles and connects through the shared base; no direct socket management remains.
+-   [ ] **Task 2.4**: Remove peer-discovery and direct-connection logic `(YYYY-MM-DD)`
+	-   Description: Delete or disable any code that discovers peers or opens direct TV↔Remote sockets; rely solely on Unified Server.
+	-   Files: `apps/tv/src/app/services/websocket.service.ts` and related discovery modules.
+	-   Acceptance: TV only uses relative `/ws` via the shared base; no configuration for peer IPs remains.
+-   [ ] **Task 2.5**: Ensure stateless rendering from `state_update` `(YYYY-MM-DD)`
+	-   Description: TV renders UI based exclusively on server-driven `state_update` messages; remove local authority. Integrate `shared/utils/youtube-helpers.ts` where YouTube playback is required.
+	-   Files: TV components that render navigation/video state; `shared/utils/youtube-helpers.ts` (consumed by TV where applicable).
+	-   Acceptance: Manual flows confirm correct UI rendering after server state changes; no divergence on refresh/reconnect. YouTube helper is wired in TV and duplicate logic removed.
+-   [ ] **Task 2.6**: Remove outbound `status` messages `(YYYY-MM-DD)`
+	-   Description: Eliminate TV-originated `status`; server FSM owns status.
+	-   Files: `apps/tv/src/app/services/websocket.service.ts` and any emitters.
+	-   Acceptance: No `status` messages sent from TV; protocol logs verify.
+-   [ ] **Task 2.7**: Build/scripts for SSR `(YYYY-MM-DD)`
+	-   Description: Add `build:ssr`/`dev:ssr` scripts; ensure outputs at `apps/tv/dist/sahar-tv/{browser,server}`.
+	-   Files: `apps/tv/package.json` (scripts), Angular builders.
+	-   Acceptance: `ng build` produces TV SSR/browser bundles at the expected paths.
 
+### 3.2 Remote Application (`apps/remote/`)
+
+Detailed tasks
+
+-   [ ] **Task 2.8**: Refactor `WebsocketService` to use the shared base `(YYYY-MM-DD)`
+	-   Description: Replace Remote-specific WebSocket code with the shared base service.
+	-   Files: `apps/remote/src/app/services/websocket.service.ts` (or equivalent path); imports from `shared/services/websocket-base.service.ts`.
+	-   Acceptance: Remote app compiles and connects via the shared base; tests cover register/ack.
+-   [ ] **Task 2.9**: Remove peer-discovery and direct-connection logic `(YYYY-MM-DD)`
+	-   Description: Delete or disable any discovery/direct socket code; rely solely on Unified Server.
+	-   Files: `apps/remote/src/app/services/websocket.service.ts` and related modules.
+	-   Acceptance: Remote only uses relative `/ws`; no peer IP settings remain.
+-   [ ] **Task 2.10**: Send initial `data` on connection `(YYYY-MM-DD)`
+	-   Description: On successful register/ack, send initial `data` payload to populate server FSM.
+	-   Files: `apps/remote/src/app/services/websocket.service.ts`; models under `shared/models` as needed.
+	-   Acceptance: Server receives and stores initial data; TV renders accordingly.
+-   [ ] **Task 2.11**: Route all navigation/control to server `(YYYY-MM-DD)`
+	-   Description: Ensure navigation and control commands are sent to the server (not to TV); handle ack and subsequent `state_update`.
+	-   Files: Remote components/services emitting commands; `shared/websocket-protocol.ts`.
+	-   Acceptance: Manual flows confirm commands update server state and propagate to TV; no direct TV calls remain.
+-   [ ] **Task 2.12**: Decide Remote delivery model (SSR vs SPA PWA) `(YYYY-MM-DD)`
+	-   Description: Choose between SPA PWA (recommended) or enabling SSR similar to TV if SEO/first paint needed; document the decision.
+	-   Files: `apps/remote/angular.json` (builder config), `apps/remote/package.json` (scripts), `apps/remote/README.md` (decision and rationale).
+	-   Acceptance: Decision recorded; config and scripts match the chosen model.
+-   [ ] **Task 2.13**: PWA hardening `(YYYY-MM-DD)`
+	-   Description: Add/verify manifest, service worker/offline strategy, icons, and caching; run Lighthouse.
+	-   Files: `apps/remote/src/manifest.webmanifest`, service worker or `ngsw-config.json`, app icons/assets, related module wiring.
+	-   Acceptance: Lighthouse PWA category passes with solid scores; offline route renders basic shell; installable over HTTPS.
+-   [ ] **Task 2.14**: Build/scripts for chosen model `(YYYY-MM-DD)`
+	-   Description: If SSR chosen, add `build:ssr`/`dev:ssr`; else ensure PWA build emits correct assets and service worker.
+	-   Files: `apps/remote/package.json` (scripts), Angular builders/config.
+	-   Acceptance: Build artifacts match the chosen model; outputs verified in `apps/remote/dist/sahar-remote`.
+
+### 3.3 Shared Functionality (`/shared`)
+
+Detailed tasks
+
+-   [ ] **Task 2.15**: Refactor `websocket-base.service.ts` to centralize WebSocket logic `(YYYY-MM-DD)`
+	-   Description: Unify connection, registration, reconnection/backoff, message send/receive with ack handling, and stop-and-wait queueing. WebSocket URL should derive from window location (single-origin) and honor `/ws` path.
+	-   Files: `shared/services/websocket-base.service.ts`; integrate into both apps.
+	-   Acceptance: Both apps compile using the shared base; unit tests for connect/register/ack pass; connects to `/ws` and handles reconnection.
+-   [ ] **Task 2.16**: Update `websocket-protocol.ts` to match ARCHITECTURE.md `(YYYY-MM-DD)`
+	-   Description: Align message types (register, navigation_command, control_command, state_sync, ack), enums, and payload shapes with the protocol; document ack semantics and timeouts.
+	-   Files: `shared/websocket/websocket-protocol.ts`; adjust usages in `shared/services/websocket-base.service.ts` and apps.
+	-   Acceptance: Type-safe across repo; no `any` placeholders; protocol docs and implementation match.
+-   [ ] **Task 2.17**: Verify shared utilities are integrated `(YYYY-MM-DD)`
+	-   Description: Ensure shared utilities are imported and used consistently; remove dead code or add missing wiring.
+	-   Files: `shared/utils/*` used across apps.
+	-   Acceptance: Builds/lint pass; duplicate logic removed or centralized.
 ---
 
-## 4. Guiding Principles for Iterative Validation
-
-**Goal**: To ensure the system remains robust, tested, and documented *throughout* the refactoring process. After completing each task in Phase 1 and 2, the following actions will be considered and applied as guided by the project lead, maintaining an "always alive and always correct" state.
-
--   **Action A**: Update the `VALIDATION.md` document with new testing strategies relevant to the completed task.
--   **Action B**: Update or create integration tests in the `/validation` directory.
--   **Action C**: Update project documentation (`README.md`, `ARCHITECTURE.md`) to reflect changes.
-
----
-
-## 5. Phase 3: Production Readiness
+## 4. Phase 3: Production Readiness
 
 **Goal**: To prepare the Unified Server for standalone deployment and improve maintainability.
 
--   [ ] **Task 3.1**: Create a standalone `package.json` for the `server` directory to make it a self-contained, deployable application. `(YYYY-MM-DD)`
+Detailed tasks
+
+-   [ ] **Task 3.1**: Standalone `server` package `(YYYY-MM-DD)`
+	-   Description: Create a standalone `package.json` for the `server` directory with scripts (`dev`, `start`, `start:prod`, `typecheck`, `build`), engines, and dependencies; ensure it runs independently.
+	-   Files: `server/package.json` (new or updated), `server/README.md` notes, adjust `server/tsconfig.json` if needed.
+	-   Acceptance: From `server/`, `npm run dev` starts dev mode and `npm run start:prod` starts prod with built assets/SSR; repository root remains unaffected.
+
+---
+
+## 5. Guiding Principles for Iterative Validation
+
+Goal: Keep the system “Always Alive, Always Correct” by coupling each implementation task with validation and documentation updates.
+
+Detailed tasks
+
+-   [ ] **Task 4.1**: Definition of Done (DoD) checklist for PRs `(YYYY-MM-DD)`
+	-   Description: Introduce a PR checklist that enforces validation and docs updates for every task (VALIDATION.md updated, tests updated/passing, docs updated, build/lint clean).
+	-   Files: `.github/pull_request_template.md` (new); reference this DoD at the top of `IMPLEMENTATION.md` if needed.
+	-   Acceptance: All new PRs show the DoD checklist; reviewers can gate merges on it.
+-   [ ] **Task 4.2**: Validation quick-run workflow `(YYYY-MM-DD)`
+	-   Description: Provide a single command to run environment check and integration tests locally.
+	-   Files: `validation/package.json` (add `scripts`: `quick` to run `node validate.js check && node validate.js test` or invoke the existing PowerShell harness); project `README.md` (usage snippet).
+	-   Acceptance: One command runs preflight plus core integration flows; documented in README.
+-   [ ] **Task 4.3**: Update VALIDATION.md per completed task `(YYYY-MM-DD)`
+	-   Description: For any change impacting behavior, add/adjust flows in `VALIDATION.md` (Section 4) and reference them from Section 5. Keep format consistent with numbered steps and explicit Expected lines.
+	-   Files: `VALIDATION.md`.
+	-   Acceptance: Each merged task that changes behavior includes a corresponding validation flow update.
+-   [ ] **Task 4.4**: Update/create integration tests in `/validation` `(YYYY-MM-DD)`
+	-   Description: Extend test drivers or add new ones to automate new flows (navigation/control, reconnection, SSR preflights). Reuse existing `sahar-validation.ps1` orchestration.
+	-   Files: `validation/test-drivers/*`, `validation/validate.js`, `validation/websocket-communication.js`.
+	-   Acceptance: Updated tests pass locally via the quick-run and via the VS Code tasks.
+-   [ ] **Task 4.5**: Documentation sync `(YYYY-MM-DD)`
+	-   Description: Reflect behavioral or architectural changes in `ARCHITECTURE.md` and usage/setup notes in `README.md`.
+	-   Files: `ARCHITECTURE.md`, `README.md` (and app-level READMEs if affected).
+	-   Acceptance: Docs accurately describe current behavior; links/ports/paths verified.

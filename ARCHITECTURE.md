@@ -14,18 +14,22 @@ The SAHAR TV Remote Control System is a real-time synchronized application suite
 - Robust recovery from disconnections
 - Real-time synchronization between TV and Remote
 
+> SSR Note: Angular can render initial HTML on the server; the client then hydrates for interactivity.
+
 ## 2. System Components & Architecture Diagram
 
 ### Architecture Diagram
 ```
 ┌──────────────┐      ┌────────────────────────────┐      ┌──────────────┐
 │  Remote App  │      │      Unified Server        │      │   TV App     │
-│   (Client)   │      │ (Express + ws + FSM/State)│      │  (Client)    │
+│   (Client)   │      │ (Express + ws + FSM/State) │      │  (Client)    │
 │  Angular     │◄────►│  Serves static files,      │◄────►│  Angular     │
 │  Port: 4202  │      │  manages protocol, FSM,    │      │  Port: 4203  │
 │              │      │  and relays messages       │      │              │
 └──────────────┘      └────────────────────────────┘      └──────────────┘
 ```
+
+Note: 4202/4203 are development SSR ports. In production, a single server port (for example, 8080) serves both TV (`/`) and Remote (`/remote`).
 
 ## 3. Application Details
 
@@ -39,6 +43,16 @@ The SAHAR TV Remote Control System is a real-time synchronized application suite
   - Ensures all communications strictly adhere to the FSM and protocol
   - Relays messages and synchronizes state between clients
 - **Key technologies:** Node.js, TypeScript, Express, ws, state management
+
+Additional serving responsibilities (clarification):
+- SSR HTML delivery: Returns server-rendered HTML for TV (`/`) and Remote (`/remote`), followed by client-side hydration.
+- Static assets: Serves built browser assets for both apps under their respective paths (for example, `/assets`, `/remote/assets`).
+- Development mode: May proxy `/` and `/remote` to each app's `ng serve --ssr` while continuing to host the WebSocket gateway and `/health`.
+- Production mode: Executes each app's SSR server bundle to render HTML and serves browser assets directly on the same origin.
+- WebSocket gateway: Exposes a single-origin WebSocket endpoint on the same server/port as HTTP(S), managed by the server-side FSM.
+- TV route alias (development convenience): The Unified Server may expose `/tv` as an alias to the TV app. The canonical TV route in production is `/`.
+- WebSocket endpoint path: `ws(s)://<server-ip>:<port>/ws` (same-origin). Clients should prefer same-origin WS/WSS.
+- Health endpoints: `/health` (overall), `/ready` (readiness), and `/live` (liveness) return JSON for monitoring and validation.
 
 ### TV Application (`apps/tv/`)
 
@@ -62,6 +76,7 @@ The SAHAR TV Remote Control System is a real-time synchronized application suite
 -   Material Design optimized for large screens 🔧 *Refactoring Needed*
 -   Real-time WebSocket command processing 🔧 *Refactoring Needed*
 -   Dynamic thumbnail calculation using shared utilities 🔧 *Refactoring Needed*
+-   Displays a QR code with the Remote entrypoint URL to onboard the remote device
 
 ### Remote Application (`apps/remote/`)
 
@@ -82,12 +97,28 @@ The SAHAR TV Remote Control System is a real-time synchronized application suite
 
 **Key Features**:
 -   Single source of truth for all content data 🔧 *Refactoring Needed*
--   Automatic server discovery (via QR code or other method) 🔧 *Refactoring Needed*
+-   QR code onboarding: scan the TV-displayed QR to open the Remote URL 🔧 *Refactoring Needed*
 -   Material Design optimized for tablet/touch interfaces 🔧 *Refactoring Needed*
 -   Enhanced video controls with scene-level interaction 🔧 *Refactoring Needed*
 -   Dynamic YouTube thumbnail integration with shared utilities 🔧 *Refactoring Needed*
 
+Target Architecture Note (clarification): The server will own content and navigation state; the Remote will evolve toward a pure UI that sends commands and renders server-driven state.
+
+> PWA/HTTPS: Service worker and install require HTTPS in production; when HTTPS is enabled, WebSocket should use WSS.
+
+### SSR Delivery Model (Development and Production)
+
+- Development
+    - Each app (TV, Remote) can run with Angular SSR dev server (`ng serve --ssr`) on its dev port.
+    - The Unified Server may proxy `/tv` and `/remote` to these SSR dev servers while continuing to host the WebSocket gateway and `/health`.
+- Production
+    - Each app is built to produce browser and server bundles; the Unified Server serves SSR HTML via the app server bundles and serves browser assets directly.
+    - After the first server-rendered response, Angular hydrates on the client to enable full interactivity.
+    - SSR execution model: Each app's SSR server bundle runs in a child process with its own port; the Unified Server proxies `/` (TV) and `/remote` to these children and serves browser assets directly on the main origin.
+
 ## 4. Unified Communication Protocol
+
+> Note: The Angular SSR delivery model does not alter the WebSocket protocol. The server-owned FSM and synchronous, ack-based communication remain unchanged.
 
 ### Protocol Version: 3.0
 **Transport:** WebSocket
@@ -178,8 +209,23 @@ interface Scene {
 
 - **TV App Development:** 4203 (ng serve)
 - **Remote App Development:** 4202 (ng serve)
-- **Server:** Listens on 5544-5547
-- **Discovery:** Clients try known ports sequentially; QR code or mDNS can be used for discovery
+- **Discovery (development):** The 5544–5547 range may be used by clients for discovery/scanning.
+- **Discovery:** Primary onboarding is QR-based; the TV displays a QR that encodes the absolute Remote URL. Optional fallbacks include mDNS hints or manual URL entry; port scanning is not used in the normal flow.
+
+### Discovery Flow (QR-based)
+1. Server starts and listens on its configured port (for example, http(s)://<server-ip>:<port>).
+2. TV application starts (served from `/` or `/tv`) and renders the initial screen.
+3. TV displays a QR code that encodes the Remote app entrypoint: `http(s)://<server-ip>:<port>/remote`.
+    - In browsers, this can simply encode `${location.origin}/remote`.
+4. The server waits for a connection from the Remote app.
+5. The user scans the QR code with the iPad camera and opens the detected URL in the browser.
+6. The Remote app loads and connects to the server's WebSocket endpoint (same-origin, `/ws`), then proceeds with registration per the protocol.
+
+Note (SSR Development): TV (4203) and Remote (4202) can use `ng serve --ssr`; the Unified Server can proxy `/tv` and `/remote` to these during development.
+
+Ports (clarification):
+- Production: a single server port (configurable via environment, e.g., 8080) serves `/` (TV), `/remote`, static assets, and the WebSocket endpoint on the same origin.
+- Development: TV uses 4203 and Remote uses 4202 with `ng serve --ssr`; the Unified Server may proxy to these while keeping the WebSocket and `/health` on its own port.
 
 ## 7. Technical Implementation
 
@@ -239,6 +285,22 @@ Remote Updates UI State
 - **TV Device:** Any device capable of running Angular web application
 - **Remote Device:** Tablet or smartphone with touch interface
 - **Recommended:** TV 32"+, Remote 10"+, 5GHz WiFi
+
+## 10. HTTPS, WSS, and PWA Requirements
+
+- Production HTTPS: Remote PWA install and service worker require HTTPS in production. The Unified Server should support HTTPS for deployment.
+- WebSocket over HTTPS: When HTTPS is enabled, use WSS for the WebSocket endpoint. Prefer same-origin for simplicity and security.
+- Certificates on LAN: Self-signed or locally-issued certificates are acceptable for LAN deployments. iPad devices must trust the certificate (install the profile, then enable full trust in Settings → General → About → Certificate Trust Settings).
+- Configuration: Certificate and key are deployment-provided. Exact configuration (for example, environment variables for cert/key paths) is defined in implementation details.
+
+## 11. Admin & Observability (Optional)
+
+- Minimal Admin UI: An optional backend-only surface may be exposed under `/admin` for validation and troubleshooting.
+    - `/admin/logs`: Live log viewer (SSE or WebSocket), with level filter and tail.
+    - Access Control: Protect with basic auth, IP allowlist, or bind to localhost only in production.
+    - Toggleable Sinks: Console, file, and SSE/WebSocket broadcast can be enabled via configuration.
+- Metrics/Health: Extend `/health`, `/ready`, `/live` with structured JSON for monitoring systems.
+- Non-invasive: The admin UI is not required for normal operation and can be disabled entirely for production deployments.
 
 ---
 
