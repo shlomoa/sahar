@@ -1,24 +1,33 @@
 import express, { Request, Response } from 'express';
 import { createServer } from 'http';
-import { WebSocketServer, WebSocket } from 'ws';
+import { WebSocketServer, WebSocket, RawData } from 'ws';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import {
-    ApplicationState,
-    ClientType,
-    SaharMessage,
-    createAckMessage,
-    createErrorMessage,
-    createStateSyncMessage
-} from '../shared/websocket/websocket-protocol';
+  ApplicationState,
+  WebSocketMessage,
+  RegisterMessage,
+  NavigationCommandMessage,
+  ControlCommandMessage,
+  ActionConfirmationMessage,
+  StateSyncMessage,
+  AckMessage,
+  ErrorMessage,
+  WEBSOCKET_CONFIG
+} from '@shared/websocket/websocket-protocol';
 
 /**
  * SAHAR Unified Server
  * Serves static files for TV and Remote apps and manages WebSocket communication
  */
 
+// ESM-safe __dirname/__filename
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Create Express application
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || WEBSOCKET_CONFIG.SERVER_PORT || 8080;
 
 // Create HTTP server from the express app
 const server = createServer(app);
@@ -28,137 +37,250 @@ const wss = new WebSocketServer({ server });
 
 // --- Finite State Machine (FSM) ---
 
+type ClientType = 'tv' | 'remote';
+
 // The single source of truth for the application state
 let applicationState: ApplicationState = {
-    tv_client_online: false,
-    remote_client_online: false,
-    active_video_id: null,
-    video_player_state: 'stopped',
-    current_view: 'videos_grid',
+  fsmState: 'initializing',
+  connectedClients: {},
+  navigation: {
+    currentLevel: 'performers',
+    breadcrumb: []
+  },
+  player: {
+    isPlaying: false,
+    currentTime: 0,
+    duration: 0,
+    volume: 1,
+    muted: false
+  }
 };
 
-// Map to store client connections and their types
-const clients = new Map<WebSocket, ClientType>();
+// Track client connections and their type
+const clients = new Map<WebSocket, { clientType: ClientType; deviceId: string; deviceName: string }>();
+
+// --- Message helpers ---
+const makeAck = (source: 'server'): AckMessage => ({ type: 'ack', timestamp: Date.now(), source, payload: {} });
+const makeStateSync = (source: 'server'): StateSyncMessage => ({ type: 'state_sync', timestamp: Date.now(), source, payload: applicationState });
+const makeError = (source: 'server', code: string, message: string): ErrorMessage => ({ type: 'error', timestamp: Date.now(), source, payload: { code, message } });
 
 /**
  * Broadcasts the current application state to all connected clients.
  */
 const broadcastState = () => {
-    const stateSyncMessage = createStateSyncMessage(applicationState);
-    const messageString = JSON.stringify(stateSyncMessage);
-    
-    if (clients.size > 0) {
-        console.log(`ℹ️  Broadcasting state to ${clients.size} client(s):`, applicationState);
-        clients.forEach((_clientType, client) => {
-            if (client.readyState === WebSocket.OPEN) {
-                client.send(messageString);
-            }
-        });
+  const stateMsg = JSON.stringify(makeStateSync('server'));
+  for (const client of wss.clients) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(stateMsg);
     }
+  }
 };
 
 wss.on('connection', (ws: WebSocket) => {
-    console.log('ℹ️  New client connected');
+  console.log('ℹ️  New client connected');
 
-    ws.on('message', (message: string) => {
-        try {
-            const parsedMessage: SaharMessage = JSON.parse(message);
-            console.log('➡️  Received message:', parsedMessage);
+  ws.on('message', (data: RawData) => {
+    try {
+      const text = typeof data === 'string' ? data : data.toString();
+      const msg: WebSocketMessage = JSON.parse(text);
+      console.log('➡️  Received message:', msg);
 
-            // The first message from any client MUST be 'register'
-            if (!clients.has(ws)) {
-                if (parsedMessage.message_type === 'register') {
-                    const clientType = parsedMessage.payload.client_type;
-                    clients.set(ws, clientType);
-
-                    // Update application state based on which client registered
-                    if (clientType === 'tv') {
-                        applicationState.tv_client_online = true;
-                    } else if (clientType === 'remote') {
-                        applicationState.remote_client_online = true;
-                    }
-                    
-                    console.log(`✅ Client registered as '${clientType}'`);
-                    
-                    // Acknowledge the registration
-                    ws.send(JSON.stringify(createAckMessage(parsedMessage.message_id)));
-
-                    // Broadcast the new state to all clients
-                    broadcastState();
-                } else {
-                    // If the first message is not 'register', it's a protocol violation.
-                    console.error('❌ Error: First message from client was not "register". Closing connection.');
-                    ws.send(JSON.stringify(createErrorMessage('Protocol violation: First message must be a "register" message.')));
-                    ws.terminate();
-                }
-                return; // End processing for this message
-            }
-
-            // --- Handle other message types for already registered clients ---
-            // (This will be implemented in subsequent steps)
-            // For now, just acknowledge any other message
-            if ('message_id' in parsedMessage) {
-                ws.send(JSON.stringify(createAckMessage(parsedMessage.message_id)));
-            }
-
-        } catch (error) {
-            console.error('❌ Error: Failed to parse message or handle client logic.', error);
-            ws.send(JSON.stringify(createErrorMessage('Invalid message format or server error.')));
+      // Enforce registration first
+      const isRegistered = clients.has(ws);
+      if (!isRegistered) {
+        if (msg.type !== 'register') {
+          ws.send(JSON.stringify(makeError('server', 'INVALID_REGISTRATION', 'First message must be a register message.')));
+          ws.close();
+          return;
         }
-    });
+        // Handle register
+        const reg = msg as RegisterMessage;
+        const { clientType, deviceId, deviceName } = reg.payload;
 
-    ws.on('close', () => {
-        console.log('ℹ️  Client disconnected');
-        if (clients.has(ws)) {
-            const clientType = clients.get(ws);
-            clients.delete(ws);
-
-            // Update application state
-            if (clientType === 'tv') {
-                applicationState.tv_client_online = false;
-            } else if (clientType === 'remote') {
-                applicationState.remote_client_online = false;
-            }
-            
-            console.log(`🔌 Client '${clientType}' unregistered.`);
-            // Broadcast the state change to remaining clients
-            broadcastState();
+        // Enforce single TV and single Remote
+        if (clientType === 'tv' && applicationState.connectedClients.tv) {
+          ws.send(JSON.stringify(makeError('server', 'CLIENT_TYPE_MISMATCH', 'A TV client is already connected.')));
+          ws.close();
+          return;
         }
-    });
+        if (clientType === 'remote' && applicationState.connectedClients.remote) {
+          ws.send(JSON.stringify(makeError('server', 'CLIENT_TYPE_MISMATCH', 'A Remote client is already connected.')));
+          ws.close();
+          return;
+        }
 
-    ws.on('error', (error: Error) => {
-        console.error('❌ WebSocket error:', error);
-    });
+        clients.set(ws, { clientType, deviceId, deviceName });
+        applicationState.connectedClients[clientType] = { deviceId, deviceName };
+
+        // Update FSM readiness
+        if (applicationState.connectedClients.remote && applicationState.connectedClients.tv) {
+          applicationState.fsmState = 'ready';
+        }
+
+        // Ack and state
+        ws.send(JSON.stringify(makeAck('server')));
+        broadcastState();
+        return;
+      }
+
+      // Handle registered clients' messages
+      switch (msg.type) {
+        case 'navigation_command': {
+          const nav = msg as NavigationCommandMessage;
+          handleNavigationCommand(nav);
+          ws.send(JSON.stringify(makeAck('server')));
+          broadcastState();
+          break;
+        }
+        case 'control_command': {
+          const ctl = msg as ControlCommandMessage;
+          handleControlCommand(ctl);
+          ws.send(JSON.stringify(makeAck('server')));
+          broadcastState();
+          break;
+        }
+        case 'action_confirmation': {
+          const confirm = msg as ActionConfirmationMessage;
+          handleActionConfirmation(confirm);
+          ws.send(JSON.stringify(makeAck('server')));
+          broadcastState();
+          break;
+        }
+        case 'register': {
+          // Already registered, ignore or error
+          ws.send(JSON.stringify(makeError('server', 'INVALID_MESSAGE_FORMAT', 'Client already registered.')));
+          break;
+        }
+        default: {
+          ws.send(JSON.stringify(makeError('server', 'INVALID_MESSAGE_FORMAT', `Unsupported message type: ${msg.type}`)));
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error: Failed to parse/handle message.', error);
+      ws.send(JSON.stringify(makeError('server', 'INVALID_MESSAGE_FORMAT', 'Invalid JSON or message.')));
+    }
+  });
+
+  ws.on('close', () => {
+    console.log('ℹ️  Client disconnected');
+    const info = clients.get(ws);
+    if (info) {
+      clients.delete(ws);
+      if (info.clientType === 'tv') delete applicationState.connectedClients.tv;
+      if (info.clientType === 'remote') delete applicationState.connectedClients.remote;
+      // If no clients, go back to initializing; if only remote, still initializing; if both, ready
+      if (applicationState.connectedClients.tv && applicationState.connectedClients.remote) {
+        applicationState.fsmState = 'ready';
+      } else {
+        applicationState.fsmState = 'initializing';
+      }
+      broadcastState();
+    }
+  });
+
+  ws.on('error', (error: Error) => {
+    console.error('❌ WebSocket error:', error);
+  });
 });
 
+// --- Handlers ---
+function handleNavigationCommand(msg: NavigationCommandMessage) {
+  const { action, targetId } = msg.payload;
+  switch (action) {
+    case 'navigate_home':
+      applicationState.navigation = { currentLevel: 'performers', breadcrumb: [] };
+      break;
+    case 'navigate_back': {
+      const bc = applicationState.navigation.breadcrumb;
+      bc.pop();
+      if (applicationState.navigation.currentLevel === 'scenes') {
+        applicationState.navigation.currentLevel = 'videos';
+        delete applicationState.navigation.sceneId;
+      } else if (applicationState.navigation.currentLevel === 'videos') {
+        applicationState.navigation.currentLevel = 'performers';
+        delete applicationState.navigation.videoId;
+      }
+      break;
+    }
+    case 'navigate_to_performer':
+      applicationState.navigation.currentLevel = 'videos';
+      applicationState.navigation.performerId = targetId;
+      applicationState.navigation.breadcrumb.push(`performer:${targetId}`);
+      break;
+    case 'navigate_to_video':
+      applicationState.navigation.currentLevel = 'scenes';
+      applicationState.navigation.videoId = targetId;
+      applicationState.navigation.breadcrumb.push(`video:${targetId}`);
+      break;
+    case 'navigate_to_scene':
+      applicationState.navigation.sceneId = targetId;
+      applicationState.navigation.breadcrumb.push(`scene:${targetId}`);
+      break;
+  }
+}
+
+function handleControlCommand(msg: ControlCommandMessage) {
+  const { action, youtubeId, startTime, seekTime, volume } = msg.payload;
+  switch (action) {
+    case 'play':
+      if (youtubeId) applicationState.player.youtubeId = youtubeId;
+      applicationState.player.isPlaying = true;
+      if (typeof startTime === 'number') applicationState.player.currentTime = startTime;
+      applicationState.fsmState = 'playing';
+      break;
+    case 'pause':
+      applicationState.player.isPlaying = false;
+      applicationState.fsmState = 'paused';
+      break;
+    case 'seek':
+      if (typeof seekTime === 'number') applicationState.player.currentTime = seekTime;
+      break;
+    case 'set_volume':
+      if (typeof volume === 'number') applicationState.player.volume = Math.max(0, Math.min(1, volume));
+      break;
+    case 'mute':
+      applicationState.player.muted = true;
+      break;
+    case 'unmute':
+      applicationState.player.muted = false;
+      break;
+  }
+}
+
+function handleActionConfirmation(msg: ActionConfirmationMessage) {
+  const { status, errorMessage } = msg.payload;
+  if (status === 'failure') {
+    applicationState.error = { code: 'COMMAND_FAILED', message: errorMessage || 'Unknown failure' };
+    applicationState.fsmState = 'error';
+  } else {
+    // On success, clear error if any
+    if (applicationState.error) delete applicationState.error;
+  }
+}
 
 // Middleware for parsing JSON and serving static files
 app.use(express.json());
 app.use(express.static('public'));
 
-// Define path to the TV app build.
-// The path is relative to the output directory (`dist/server`).
+// Define path to the TV and Remote app builds (relative to output directory)
 const tvAppPath = path.join(__dirname, '../../apps/tv/dist/sahar-tv');
 const remoteAppPath = path.join(__dirname, '../../apps/remote/dist/sahar-remote');
 
 // Serve the TV app, with a catch-all to redirect to index.html for Angular routing.
 app.use('/tv', express.static(tvAppPath));
 app.get('/tv/*', (req: Request, res: Response) => {
-    res.sendFile(path.join(tvAppPath, 'index.html'));
+  res.sendFile(path.join(tvAppPath, 'index.html'));
 });
 
 // Serve the Remote app, with a catch-all to redirect to index.html for Angular routing.
 app.use('/remote', express.static(remoteAppPath));
 app.get('/remote/*', (req: Request, res: Response) => {
-    res.sendFile(path.join(remoteAppPath, 'index.html'));
+  res.sendFile(path.join(remoteAppPath, 'index.html'));
 });
 
 // Basic health check endpoint
 app.get('/health', (req: Request, res: Response) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString()
-  });
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Start the server
@@ -167,11 +289,9 @@ server.listen(PORT, () => {
   console.log('📊 Server Status:');
   console.log('  ✅ Express app initialized');
   console.log('  ✅ HTTP server listening');
-  console.log('  ✅ TV app being served from /tv');
-  console.log('  ✅ Remote app being served from /remote');
+  console.log('  ✅ TV app served at /tv');
+  console.log('  ✅ Remote app served at /remote');
   console.log('  ✅ WebSocket server attached');
-  console.log('\n🚀 Next Steps:');
-  console.log('  1. Implement FSM and message handling (Task 1.8)');
 });
 
 // Graceful shutdown
