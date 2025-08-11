@@ -7,7 +7,11 @@
     "check": "node -v && npm -v",
     "start": "npm run build && ts-node ../server/websocket-server.ts",
     "test": "node test-drivers/tv-app-test-driver.js",
-    "validate": "npm run check && npm run start && npm run test",
+  "validate": "npm run check && npm run start && npm run test",
+  "tv-stub": "node ./stubs/tv-stub.js",
+  "remote-stub": "node ./stubs/remote-stub.js",
+  "stubs:up": "concurrently -k \"npm:tv-stub\" \"npm:remote-stub\"",
+  "stubs:up:https": "cross-env SERVER_URL=wss://localhost:3000/ws npm run stubs:up",
     "build": "npm run build:tv && npm run build:remote",
     "build:tv": "(cd .. && ng build tv)",
     "build:remote": "(cd .. && ng build remote)"
@@ -23,7 +27,8 @@
     "@types/ws": "^8.18.1",
     "nodemon": "^3.0.2",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.2"
+  "typescript": "^5.9.2",
+  "cross-env": "^7.0.3"
   },
   "keywords": [
     "validation",

@@ -29,6 +29,16 @@ Detailed tasks
 	-   Description: Add a config module to read environment variables and expose typed settings: PORT, DEV_SSR, TV_DEV_URL, REMOTE_DEV_URL, TV_SSR_PORT, REMOTE_SSR_PORT, SSL_CERT_FILE, SSL_KEY_FILE, LOG_LEVEL.
 	-   Files: `server/config.ts` (new), use in `server/websocket-server.ts`.
 	-   Acceptance: Server branches dev/prod behavior off config; values logged at startup.
+	-   Defaults (unless overridden by env):
+		- `PORT=3000`
+		- `DEV_SSR=false` (true proxies `/` and `/remote` to Angular SSR dev servers)
+		- `TV_DEV_URL=http://localhost:4203` (used when DEV_SSR=true)
+		- `REMOTE_DEV_URL=http://localhost:4202` (used when DEV_SSR=true)
+		- `TV_SSR_PORT=5101` (child port for TV SSR in prod)
+		- `REMOTE_SSR_PORT=5102` (child port for Remote SSR in prod)
+		- `SSL_CERT_FILE` / `SSL_KEY_FILE` unset by default (HTTP only)
+		- `LOG_LEVEL=info`
+		- Protocol timing (fallbacks aligning with ARCHITECTURE.md): `ACK_TIMEOUT_MS=3000`, `RECONNECT_BASE_MS=500`, `RECONNECT_MAX_MS=5000`, `RECONNECT_JITTER_MS=100`, `WS_PATH=/ws`
 -   [ ] **Task 1.6**: Dev reverse proxies (SSR dev) `(YYYY-MM-DD)`
 	-   Description: Reverse proxy SSR HTML:
 		-   `/` (or `/tv`) → TV dev SSR at 4203
@@ -97,6 +107,10 @@ Detailed tasks
 	-   Description: Standardize logs (JSON or leveled text) including connection IDs, message types, timing, and proxy/child status.
 	-   Files: `server/logger.ts`, integration across server.
 	-   Acceptance: Logs support debugging and audits.
+-   [ ] **Task 1.21**: Invalid message handling `(YYYY-MM-DD)`
+	-   Description: When receiving malformed messages or invalid state transitions, emit an `error` message to the sender and discard without state mutation (align with ARCHITECTURE.md: Error Handling).
+	-   Files: `server/websocket-server.ts` (validation and error path), `server/fsm.ts` (transition guards), `server/logger.ts` (error logs).
+	-   Acceptance: Invalid messages generate `error` responses, no state change occurs, and structured logs include `event:error` with details.
 
 ---
 
@@ -186,6 +200,10 @@ Detailed tasks
 	-   Description: Ensure shared utilities are imported and used consistently; remove dead code or add missing wiring.
 	-   Files: `shared/utils/*` used across apps.
 	-   Acceptance: Builds/lint pass; duplicate logic removed or centralized.
+-   [ ] **Task 2.18**: Define `ApplicationState` interface `(YYYY-MM-DD)`
+	-   Description: Add a shared TypeScript interface for the authoritative server-owned application state, matching ARCHITECTURE.md (version, clients, navigation, playback, optional data).
+	-   Files: `shared/models/application-state.ts` (new), referenced by server and tests; optional `.d.ts` for JS-based validation stubs if needed.
+	-   Acceptance: Type-safe usage in server code and any TS consumers; shape matches ARCHITECTURE.md; exported for reuse.
 ---
 
 ## 4. Phase 3: Production Readiness
@@ -227,3 +245,42 @@ Detailed tasks
 	-   Description: Reflect behavioral or architectural changes in `ARCHITECTURE.md` and usage/setup notes in `README.md`.
 	-   Files: `ARCHITECTURE.md`, `README.md` (and app-level READMEs if affected).
 	-   Acceptance: Docs accurately describe current behavior; links/ports/paths verified.
+-   [ ] **Task 4.6**: Implement TV Stub `(YYYY-MM-DD)`
+	-   Description: Create a controllable TV stub implementing the common stub contract (register/ack/state_sync, deterministic client_id, reconnection backoff, structured logs) with HTTP API: `GET /health`, `GET /state`, `GET /logs`, `POST /reset`.
+	-   Files: `validation/stubs/tv-stub.js` (or `.ts`).
+	-   Acceptance: Starts with `--server-url`, `--http-port`, `--client-id`; acks all `state_sync`; endpoints return expected payloads; reconnects after server restarts within backoff bounds.
+
+-   [ ] **Task 4.7**: Implement Remote Stub `(YYYY-MM-DD)`
+	-   Description: Create a controllable Remote stub (register/ack/state_sync, deterministic client_id, reconnection backoff, structured logs) with HTTP API including `POST /command` to emit `navigation_command`/`control_command` (and optional `seed` → single `data` message).
+	-   Files: `validation/stubs/remote-stub.js` (or `.ts`).
+	-   Acceptance: `POST /command` sends correct WS message and waits for ack; `/state` reflects last `state_sync`; `seed` path sends one `data` message after register.
+
+-   [ ] **Task 4.8**: Stub runner scripts `(YYYY-MM-DD)`
+	-   Description: Add npm scripts to start/stop stubs with default ports (TV: 4301, Remote: 4302) and server URL (default `ws://localhost:3000/ws`). Optionally add VS Code tasks.
+	-   Files: `validation/package.json` (scripts), optional `.vscode/tasks.json`.
+	-   Acceptance: Single command brings both stubs up and prints control URLs; supports overriding ports/URL via env/args.
+
+-   [ ] **Task 4.9**: Integration drivers for stub flows `(YYYY-MM-DD)`
+	-   Description: Add test drivers to automate VALIDATION.md Flows 8–10: drive Remote Stub via HTTP, assert TV Stub state via HTTP.
+	-   Files: `validation/test-drivers/stubs-flows.js` (new), `validation/validate.js` (wire driver).
+	-   Acceptance: "navigation" updates TV Stub `/state`; "playback" reflects correct action; non-zero exit on assertion failures.
+
+-   [ ] **Task 4.10**: Stop-and-wait enforcement tests `(YYYY-MM-DD)`
+	-   Description: Verify that a second command is only accepted after ack of the first, exercising Remote→Server and Server→TV directions.
+	-   Files: `validation/test-drivers/stubs-flows.js` (extend) or dedicated driver.
+	-   Acceptance: Back-to-back POSTs result in serialized handling; timestamps/logs prove no out-of-order processing.
+
+-   [ ] **Task 4.11**: Log schema conformance checks `(YYYY-MM-DD)`
+	-   Description: Validate emitted logs include required structured fields (ts, level, event, client_type/id, message_type when relevant, state_version for broadcasts).
+	-   Files: `validation/utils/log-assert.js` (new), invoked by drivers.
+	-   Acceptance: Sample events (register, ack, broadcast) pass schema checks; failures report missing fields.
+
+-   [ ] **Task 4.12**: Health payload completeness tests `(YYYY-MM-DD)`
+	-   Description: Assert `/live`, `/ready`, `/health` payloads match ARCHITECTURE.md operational schemas (fields and types), with conditional children in prod SSR.
+	-   Files: `validation/test-drivers/health-check.js` (new).
+	-   Acceptance: All endpoints return expected shapes; children absent in non-SSR mode; driver exits non-zero on mismatch.
+
+-   [ ] **Task 4.13**: Server FSM unit tests `(YYYY-MM-DD)`
+	-   Description: Unit-test FSM transitions (valid/invalid), message handlers (register/navigation/control), `state_sync` generation, and ack timeout behavior.
+	-   Files: Server-side test files under `server/` test setup (framework of choice) or lightweight harness.
+	-   Acceptance: Tests cover the listed scopes and pass locally.

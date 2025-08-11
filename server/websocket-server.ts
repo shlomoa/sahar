@@ -14,7 +14,7 @@ import {
   AckMessage,
   ErrorMessage,
   WEBSOCKET_CONFIG
-} from '@shared/websocket/websocket-protocol';
+} from '@shared/websocket/websocket-protocol.js';
 
 /**
  * SAHAR Unified Server
@@ -259,7 +259,9 @@ function handleActionConfirmation(msg: ActionConfirmationMessage) {
 }
 
 // Middleware for parsing JSON and serving static files
+
 app.use(express.json());
+app.use('/.well-known', express.static('public/.well-known', { dotfiles: 'allow' }))
 app.use(express.static('public'));
 
 // Define path to the TV and Remote app builds (relative to output directory)
@@ -268,13 +270,13 @@ const remoteAppPath = path.join(__dirname, '../../apps/remote/dist/sahar-remote'
 
 // Serve the TV app, with a catch-all to redirect to index.html for Angular routing.
 app.use('/tv', express.static(tvAppPath));
-app.get('/tv/*', (req: Request, res: Response) => {
+app.get('/tv/*splat', (req: Request, res: Response) => {
   res.sendFile(path.join(tvAppPath, 'index.html'));
 });
 
 // Serve the Remote app, with a catch-all to redirect to index.html for Angular routing.
 app.use('/remote', express.static(remoteAppPath));
-app.get('/remote/*', (req: Request, res: Response) => {
+app.get('/remote/*splat', (req: Request, res: Response) => {
   res.sendFile(path.join(remoteAppPath, 'index.html'));
 });
 

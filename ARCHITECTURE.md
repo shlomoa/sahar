@@ -128,6 +128,19 @@ Target Architecture Note (clarification): The server will own content and naviga
 
 The entire system operates on a strictly synchronous, server-centric communication model. All state is owned by the server's FSM. Clients are stateless and merely reflect the state broadcast by the server.
 
+### Protocol constants (defaults)
+
+These defaults guide implementations and tests; they can be overridden via configuration at runtime (see IMPLEMENTATION Task 1.5).
+
+- ACK_TIMEOUT_MS: 3000
+- RECONNECT_BACKOFF_MS: base=500, max=5000, jitter=±100
+- WS_PATH: "/ws"
+- HEALTH_STATUS: "ok" | "degraded" | "error"
+
+Notes
+- Stop-and-wait allows only one in-flight message per peer; on timeout, the sender treats the connection as lost and reconnects.
+- Clients should use same-origin WS/WSS at the fixed path `/ws` unless explicitly configured otherwise.
+
 #### Connection and Registration Flow
 1.  **Server Startup:** The Unified Server starts, serving the client applications and listening for WebSocket connections on its designated port (e.g., 8080).
 2.  **Client Connection:** The TV and Remote apps connect to the server's WebSocket endpoint.
@@ -179,6 +192,60 @@ interface WebSocketMessage {
 -   **Disconnection:** If a client disconnects, the server updates its FSM (`connectedClients`) and broadcasts the new state to the remaining client.
 -   **Reconnection:** Upon reconnecting, a client simply follows the registration flow again, receiving the latest state from the server.
 -   **Invalid Messages:** If the server receives an invalid message (e.g., wrong format, invalid state transition), it will send an `error` message to the originating client and the message will be discarded.
+
+### Server-owned ApplicationState (authoritative schema)
+
+The server owns and broadcasts the full application state. Minimal baseline below; apps may ignore fields they do not need.
+
+```typescript
+// Monotonic version increases on each committed state change
+export interface ApplicationState {
+    version: number;
+    clients: {
+        tv: { connected: boolean; id?: string };
+        remote: { connected: boolean; id?: string };
+    };
+    navigation: {
+        view: 'home' | 'performers' | 'videos' | 'scenes';
+        selectedPerformerId?: string;
+        selectedVideoId?: string;
+        selectedSceneId?: string;
+    };
+    playback: {
+        isPlaying: boolean;
+        currentVideoId?: string;
+        currentSceneId?: string;
+        positionSec?: number; // last known position
+        volume?: number;      // 0..1
+    };
+    // Optional cache of content; server may echo subset for convenience
+    data?: {
+        performers?: any[];
+        videos?: Video[];
+        scenes?: Scene[];
+    };
+}
+```
+
+State rules
+- The server increments `version` after an acknowledged state mutation.
+- Clients render based on the latest `state_sync` and treat their local UI state as derived.
+- The Remote issues commands that trigger state transitions; only the server commits them.
+
+### Structured logging fields (server and stubs)
+
+To aid troubleshooting, logs are structured with consistent fields.
+
+- ts: ISO timestamp
+- level: debug | info | warn | error
+- event: short code (e.g., "ws.register", "ws.ack", "fsm.transition", "state.broadcast", "child.spawn")
+- source: server | proxy | child | ws
+- client_type: tv | remote (when applicable)
+- client_id: string (when applicable)
+- message_type: MessageType (when applicable)
+- latency_ms: number (when applicable; e.g., send→ack)
+- state_version: number (when broadcasting/processing state changes)
+- detail: object (free-form; include error stack if level=error)
 
 ## 5. Video Integration
 
@@ -301,6 +368,43 @@ Remote Updates UI State
     - Toggleable Sinks: Console, file, and SSE/WebSocket broadcast can be enabled via configuration.
 - Metrics/Health: Extend `/health`, `/ready`, `/live` with structured JSON for monitoring systems.
 - Non-invasive: The admin UI is not required for normal operation and can be disabled entirely for production deployments.
+
+## 12. Operational Schemas: Health/Readiness
+
+The Unified Server exposes three HTTP endpoints with JSON payloads for preflight and monitoring. Status values: "ok" | "degraded" | "error".
+
+### 12.1 `/live`
+```json
+{
+    "status": "live",
+    "ts": "2025-08-11T12:34:56.000Z",
+    "uptimeSec": 1234
+}
+```
+
+### 12.2 `/ready`
+```json
+{
+    "status": "ready",
+    "ts": "2025-08-11T12:34:56.000Z",
+    "wsInitialized": true,
+    "proxiesReady": true
+}
+```
+
+### 12.3 `/health`
+```json
+{
+    "status": "ok",
+    "ts": "2025-08-11T12:34:56.000Z",
+    "stateVersion": 42,
+    "clients": { "tv": true, "remote": false },
+    "children": {
+        "tvSsr": { "status": "ok", "port": 5101, "pid": 12345, "restarts": 0 },
+        "remoteSsr": { "status": "ok", "port": 5102, "pid": 12346, "restarts": 0 }
+    }
+}
+```
 
 ---
 

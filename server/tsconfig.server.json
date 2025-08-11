@@ -13,9 +13,9 @@
     "resolveJsonModule": true,
     "baseUrl": "./",
     "paths": {
-      "@shared/*": ["./shared/*"]
+      "@shared/*": ["shared/*"]
     },
-  "preserveSymlinks": true,
+    "preserveSymlinks": true,
     "types": ["node"]
   },
   "include": ["websocket-server.ts", "shared/websocket/**/*.ts"],

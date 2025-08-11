@@ -250,3 +250,15 @@ These flows validate components independently using the stubs above. They are ca
         8.  **Expected**: TV Stub state matches the requested view.
         9.  Perform a playback control in Remote app (e.g., Play video id).
         10. **Expected**: TV Stub `state_sync` shows the correct video/action.
+
+---
+
+## 8. Validation constants and schemas (reference)
+
+Use these values unless overridden by test config; they align with ARCHITECTURE.md.
+
+- Timing defaults: ACK_TIMEOUT_MS=3000; reconnect backoff base/max/jitter = 500/5000/100 ms
+- WebSocket path: /ws (same-origin)
+- Health statuses: ok | degraded | error
+- ApplicationState schema: see ARCHITECTURE.md “Server-owned ApplicationState”
+- Health payloads: see ARCHITECTURE.md Section 12 (Operational Schemas)

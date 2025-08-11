@@ -5,23 +5,23 @@
   "type": "module",
   "main": "dist/websocket-server.js",
   "scripts": {
-  "build": "tsc -p tsconfig.server.json && tsc-alias -p tsconfig.server.json",
-  "start": "node --preserve-symlinks dist/websocket-server.js",
+    "build": "tsc -p tsconfig.server.json && tsc-alias -p tsconfig.server.json",
+    "start": "node dist/websocket-server.js",
     "dev": "nodemon --watch ./ --ext ts --exec \"ts-node --esm --project tsconfig.server.json websocket-server.ts\"",
     "typecheck": "tsc -p tsconfig.server.json --noEmit"
   },
   "dependencies": {
-    "express": "^5.1.0",
     "ws": "^8.14.2"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
     "@types/node": "^24.2.0",
     "@types/ws": "^8.18.1",
+    "express": "^5.1.0",
     "nodemon": "^3.0.2",
     "ts-node": "^10.9.2",
-  "typescript": "^5.9.2",
-  "tsc-alias": "^1.8.8"
+    "tsc-alias": "^1.8.8",
+    "typescript": "^5.9.2"
   },
   "license": "MIT"
 }
