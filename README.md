@@ -20,27 +20,43 @@ For complete architecture and protocol details, see the single source of truth: 
 
 ### Prerequisites
 - Node.js 18+
-- Angular CLI 20+
+- Angular CLI 20+ (only needed for direct `ng serve` / manual builds)
 - Local WiFi network
 
-### Installation
+### Install Dependencies
 ```bash
-# Install dependencies
 cd apps/tv && npm install
 cd ../remote && npm install
+cd ../../server && npm install
+cd ../validation && npm install
 ```
 
-### Run Applications
-```bash
-# Start TV App (Terminal 1)
-cd apps/tv && ng serve
+### Run Modes (Validation Orchestrator)
+The validation workspace provides four explicit modes (no extra scripts files required):
 
-# Start Remote App (Terminal 2)
+Mode | Description | Angular Builds | Processes
+-----|-------------|----------------|----------
+prod | Both TV & Remote as production builds | tv + remote | server
+tv-stub | Remote prod UI, TV simulated | remote only | server + tv stub
+remote-stub | TV prod UI, Remote simulated | tv only | server + remote stub
+stubs | Both simulated stubs (fast loop) | none | server + tv stub + remote stub
+
+Run examples (from repo root with workspace flag or inside validation folder):
+```powershell
+npm run mode:prod -w validation
+npm run tv-stub   -w validation
+npm run remote-stub -w validation
+npm run stubs     -w validation
+```
+
+Classic direct Angular dev (hot reload) remains available:
+```bash
+cd apps/tv && ng serve
+# in another terminal
 cd apps/remote && ng serve
 ```
 
-### Integrated run and validation
-- For end-to-end running and validation flows, see [VALIDATION.md](./VALIDATION.md).
+Integrated validation flows: see [VALIDATION.md](./VALIDATION.md).
 
 ## 🏗️ Architecture
 
@@ -119,11 +135,25 @@ function getVideoThumbnail(videoUrl: string): string {
 }
 ```
 
-## 🔌 Communication Protocol
+## 🔌 Communication Protocol & Configuration
 
-- Protocol v3.0 (Stop-and-Wait), centralized server-owned FSM; clients are stateless and render from `state_sync`.
-- See architecture and flows: [ARCHITECTURE.md — Unified Communication Protocol](./ARCHITECTURE.md#4-unified-communication-protocol)
-- Canonical message types and enums: [shared/websocket/websocket-protocol.ts](./shared/websocket/websocket-protocol.ts)
+Protocol v3.0 (Stop-and-Wait), centralized server-owned FSM; clients are stateless and render from `state_sync`.
+
+Authoritative definitions: [shared/websocket/websocket-protocol.ts](./shared/websocket/websocket-protocol.ts)
+
+Message Types (high-level):
+`register`, `navigation_command`, `control_command`, `action_confirmation`, `ack`, `state_sync`, `error`.
+
+Configuration Separation:
+- `WEBSOCKET_CONFIG` (shared, runtime essentials): port, ack timeout, websocket path.
+- Validation-only tuning (`validation/config/validation-config.ts`): stub HTTP ports, reconnect/backoff, helper `buildLocalServerUrl`.
+
+Logging & Health:
+- Structured JSON logs with component metadata.
+- `/live`, `/ready`, `/health` endpoints for liveness, readiness, and deep status.
+
+Single Source of Truth:
+- Protocol file surfaced via symlinks in app/server folders; edit only the canonical shared file.
 
 ## 🛠️ Implementation plan & progress
 
@@ -134,16 +164,32 @@ See the authoritative flow and details in: [ARCHITECTURE.md — Network Architec
 
 Summary: both clients connect to the unified server; the server owns the FSM, pushes `state_sync` updates, and clients send navigation/control commands using the Stop-and-Wait protocol.
 
-## 🧪 Testing
+## 🧪 Testing & Validation
 
-- For complete validation flows (Environment Check, Start Applications, Integration Tests), see [VALIDATION.md](./VALIDATION.md).
+See [VALIDATION.md](./VALIDATION.md) for environment checks, integration scenarios, and stub usage.
 
-### Build Verification
-```bash
-# Test builds
-cd apps/tv && ng build       # Should complete successfully  
-cd apps/remote && ng build   # Should complete successfully
+Quick checks:
+```powershell
+# Full prod mode
+npm run mode:prod -w validation
+curl http://localhost:8080/live
+curl http://localhost:8080/health
+
+# Fast protocol loop (both stubs)
+npm run stubs -w validation
 ```
+
+Manual Angular build verification:
+```bash
+cd apps/tv && npm run build
+cd ../remote && npm run build
+```
+
+Stub HTTP endpoints:
+- `/health`, `/state`, `/logs`, `/reset` (both)
+- `/command` (remote stub only: send navigation/control test messages)
+
+Reconnect/backoff parameters centralized in validation config.
 
 ## 📖 Documentation
 
@@ -165,13 +211,18 @@ cd apps/remote && ng build   # Should complete successfully
 
 ### Development Workflow
 ```bash
-# Development with live reload
-cd apps/tv && ng serve
-cd apps/remote && ng serve
+# Fastest: simulate both sides (no Angular build)
+npm run stubs -w validation
 
-# Production builds
-cd apps/tv && ng build --configuration production
-cd apps/remote && ng build --configuration production
+# Mixed: one real UI, one stub
+npm run tv-stub -w validation
+
+# Full production experience
+npm run mode:prod -w validation
+
+# Direct Angular hot reload (optional)
+cd apps/tv && ng serve
+cd ../remote && ng serve
 ```
 
 ## 🔧 System Requirements
@@ -188,9 +239,16 @@ cd apps/remote && ng build --configuration production
 - **Network**: 5GHz WiFi for optimal performance
 - **Bandwidth**: Minimal (1-10KB per WebSocket message)
 
-## 🚀 Production Deployment
+## 🚀 Production Deployment & Runtime Modes
 
-For development, integrated validation, and production deployment, see: [DEPLOYMENT.md](./DEPLOYMENT.md).
+Deployment guide: [DEPLOYMENT.md](./DEPLOYMENT.md).
+
+Runtime Mode Selection Guidelines:
+1. `mode:prod`: UI integration, end-to-end visual verification.
+2. `tv-stub` / `remote-stub`: Focused testing when iterating on one UI.
+3. `stubs`: Rapid protocol / FSM / server iteration.
+
+Pick the lightest mode that still exercises the layer you are changing.
 
 ## 🤝 Contributing
 
