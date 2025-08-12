@@ -13,8 +13,18 @@ import {
   StateSyncMessage,
   AckMessage,
   ErrorMessage,
-  WEBSOCKET_CONFIG
-} from '@shared/websocket/websocket-protocol.js';
+  WEBSOCKET_CONFIG,
+  ERROR_CODES,
+  NAVIGATION_ACTION_SET,
+  CONTROL_ACTION_SET
+} from './shared/websocket/websocket-protocol.js';
+import { createLogger } from './shared/utils/logging.js';
+
+// --- Structured Logger (shared) ---------------------------------------------------------------
+const logger = createLogger({ component: 'server' });
+const logInfo = (event: string, meta?: any, msg?: string) => logger.info(event, meta, msg);
+const logWarn = (event: string, meta?: any, msg?: string) => logger.warn(event, meta, msg);
+const logError = (event: string, meta?: any, msg?: string) => logger.error(event, meta, msg);
 
 /**
  * SAHAR Unified Server
@@ -27,7 +37,8 @@ const __dirname = path.dirname(__filename);
 
 // Create Express application
 const app = express();
-const PORT = process.env.PORT || WEBSOCKET_CONFIG.SERVER_PORT || 8080;
+// Single source of truth for port from shared protocol config
+const PORT = WEBSOCKET_CONFIG.SERVER_PORT;
 
 // Create HTTP server from the express app
 const server = createServer(app);
@@ -59,10 +70,87 @@ let applicationState: ApplicationState = {
 // Track client connections and their type
 const clients = new Map<WebSocket, { clientType: ClientType; deviceId: string; deviceName: string }>();
 
+// Readiness flag (infrastructure readiness: HTTP + WS initialized)
+let isReady = false;
+const markReady = () => { isReady = true; };
+
 // --- Message helpers ---
 const makeAck = (source: 'server'): AckMessage => ({ type: 'ack', timestamp: Date.now(), source, payload: {} });
 const makeStateSync = (source: 'server'): StateSyncMessage => ({ type: 'state_sync', timestamp: Date.now(), source, payload: applicationState });
 const makeError = (source: 'server', code: string, message: string): ErrorMessage => ({ type: 'error', timestamp: Date.now(), source, payload: { code, message } });
+
+// --- Error sending helper ---
+function sendError(ws: WebSocket, code: string, message: string, opts: { close?: boolean; meta?: any } = {}) {
+  ws.send(JSON.stringify(makeError('server', code, message)));
+  logWarn('invalid_message', { code, message, ...(opts.meta || {}) });
+  if (opts.close) {
+    try { ws.close(); } catch {/* ignore */}
+  }
+}
+
+// --- Validation ---
+// Use canonical action sets from shared protocol
+const NAV_ACTIONS = NAVIGATION_ACTION_SET;
+const CTRL_ACTIONS = CONTROL_ACTION_SET;
+
+function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebSocketMessage } | { ok: false; code: string; reason: string; close?: boolean } {
+  if (typeof raw !== 'object' || raw === null) {
+    return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Non-object message', close: !isRegistered };
+  }
+  const { type, payload } = raw as { type?: string; payload?: any };
+  if (typeof type !== 'string') {
+    return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Missing type', close: !isRegistered };
+  }
+  if (!isRegistered) {
+    if (type !== 'register') {
+      return { ok: false, code: ERROR_CODES.INVALID_REGISTRATION, reason: 'First message must be register', close: true };
+    }
+    // register payload checks
+    if (!payload || typeof payload !== 'object') {
+      return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Register missing payload', close: true };
+    }
+    if (payload.clientType !== 'tv' && payload.clientType !== 'remote') {
+      return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid clientType', close: true };
+    }
+    if (typeof payload.deviceId !== 'string' || !payload.deviceId) {
+      return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid deviceId', close: true };
+    }
+    if (typeof payload.deviceName !== 'string' || !payload.deviceName) {
+      return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid deviceName', close: true };
+    }
+    return { ok: true, msg: raw as WebSocketMessage };
+  }
+  // Already registered client
+  switch (type) {
+    case 'register':
+      return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Duplicate register' }; // no close
+    case 'navigation_command': {
+      if (!payload || typeof payload !== 'object') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Navigation missing payload' };
+      if (!NAV_ACTIONS.has(payload.action)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid navigation action' };
+      if (payload.targetId && typeof payload.targetId !== 'string') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid targetId' };
+      return { ok: true, msg: raw as WebSocketMessage };
+    }
+    case 'control_command': {
+      if (!payload || typeof payload !== 'object') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Control missing payload' };
+      if (!CTRL_ACTIONS.has(payload.action)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid control action' };
+      if (payload.startTime && typeof payload.startTime !== 'number') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid startTime' };
+      if (payload.seekTime && typeof payload.seekTime !== 'number') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid seekTime' };
+      if (payload.volume && (typeof payload.volume !== 'number' || payload.volume < 0 || payload.volume > 1)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid volume' };
+      return { ok: true, msg: raw as WebSocketMessage };
+    }
+    case 'action_confirmation': {
+      if (!payload || typeof payload !== 'object') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Confirmation missing payload' };
+      if (payload.status !== 'success' && payload.status !== 'failure') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid confirmation status' };
+      return { ok: true, msg: raw as WebSocketMessage };
+    }
+    case 'ack':
+    case 'state_sync':
+    case 'error':
+      return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Client cannot send server-only type' };
+    default:
+      return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Unsupported message type' };
+  }
+}
 
 /**
  * Broadcasts the current application state to all connected clients.
@@ -77,92 +165,87 @@ const broadcastState = () => {
 };
 
 wss.on('connection', (ws: WebSocket) => {
-  console.log('ℹ️  New client connected');
+  logInfo('client_connected');
 
   ws.on('message', (data: RawData) => {
+    const isRegistered = clients.has(ws);
+    let parsed: any;
     try {
       const text = typeof data === 'string' ? data : data.toString();
-      const msg: WebSocketMessage = JSON.parse(text);
-      console.log('➡️  Received message:', msg);
-
-      // Enforce registration first
-      const isRegistered = clients.has(ws);
-      if (!isRegistered) {
-        if (msg.type !== 'register') {
-          ws.send(JSON.stringify(makeError('server', 'INVALID_REGISTRATION', 'First message must be a register message.')));
-          ws.close();
-          return;
-        }
-        // Handle register
-        const reg = msg as RegisterMessage;
-        const { clientType, deviceId, deviceName } = reg.payload;
-
-        // Enforce single TV and single Remote
-        if (clientType === 'tv' && applicationState.connectedClients.tv) {
-          ws.send(JSON.stringify(makeError('server', 'CLIENT_TYPE_MISMATCH', 'A TV client is already connected.')));
-          ws.close();
-          return;
-        }
-        if (clientType === 'remote' && applicationState.connectedClients.remote) {
-          ws.send(JSON.stringify(makeError('server', 'CLIENT_TYPE_MISMATCH', 'A Remote client is already connected.')));
-          ws.close();
-          return;
-        }
-
-        clients.set(ws, { clientType, deviceId, deviceName });
-        applicationState.connectedClients[clientType] = { deviceId, deviceName };
-
-        // Update FSM readiness
-        if (applicationState.connectedClients.remote && applicationState.connectedClients.tv) {
-          applicationState.fsmState = 'ready';
-        }
-
-        // Ack and state
-        ws.send(JSON.stringify(makeAck('server')));
-        broadcastState();
+      parsed = JSON.parse(text);
+    } catch (e) {
+      sendError(ws, ERROR_CODES.INVALID_MESSAGE_FORMAT, 'Invalid JSON', { close: !isRegistered, meta: { preRegistered: !isRegistered } });
+      return;
+    }
+    const v = validateMessage(parsed, isRegistered);
+    if (!v.ok) {
+      sendError(ws, v.code, v.reason, { close: !!v.close, meta: { preRegistered: !isRegistered } });
+      return;
+    }
+    const msg = v.msg;
+    logInfo('message_received', { type: msg.type });
+    if (!isRegistered && msg.type === 'register') {
+      const reg = msg as RegisterMessage;
+      const { clientType, deviceId, deviceName } = reg.payload;
+      // Enforce single TV / Remote uniqueness
+      if (clientType === 'tv' && applicationState.connectedClients.tv) {
+        sendError(ws, ERROR_CODES.CLIENT_TYPE_MISMATCH, 'A TV client is already connected.', { close: true, meta: { attempted: 'tv' } });
         return;
       }
-
-      // Handle registered clients' messages
-      switch (msg.type) {
-        case 'navigation_command': {
-          const nav = msg as NavigationCommandMessage;
-          handleNavigationCommand(nav);
-          ws.send(JSON.stringify(makeAck('server')));
-          broadcastState();
-          break;
-        }
-        case 'control_command': {
-          const ctl = msg as ControlCommandMessage;
-          handleControlCommand(ctl);
-          ws.send(JSON.stringify(makeAck('server')));
-          broadcastState();
-          break;
-        }
-        case 'action_confirmation': {
-          const confirm = msg as ActionConfirmationMessage;
-          handleActionConfirmation(confirm);
-          ws.send(JSON.stringify(makeAck('server')));
-          broadcastState();
-          break;
-        }
-        case 'register': {
-          // Already registered, ignore or error
-          ws.send(JSON.stringify(makeError('server', 'INVALID_MESSAGE_FORMAT', 'Client already registered.')));
-          break;
-        }
-        default: {
-          ws.send(JSON.stringify(makeError('server', 'INVALID_MESSAGE_FORMAT', `Unsupported message type: ${msg.type}`)));
-        }
+      if (clientType === 'remote' && applicationState.connectedClients.remote) {
+        sendError(ws, ERROR_CODES.CLIENT_TYPE_MISMATCH, 'A Remote client is already connected.', { close: true, meta: { attempted: 'remote' } });
+        return;
       }
-    } catch (error) {
-      console.error('❌ Error: Failed to parse/handle message.', error);
-      ws.send(JSON.stringify(makeError('server', 'INVALID_MESSAGE_FORMAT', 'Invalid JSON or message.')));
+      clients.set(ws, { clientType, deviceId, deviceName });
+      applicationState.connectedClients[clientType] = { deviceId, deviceName };
+      if (applicationState.connectedClients.remote && applicationState.connectedClients.tv) {
+        applicationState.fsmState = 'ready';
+      }
+      ws.send(JSON.stringify(makeAck('server')));
+      broadcastState();
+      logInfo('client_registered', { clientType, deviceId });
+      return;
+    }
+    // Already registered normal messages
+    switch (msg.type) {
+      case 'navigation_command': {
+        const nav = msg as NavigationCommandMessage;
+        handleNavigationCommand(nav);
+        ws.send(JSON.stringify(makeAck('server')));
+        broadcastState();
+        logInfo('navigation_command_handled', { action: nav.payload.action });
+        break;
+      }
+      case 'control_command': {
+        const ctl = msg as ControlCommandMessage;
+        handleControlCommand(ctl);
+        ws.send(JSON.stringify(makeAck('server')));
+        broadcastState();
+        logInfo('control_command_handled', { action: ctl.payload.action });
+        break;
+      }
+      case 'action_confirmation': {
+        const confirm = msg as ActionConfirmationMessage;
+        handleActionConfirmation(confirm);
+        ws.send(JSON.stringify(makeAck('server')));
+        broadcastState();
+        logInfo('action_confirmation_received', { status: confirm.payload.status });
+        break;
+      }
+      case 'register': {
+        // Should not reach here due to validation, but guard anyway
+        sendError(ws, ERROR_CODES.INVALID_MESSAGE_FORMAT, 'Duplicate register attempt');
+        break;
+      }
+      default: {
+        // Should not happen (validated earlier)
+        sendError(ws, ERROR_CODES.INVALID_MESSAGE_FORMAT, 'Unhandled type after validation');
+      }
     }
   });
 
   ws.on('close', () => {
-    console.log('ℹ️  Client disconnected');
+    logInfo('client_disconnected');
     const info = clients.get(ws);
     if (info) {
       clients.delete(ws);
@@ -179,7 +262,7 @@ wss.on('connection', (ws: WebSocket) => {
   });
 
   ws.on('error', (error: Error) => {
-    console.error('❌ WebSocket error:', error);
+    logError('websocket_error', { error: error.message });
   });
 });
 
@@ -280,27 +363,49 @@ app.get('/remote/*splat', (req: Request, res: Response) => {
   res.sendFile(path.join(remoteAppPath, 'index.html'));
 });
 
-// Basic health check endpoint
-app.get('/health', (req: Request, res: Response) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+// Liveness endpoint (process up)
+app.get('/live', (_req: Request, res: Response) => {
+  res.status(200).json({ status: 'live' });
+});
+
+// Readiness endpoint (infrastructure ready to accept clients)
+app.get('/ready', (_req: Request, res: Response) => {
+  if (isReady) return res.status(200).json({ status: 'ready' });
+  return res.status(503).json({ status: 'not_ready' });
+});
+
+// Enriched health snapshot (debug / monitoring)
+app.get('/health', (_req: Request, res: Response) => {
+  const wsConnections = [...wss.clients].length;
+  const registered = [...clients.values()].map(c => ({ type: c.clientType, deviceId: c.deviceId }));
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptimeSeconds: process.uptime(),
+    fsmState: applicationState.fsmState,
+    wsConnections,
+    registeredClients: registered,
+    navigationLevel: applicationState.navigation.currentLevel,
+    playerState: {
+      isPlaying: applicationState.player.isPlaying,
+      currentTime: applicationState.player.currentTime
+    }
+  });
 });
 
 // Start the server
 server.listen(PORT, () => {
-  console.log(`✅ SAHAR Unified Server running on http://localhost:${PORT}`);
-  console.log('📊 Server Status:');
-  console.log('  ✅ Express app initialized');
-  console.log('  ✅ HTTP server listening');
-  console.log('  ✅ TV app served at /tv');
-  console.log('  ✅ Remote app served at /remote');
-  console.log('  ✅ WebSocket server attached');
+  logInfo('server_start', { port: PORT });
+  logInfo('server_status', { express: true, httpListening: true, tvRoute: '/tv', remoteRoute: '/remote', websocket: true });
+  markReady();
+  logInfo('server_ready');
 });
 
 // Graceful shutdown
 process.on('SIGINT', () => {
-  console.log('\n🛑 Shutting down SAHAR Unified Server...');
+  logWarn('shutdown_signal', { signal: 'SIGINT' });
   server.close(() => {
-    console.log('✅ Server shut down gracefully');
+    logInfo('server_shutdown');
     process.exit(0);
   });
 });

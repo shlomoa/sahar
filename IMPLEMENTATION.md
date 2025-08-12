@@ -247,12 +247,12 @@ Detailed tasks
 	-   Acceptance: Docs accurately describe current behavior; links/ports/paths verified.
 -   [ ] **Task 4.6**: Implement TV Stub `(YYYY-MM-DD)`
 	-   Description: Create a controllable TV stub implementing the common stub contract (register/ack/state_sync, deterministic client_id, reconnection backoff, structured logs) with HTTP API: `GET /health`, `GET /state`, `GET /logs`, `POST /reset`.
-	-   Files: `validation/stubs/tv-stub.js` (or `.ts`).
+	-   Files: `validation/stubs/tv-stub.ts`.
 	-   Acceptance: Starts with `--server-url`, `--http-port`, `--client-id`; acks all `state_sync`; endpoints return expected payloads; reconnects after server restarts within backoff bounds.
 
 -   [ ] **Task 4.7**: Implement Remote Stub `(YYYY-MM-DD)`
 	-   Description: Create a controllable Remote stub (register/ack/state_sync, deterministic client_id, reconnection backoff, structured logs) with HTTP API including `POST /command` to emit `navigation_command`/`control_command` (and optional `seed` → single `data` message).
-	-   Files: `validation/stubs/remote-stub.js` (or `.ts`).
+	-   Files: `validation/stubs/remote-stub.ts`.
 	-   Acceptance: `POST /command` sends correct WS message and waits for ack; `/state` reflects last `state_sync`; `seed` path sends one `data` message after register.
 
 -   [ ] **Task 4.8**: Stub runner scripts `(YYYY-MM-DD)`

@@ -180,11 +180,11 @@ Purpose: Provide lightweight, controllable stand-ins for the TV and Remote apps 
 - Logging: Structured logs to stdout with timestamps and message type, plus rolling in-memory buffer returned at `GET /logs`.
 - Exit codes: Non-zero on uncaught error; zero on SIGINT/SIGTERM.
 
-Planned locations
-- `validation/stubs/tv-stub.js` — TV renderer stub
-- `validation/stubs/remote-stub.js` — Remote controller stub
+Locations
+- `validation/stubs/tv-stub.ts` — TV renderer stub
+- `validation/stubs/remote-stub.ts` — Remote controller stub
 
-### 6.2. TV Stub Specification (`validation/stubs/tv-stub.js`)
+### 6.2. TV Stub Specification (`validation/stubs/tv-stub.ts`)
 
 - Registration
     - Sends `register` with `{ client_type: "tv", client_id }` on connect; awaits `ack`.
@@ -197,7 +197,7 @@ Planned locations
 - Configuration
     - Env/flags: `--server-url` (default `ws://localhost:3000/ws`), `--http-port` (default `4301`), `--client-id`.
 
-### 6.3. Remote Stub Specification (`validation/stubs/remote-stub.js`)
+### 6.3. Remote Stub Specification (`validation/stubs/remote-stub.ts`)
 
 - Registration
     - Sends `register` with `{ client_type: "remote", client_id }`; awaits `ack`.
@@ -262,3 +262,95 @@ Use these values unless overridden by test config; they align with ARCHITECTURE.
 - Health statuses: ok | degraded | error
 - ApplicationState schema: see ARCHITECTURE.md “Server-owned ApplicationState”
 - Health payloads: see ARCHITECTURE.md Section 12 (Operational Schemas)
+
+---
+
+## 9. Structured Logging (Server + Stubs)
+
+All runtime components (Unified Server, TV Stub, Remote Stub) emit single-line JSON logs to stdout for deterministic parsing during validation.
+
+### 9.1 Schema
+
+```
+{
+  ts: string (ISO 8601 UTC),
+  level: "info" | "warn" | "error",
+  event: string (canonical snake_case or dot.notation identifier),
+  msg?: string (short human-friendly message),
+  meta?: object (arbitrary structured payload; MUST be JSON-serializable)
+}
+```
+
+Additional fixed fields may appear inside `meta` when provided via base context:
+
+- component: "server" | "tv_stub" | "remote_stub"
+- client_id: (stub only)
+
+### 9.2 Canonical Events (Initial Set)
+
+Server:
+- server_start
+- server_status
+- server_ready
+- client_connected
+- client_registered
+- message_received
+- navigation_command_handled
+- control_command_handled
+- action_confirmation_received
+- invalid_message (warn)
+- websocket_error (error)
+- shutdown_signal (warn)
+- server_shutdown
+
+Stubs (prefix `ws.` and `http.` retained):
+- ws.connect.start
+- ws.open
+- ws.ack
+- ws.state_sync
+- ws.close (warn)
+- ws.error (error)
+- ws.reconnect.schedule
+- ws.message / ws.message.parse_error (error)
+- http.listen
+- http.reset
+- http.command.sent / http.command.seed / http.command.error (error)
+
+### 9.3 Validation Expectations
+
+Automated and manual validation may assert:
+1. Each log line parses as valid JSON and contains required fields (ts, level, event).
+2. No raw `console.log` usage for runtime events outside the shared logger (future static check may enforce this).
+3. `invalid_message` events include error `code` and `message` inside `meta`.
+4. For a successful startup sequence, expected ordered events (subset):
+    - server_start → server_status → server_ready
+5. For a full registration flow (server + both stubs):
+    - client_connected (twice) → client_registered (tv) → client_registered (remote) → state sync events (implicit) → navigation/ control handling events when commands issued.
+6. Absence of `websocket_error` and `invalid_message` during happy-path scenarios.
+
+### 9.4 Sampling & Buffering
+
+Stubs retain an in-memory rolling buffer (size 500) of emitted log records surfaced via `GET /logs` for black-box test drivers. The server does not buffer (logs are stream-only) to preserve simplicity—tests should tail stdout or capture process logs.
+
+### 9.5 Extensibility Rules
+
+When adding new events:
+- Prefer a stable, machine-oriented event key (snake_case or dotted groups) over free-form text.
+- Include only structured data in `meta`; avoid embedding large blobs (>5KB) or circular references.
+- Avoid changing semantics of existing event names; introduce a new event instead.
+
+### 9.6 Failure Modes
+
+If JSON serialization of `meta` fails (e.g., circular reference), the logger emits a fallback record:
+```
+{ "ts": <iso>, "level": <level>, "event": <original_event>, "msg": "logging_failure", "error": <error_message> }
+```
+Tests treat any `logging_failure` occurrence as a validation warning.
+
+### 9.7 Future Enhancements (Not Yet Implemented)
+
+- Static validation script to scan for disallowed raw console usage.
+- Log schema contract test ensuring required fields and allowed level values.
+- Correlation IDs (e.g., for multi-step command lifecycles) if/when needed.
+
+---

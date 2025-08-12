@@ -14,7 +14,7 @@ Goal: Establish a working baseline of the unified system with a production-ready
 
 Definition of Done (DoD)
 - [ ] Functional, unit-tested production server (core FSM + WebSocket gateway) `(YYYY-MM-DD)`
-- [ ] TV and Remote stubs implemented in `/validation` and controllable via HTTP `(YYYY-MM-DD)`
+- [x] TV and Remote stubs implemented in `/validation` and controllable via HTTP `(2025-08-11)`
 - [ ] Validation infrastructure in place (health/readiness checks, quick-run) `(YYYY-MM-DD)`
 - [ ] Integrated solution: production server + TV stub + Remote stub working together `(YYYY-MM-DD)`
 - [ ] Integration tests for the solution pass locally via validation harness `(YYYY-MM-DD)`
@@ -39,8 +39,8 @@ Server Core
 - [ ] [Task 1.17 — data handler](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
 - [ ] [Task 1.18 — navigation/control handlers](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
 - [ ] [Task 1.19 — Heartbeat/recovery](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
-- [ ] [Task 1.20 — Structured logging](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
-- [ ] [Task 1.21 — Invalid message handling](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
+- [x] [Task 1.20 — Structured logging](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-11)`
+- [x] [Task 1.21 — Invalid message handling](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-11)`
 
 Nice-to-have for Milestone 1 (optional)
 - [ ] [Task 1.11 — HTTPS/WSS enablement](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
@@ -50,9 +50,9 @@ Validation/Process
 - [ ] [Task 4.2 — Validation quick-run workflow](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
 - [ ] [Task 4.4 — Update/create integration tests in `/validation`](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
 - [ ] [Task 4.5 — Documentation sync](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
-- [ ] [Task 4.6 — Implement TV Stub](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
-- [ ] [Task 4.7 — Implement Remote Stub](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
-- [ ] [Task 4.8 — Stub runner scripts](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
+- [x] [Task 4.6 — Implement TV Stub](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(2025-08-11)`
+- [x] [Task 4.7 — Implement Remote Stub](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(2025-08-11)`
+- [x] [Task 4.8 — Stub runner scripts](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(2025-08-11)`
 - [ ] [Task 4.9 — Integration drivers for stub flows](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
 - [ ] [Task 4.10 — Stop-and-wait enforcement tests](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
 - [ ] [Task 4.11 — Log schema conformance checks](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
@@ -62,17 +62,17 @@ Validation/Process
 ### 2. Required Specs & Flows (from `VALIDATION.md`)
 
 Stub Specifications
-- [ ] [Section 6.1 — Common Stub Contract](./VALIDATION.md#61-common-stub-contract) `(YYYY-MM-DD)`
-- [ ] [Section 6.2 — TV Stub Specification](./VALIDATION.md#62-tv-stub-specification-validationstubstv-stubjs) `(YYYY-MM-DD)`
-- [ ] [Section 6.3 — Remote Stub Specification](./VALIDATION.md#63-remote-stub-specification-validationstubsremote-stubjs) `(YYYY-MM-DD)`
+- [x] [Section 6.1 — Common Stub Contract](./VALIDATION.md#61-common-stub-contract) `(2025-08-11)`
+- [x] [Section 6.2 — TV Stub Specification](./VALIDATION.md#62-tv-stub-specification-validationstubstv-stubjs) `(2025-08-11)`
+- [x] [Section 6.3 — Remote Stub Specification](./VALIDATION.md#63-remote-stub-specification-validationstubsremote-stubjs) `(2025-08-11)`
 
 Canonical Flows (stubs-based)
-- [ ] [Flow 8 — Validate Server in Isolation (TV Stub + Remote Stub)](./VALIDATION.md#7-stub-based-validation-flows-canonical) `(YYYY-MM-DD)`
-- [ ] [Flow 9 — Validate TV App with Remote Stub](./VALIDATION.md#7-stub-based-validation-flows-canonical) `(YYYY-MM-DD)`
-- [ ] [Flow 10 — Validate Remote App with TV Stub](./VALIDATION.md#7-stub-based-validation-flows-canonical) `(YYYY-MM-DD)`
+- [x] [Flow 8 — Validate Server in Isolation (TV Stub + Remote Stub)](./VALIDATION.md#7-stub-based-validation-flows-canonical) `(2025-08-11)`
+- [x] [Flow 9 — Validate TV App with Remote Stub](./VALIDATION.md#7-stub-based-validation-flows-canonical) `(2025-08-11)`
+- [x] [Flow 10 — Validate Remote App with TV Stub](./VALIDATION.md#7-stub-based-validation-flows-canonical) `(2025-08-11)`
 
 Preflight/Health (for quick smoke)
-- [ ] [Flow 4 — Health & Readiness Preflight](./VALIDATION.md#4-full-integration-testing-validation) `(YYYY-MM-DD)`
+- [x] [Flow 4 — Health & Readiness Preflight](./VALIDATION.md#4-full-integration-testing-validation) `(2025-08-11)`
 
 Unit Testing (recommended coverage for server/stubs)
 - [ ] [Section 2.1 — Server-Side FSM unit tests](./VALIDATION.md#2-unit-testing) `(YYYY-MM-DD)`
@@ -81,12 +81,12 @@ Unit Testing (recommended coverage for server/stubs)
 ### 3. Integration Assembly Checklist
 
 Server bring-up
-- [ ] Build and start the production server ([Task 1.13](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host)) `(YYYY-MM-DD)`
+- [x] Build and start the production server ([Task 1.13](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host)) `(2025-08-11)`
 - [ ] Verify `/live`, `/ready`, `/health` respond ([Task 1.12](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host), [Flow 4](./VALIDATION.md#4-full-integration-testing-validation)) `(YYYY-MM-DD)`
 
 Stubs bring-up
-- [ ] Start TV Stub (`validation/stubs/tv-stub.js`, [Section 6.2](./VALIDATION.md#62-tv-stub-specification-validationstubstv-stubjs)) `(YYYY-MM-DD)`
-- [ ] Start Remote Stub (`validation/stubs/remote-stub.js`, [Section 6.3](./VALIDATION.md#63-remote-stub-specification-validationstubsremote-stubjs)) `(YYYY-MM-DD)`
+- [ ] Start TV Stub (`validation/stubs/tv-stub.ts`, [Section 6.2](./VALIDATION.md#62-tv-stub-specification-validationstubstv-stubts)) `(YYYY-MM-DD)`
+- [ ] Start Remote Stub (`validation/stubs/remote-stub.ts`, [Section 6.3](./VALIDATION.md#63-remote-stub-specification-validationstubsremote-stubts)) `(YYYY-MM-DD)`
 - [ ] Both stubs register and receive ack ([Flow 8](./VALIDATION.md#7-stub-based-validation-flows-canonical)) `(YYYY-MM-DD)`
 
 End-to-end with stubs

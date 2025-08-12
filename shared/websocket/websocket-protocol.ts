@@ -156,8 +156,9 @@ export type SaharMessage =
 // Protocol Configuration
 export const WEBSOCKET_CONFIG = {
   SERVER_PORT: 8080,
-  ACK_TIMEOUT: 5000,  // ms
-};
+  ACK_TIMEOUT: 5000, // ms
+  WS_PATH: '/ws',
+} as const; // Validation config moved to validation/config/validation-config.ts
 
 // Error Codes
 export const ERROR_CODES = {
@@ -174,3 +175,27 @@ export const ERROR_CODES = {
   INVALID_MESSAGE_FORMAT: 'INVALID_MESSAGE_FORMAT',
   ACK_TIMEOUT: 'ACK_TIMEOUT', // Receiver did not acknowledge in time
 } as const;
+
+// =================================================================================================
+// ACTION SETS (Authoritative Lists)
+// Centralized canonical sets for quick membership validation in the server.
+// These MUST mirror the string literal unions declared in NavigationCommandPayload.action
+// and ControlCommandPayload.action above. Any change here requires updating those unions.
+// =================================================================================================
+
+export const NAVIGATION_ACTION_SET: ReadonlySet<NavigationCommandPayload['action']> = new Set([
+  'navigate_to_performer',
+  'navigate_to_video',
+  'navigate_to_scene',
+  'navigate_back',
+  'navigate_home'
+]);
+
+export const CONTROL_ACTION_SET: ReadonlySet<ControlCommandPayload['action']> = new Set([
+  'play',
+  'pause',
+  'seek',
+  'set_volume',
+  'mute',
+  'unmute'
+]);

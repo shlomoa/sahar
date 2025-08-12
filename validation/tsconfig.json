@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "preserve",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "esModuleInterop": false,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "dist",
+    "rootDir": ".",
+    "resolveJsonModule": true,
+    "baseUrl": "./",
+    "paths": {
+      "@shared/*": ["shared/*"],
+      "@server/*": ["server/*"]
+    },
+    "preserveSymlinks": true,
+    "types": ["node"]
+  },
+  "include": [
+    "validation/stubs/**/*.ts",
+    "validation/test-drivers/**/*.ts",
+    "validation/config/**/*.ts",
+    "shared/websocket/websocket-protocol.ts",
+    "shared/utils/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}
