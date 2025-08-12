@@ -12,8 +12,7 @@
     "resolveJsonModule": true,
     "baseUrl": "./",
     "paths": {
-      "@shared/*": ["shared/*"],
-      "@server/*": ["server/*"]
+      "@shared/*": ["shared/*"]
     },
     "preserveSymlinks": true,
     "types": ["node"]

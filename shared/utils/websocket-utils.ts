@@ -1,4 +1,12 @@
-import { WEBSOCKET_CONFIG, WebSocketMessage, WebSocketError } from '../websocket/websocket-protocol';
+import { WEBSOCKET_CONFIG, WebSocketMessage } from '../websocket/websocket-protocol';
+
+// Local lightweight error shape used by legacy helpers (not part of protocol types)
+export interface WebSocketClientError {
+  code: string;
+  message: string;
+  timestamp: number;
+  deviceId?: string;
+}
 
 // Utility functions for WebSocket operations
 export class WebSocketUtils {
@@ -6,22 +14,18 @@ export class WebSocketUtils {
     return `${deviceType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  static createMessage(type: WebSocketMessage['type'], payload: any, deviceId?: string): WebSocketMessage {
+  static createMessage(type: WebSocketMessage['type'], payload: any, source: 'tv' | 'remote' | 'server'): WebSocketMessage {
     return {
       type,
       timestamp: Date.now(),
-      payload,
-      ...(deviceId && { deviceId })
+      source,
+      payload
     };
   }
 
   static generateLocalHostUrls(): string[] {
-    const ips: string[] = [];
-    WEBSOCKET_CONFIG.PORT_RANGE.forEach(base => {        
-        ips.push(`ws://localhost:${base}`);
-    });
-      
-    return ips;
+    // Simplified: single configured server port
+    return [`ws://localhost:${WEBSOCKET_CONFIG.SERVER_PORT}${WEBSOCKET_CONFIG.WS_PATH}`];
   }
 
   static generateLocalNetworkIPs(): string[] {
@@ -81,11 +85,8 @@ export class WebSocketUtils {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
 
-  static calculateReconnectDelay(attempt: number): number {
-    return Math.min(
-      WEBSOCKET_CONFIG.RECONNECT_DELAY_BASE * Math.pow(2, attempt - 1),
-      WEBSOCKET_CONFIG.RECONNECT_DELAY_MAX
-    );
+  static calculateReconnectDelay(attempt: number, baseMs = 500, maxMs = 5000): number {
+    return Math.min(baseMs * Math.pow(2, attempt - 1), maxMs);
   }
 
   static isValidWebSocketMessage(data: any): data is WebSocketMessage {
@@ -98,12 +99,8 @@ export class WebSocketUtils {
     );
   }
 
-  static createErrorObject(code: string, message: string): WebSocketError {
-    return {
-      code,
-      message,
-      timestamp: Date.now()
-    };
+  static createErrorObject(code: string, message: string): WebSocketClientError {
+    return { code, message, timestamp: Date.now() };
   }
 
   static logMessage(deviceType: 'tv' | 'remote', direction: 'sent' | 'received', message: WebSocketMessage): void {
