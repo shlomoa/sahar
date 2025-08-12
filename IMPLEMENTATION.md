@@ -70,11 +70,9 @@ Detailed tasks
 	-   Note: WS path fixed at `/ws`.
 	-   Files: `server/websocket-server.ts` (http/https server creation), `server/config.ts`.
 	-   Acceptance: Remote PWA can install over HTTPS; WSS used automatically when HTTPS on.
--   [ ] **Task 1.12**: Health/readiness/logging `(YYYY-MM-DD)`
-	-   Description: Implement endpoints: `/health` (overall + SSR children), `/ready` (proxies + WS initialized), `/live` (heartbeat).
-	-   Introduce structured logging with levels; optional `/admin/logs` can follow later.
-	-   Files: `server/websocket-server.ts`, `server/ssr-manager.ts`, `server/logger.ts` (new).
-	-   Acceptance: Endpoints return JSON; logs show key lifecycle events.
+--   [x] **Task 1.12**: Health/readiness/logging (2025-08-12)
+	-   Description: `/live`, `/ready`, `/health` implemented; structured JSON logger in place.
+	-   Acceptance: Endpoints return JSON; logs show lifecycle events.
 -   [ ] **Task 1.13**: Scripts and environment `(YYYY-MM-DD)`
 	-   Description: Scripts: `dev` (proxies; assumes dev SSR servers), `start:prod` (assumes built bundles/assets; starts process manager).
 	-   Files: `server/package.json` (scripts), `README.md` notes if needed.
@@ -107,10 +105,8 @@ Detailed tasks
 	-   Description: Standardize logs (JSON or leveled text) including connection IDs, message types, timing, and proxy/child status.
 	-   Files: `server/logger.ts`, integration across server.
 	-   Acceptance: Logs support debugging and audits.
--   [ ] **Task 1.21**: Invalid message handling `(YYYY-MM-DD)`
-	-   Description: When receiving malformed messages or invalid state transitions, emit an `error` message to the sender and discard without state mutation (align with ARCHITECTURE.md: Error Handling).
-	-   Files: `server/websocket-server.ts` (validation and error path), `server/fsm.ts` (transition guards), `server/logger.ts` (error logs).
-	-   Acceptance: Invalid messages generate `error` responses, no state change occurs, and structured logs include `event:error` with details.
+--   [x] **Task 1.21**: Invalid message handling (2025-08-12)
+	-   Implemented error response & logging path; invalid messages rejected without state mutation.
 
 ---
 
@@ -245,20 +241,14 @@ Detailed tasks
 	-   Description: Reflect behavioral or architectural changes in `ARCHITECTURE.md` and usage/setup notes in `README.md`.
 	-   Files: `ARCHITECTURE.md`, `README.md` (and app-level READMEs if affected).
 	-   Acceptance: Docs accurately describe current behavior; links/ports/paths verified.
--   [ ] **Task 4.6**: Implement TV Stub `(YYYY-MM-DD)`
-	-   Description: Create a controllable TV stub implementing the common stub contract (register/ack/state_sync, deterministic client_id, reconnection backoff, structured logs) with HTTP API: `GET /health`, `GET /state`, `GET /logs`, `POST /reset`.
-	-   Files: `validation/stubs/tv-stub.ts`.
-	-   Acceptance: Starts with `--server-url`, `--http-port`, `--client-id`; acks all `state_sync`; endpoints return expected payloads; reconnects after server restarts within backoff bounds.
+-   [x] **Task 4.6**: Implement TV Stub (2025-08-12)
+	-   Stub present at `validation/stubs/tv-stub.ts`; implements contract & endpoints.
 
--   [ ] **Task 4.7**: Implement Remote Stub `(YYYY-MM-DD)`
-	-   Description: Create a controllable Remote stub (register/ack/state_sync, deterministic client_id, reconnection backoff, structured logs) with HTTP API including `POST /command` to emit `navigation_command`/`control_command` (and optional `seed` → single `data` message).
-	-   Files: `validation/stubs/remote-stub.ts`.
-	-   Acceptance: `POST /command` sends correct WS message and waits for ack; `/state` reflects last `state_sync`; `seed` path sends one `data` message after register.
+-   [x] **Task 4.7**: Implement Remote Stub (2025-08-12)
+	-   Stub present at `validation/stubs/remote-stub.ts`; command + seed path implemented.
 
--   [ ] **Task 4.8**: Stub runner scripts `(YYYY-MM-DD)`
-	-   Description: Add npm scripts to start/stop stubs with default ports (TV: 4301, Remote: 4302) and server URL (default `ws://localhost:3000/ws`). Optionally add VS Code tasks.
-	-   Files: `validation/package.json` (scripts), optional `.vscode/tasks.json`.
-	-   Acceptance: Single command brings both stubs up and prints control URLs; supports overriding ports/URL via env/args.
+-   [x] **Task 4.8**: Stub runner scripts (2025-08-12)
+	-   Implemented via consolidated mode scripts: `stubs`, `tv-stub`, `remote-stub`, `mode:prod` in `validation/package.json`.
 
 -   [ ] **Task 4.9**: Integration drivers for stub flows `(YYYY-MM-DD)`
 	-   Description: Add test drivers to automate VALIDATION.md Flows 8–10: drive Remote Stub via HTTP, assert TV Stub state via HTTP.
@@ -281,6 +271,16 @@ Detailed tasks
 	-   Acceptance: All endpoints return expected shapes; children absent in non-SSR mode; driver exits non-zero on mismatch.
 
 -   [ ] **Task 4.13**: Server FSM unit tests `(YYYY-MM-DD)`
+
+### 5.1 New Completed (Untracked) Work
+-   [x] **Task 5.1.1**: Protocol/validation config separation (2025-08-12)
+	-   Moved validation-only timing & stub port config to `validation/config/validation-config.ts`; kept shared runtime essentials in `WEBSOCKET_CONFIG`.
+-   [x] **Task 5.1.2**: Multi-mode validation scripts (2025-08-12)
+	-   Added `mode:prod`, `tv-stub`, `remote-stub`, `stubs` scripts enabling selective process composition without helper JS files.
+
+### 5.2 Follow-ups
+- Convert legacy PowerShell validation flows to pure Node drivers invoking mode scripts.
+- Add hashing/skip logic to avoid rebuilding unchanged Angular apps between mode switches.
 	-   Description: Unit-test FSM transitions (valid/invalid), message handlers (register/navigation/control), `state_sync` generation, and ack timeout behavior.
 	-   Files: Server-side test files under `server/` test setup (framework of choice) or lightweight harness.
 	-   Acceptance: Tests cover the listed scopes and pass locally.

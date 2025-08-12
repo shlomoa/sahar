@@ -6,11 +6,34 @@ This document outlines the comprehensive testing and validation strategy for the
 
 ## 1. Validation Structure
 
-Validation is divided into three primary phases, executed sequentially after any implementation task.
+Validation is divided into three primary phases, executed sequentially after any implementation task. A lightweight multi‑mode runner (npm scripts under `validation/`) lets you spin up only the pieces needed per phase (see Section 1.1).
 
 1.  **Unit Testing**: Focused, automated tests for individual components.
 2.  **Per-App Testing**: Manual, flow-based tests for each application against a mock server.
 3.  **Full Integration Testing**: Automated, end-to-end tests of the complete system.
+
+### 1.1 Runtime Modes (Rapid Iteration)
+
+The validation workspace provides four orchestrated modes (no extra JS launcher files — pure npm scripting). Choose the lightest mode that still exercises the layer you are changing:
+
+Mode | Purpose | Angular Builds | Processes Started
+-----|---------|----------------|------------------
+`mode:prod` | Full stack (both real UIs) | tv + remote | server
+`tv-stub` | Real Remote UI, simulated TV | remote | server + tv stub
+`remote-stub` | Real TV UI, simulated Remote | tv | server + remote stub
+`stubs` | Protocol / server only (fast loop) | none | server + both stubs
+
+Invocation examples (from repo root):
+```powershell
+npm run mode:prod -w validation
+npm run tv-stub -w validation
+npm run remote-stub -w validation
+npm run stubs -w validation
+```
+
+Section 7 flows map naturally:
+- Flows 8–10 are best exercised via `stubs`, `tv-stub`, or `remote-stub` respectively.
+- Full integration (Section 4) typically uses `mode:prod` (or targeted mixed modes while iterating).
 
 ---
 
@@ -79,7 +102,7 @@ These tests are performed manually by running the server and one client applicat
 ## 4. Full Integration Testing (`/validation`)
 
 -   **Objective**: Automate end-to-end user stories involving the real server and both client applications.
--   **Method**: The `sahar-validation.ps1` script orchestrates the tests using custom test drivers.
+-   **Method**: Prefer the npm mode scripts (`mode:prod`) for standing up the environment. The legacy `sahar-validation.ps1` tasks remain available (VS Code tasks: Environment Check / Start Applications / Integration Tests) but are being phased out in favor of pure package scripts.
 
 -   **Flow 1: Full System Startup & Navigation**
     1.  `sahar-validation.ps1 start`: Starts the server, TV app, and Remote app.
@@ -195,7 +218,7 @@ Locations
 - HTTP control
     - `GET /health`, `GET /state`, `GET /logs`, `POST /reset` as per common contract.
 - Configuration
-    - Env/flags: `--server-url` (default `ws://localhost:3000/ws`), `--http-port` (default `4301`), `--client-id`.
+    - Sourced from `validation/config/validation-config.ts` (central stub ports, reconnect/backoff) plus optional CLI overrides: `--server-url` (default built via `buildLocalServerUrl()`), `--http-port` (default TV stub port), `--client-id`.
 
 ### 6.3. Remote Stub Specification (`validation/stubs/remote-stub.ts`)
 
@@ -208,7 +231,7 @@ Locations
 - State handling
     - On `state_sync`, store payload, expose via `GET /state`, and send `ack`.
 - Configuration
-    - Env/flags: `--server-url` (default `ws://localhost:3000/ws`), `--http-port` (default `4302`), `--client-id`.
+    - Sourced from `validation/config/validation-config.ts` with same override semantics as TV stub.
 
 ---
 
@@ -253,15 +276,23 @@ These flows validate components independently using the stubs above. They are ca
 
 ---
 
-## 8. Validation constants and schemas (reference)
+## 8. Validation Constants and Configuration Separation (reference)
 
 Use these values unless overridden by test config; they align with ARCHITECTURE.md.
 
+- Shared runtime config (`shared/websocket/websocket-protocol.ts` / `WEBSOCKET_CONFIG`):
+    - `SERVER_PORT`, `ACK_TIMEOUT_MS`, `WS_PATH`
+- Validation-only config (`validation/config/validation-config.ts` / `VALIDATION_CONFIG`):
+    - Stub HTTP ports, reconnect backoff (`RECONNECT_BASE_MS`, `RECONNECT_MAX_MS`, `RECONNECT_JITTER_MS`), helper `buildLocalServerUrl()`
 - Timing defaults: ACK_TIMEOUT_MS=3000; reconnect backoff base/max/jitter = 500/5000/100 ms
 - WebSocket path: /ws (same-origin)
 - Health statuses: ok | degraded | error
 - ApplicationState schema: see ARCHITECTURE.md “Server-owned ApplicationState”
 - Health payloads: see ARCHITECTURE.md Section 12 (Operational Schemas)
+
+Configuration Separation Rationale:
+- Prevent validation-only tuning values from leaking into production bundles.
+- Ensure a single source of truth for protocol-critical timing (ACK) while allowing experimental reconnect tuning.
 
 ---
 
