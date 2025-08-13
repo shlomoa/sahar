@@ -25,20 +25,10 @@ Detailed tasks
 -   [x] **Task 1.2**: Serve Remote static files from `apps/remote/dist/sahar-remote` (2025-08-07)
 -   [x] **Task 1.3**: Create HTTP server, attach `ws` WebSocket server (2025-08-07)
 -   [x] **Task 1.4**: Protocol doc updates in ARCHITECTURE.md and VALIDATION.md (2025-08-07)
--   [ ] **Task 1.5**: Centralized server config `(YYYY-MM-DD)`
-	-   Description: Add a config module to read environment variables and expose typed settings: PORT, DEV_SSR, TV_DEV_URL, REMOTE_DEV_URL, TV_SSR_PORT, REMOTE_SSR_PORT, SSL_CERT_FILE, SSL_KEY_FILE, LOG_LEVEL.
-	-   Files: `server/config.ts` (new), use in `server/websocket-server.ts`.
-	-   Acceptance: Server branches dev/prod behavior off config; values logged at startup.
-	-   Defaults (unless overridden by env):
-		- `PORT=3000`
-		- `DEV_SSR=false` (true proxies `/` and `/remote` to Angular SSR dev servers)
-		- `TV_DEV_URL=http://localhost:4203` (used when DEV_SSR=true)
-		- `REMOTE_DEV_URL=http://localhost:4202` (used when DEV_SSR=true)
-		- `TV_SSR_PORT=5101` (child port for TV SSR in prod)
-		- `REMOTE_SSR_PORT=5102` (child port for Remote SSR in prod)
-		- `SSL_CERT_FILE` / `SSL_KEY_FILE` unset by default (HTTP only)
-		- `LOG_LEVEL=info`
-		- Protocol timing (fallbacks aligning with ARCHITECTURE.md): `ACK_TIMEOUT_MS=3000`, `RECONNECT_BASE_MS=500`, `RECONNECT_MAX_MS=5000`, `RECONNECT_JITTER_MS=100`, `WS_PATH=/ws`
+-   [x] **Task 1.5**: Centralized server config (Retired – 2025-08-12)
+	-   Original Description: Provide unified config module (ports, SSR flags, cert paths, log level, protocol timing).
+	-   Rationale: Avoid premature abstraction. Minimal runtime protocol constants kept in `WEBSOCKET_CONFIG`; validation/backoff & stub settings moved to `validation/config/validation-config.ts` (Task 5.1.1). Remaining env-driven settings (SSR child ports, HTTPS cert paths, log level) will be added alongside Tasks 1.6–1.11 & 1.13.
+	-   Outcome: Task retired; configuration will accrete feature-by-feature.
 -   [ ] **Task 1.6**: Dev reverse proxies (SSR dev) `(YYYY-MM-DD)`
 	-   Description: Reverse proxy SSR HTML:
 		-   `/` (or `/tv`) → TV dev SSR at 4203
@@ -70,7 +60,7 @@ Detailed tasks
 	-   Note: WS path fixed at `/ws`.
 	-   Files: `server/websocket-server.ts` (http/https server creation), `server/config.ts`.
 	-   Acceptance: Remote PWA can install over HTTPS; WSS used automatically when HTTPS on.
---   [x] **Task 1.12**: Health/readiness/logging (2025-08-12)
+-   [x] **Task 1.12**: Health/readiness/logging (2025-08-12)
 	-   Description: `/live`, `/ready`, `/health` implemented; structured JSON logger in place.
 	-   Acceptance: Endpoints return JSON; logs show lifecycle events.
 -   [ ] **Task 1.13**: Scripts and environment `(YYYY-MM-DD)`
@@ -105,7 +95,7 @@ Detailed tasks
 	-   Description: Standardize logs (JSON or leveled text) including connection IDs, message types, timing, and proxy/child status.
 	-   Files: `server/logger.ts`, integration across server.
 	-   Acceptance: Logs support debugging and audits.
---   [x] **Task 1.21**: Invalid message handling (2025-08-12)
+-   [x] **Task 1.21**: Invalid message handling (2025-08-12)
 	-   Implemented error response & logging path; invalid messages rejected without state mutation.
 
 ---

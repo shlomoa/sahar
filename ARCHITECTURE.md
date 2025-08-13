@@ -1,4 +1,3 @@
-
 # SAHAR TV Remote - System Architecture
 
 *This is the definitive source of truth for system architecture and protocol.*
@@ -140,6 +139,12 @@ These defaults guide implementations and tests; they can be overridden via confi
 Notes
 - Stop-and-wait allows only one in-flight message per peer; on timeout, the sender treats the connection as lost and reconnects.
 - Clients should use same-origin WS/WSS at the fixed path `/ws` unless explicitly configured otherwise.
+
+Configuration Note (2025-08-12)
+- Centralized config module (original Task 1.5) retired for Milestone 1 to keep scope lean.
+- Only minimal runtime protocol constants are exported via `WEBSOCKET_CONFIG`.
+- Validation/stub-only timing & backoff parameters live in `validation/config/validation-config.ts` and are intentionally kept out of production runtime exports.
+- Env-driven additions (SSR child ports, HTTPS cert/key paths, log level) will be introduced alongside Tasks 1.6–1.11 & 1.13.
 
 #### Connection and Registration Flow
 1.  **Server Startup:** The Unified Server starts, serving the client applications and listening for WebSocket connections on its designated port (e.g., 8080).
