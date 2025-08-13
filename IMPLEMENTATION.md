@@ -61,7 +61,7 @@ Detailed tasks
 	-   Acceptance: Remote PWA can install over HTTPS; WSS used automatically when HTTPS on.
 -   [x] **Task 1.12**: Health/readiness/logging (2025-08-12)
 	-   Description: `/live`, `/ready`, `/health` implemented; structured JSON logger in place.
-	-   Acceptance: Endpoints return JSON; logs show lifecycle events.
+	-   Acceptance: Endpoints return JSON; logs show lifecycle events. Validation Hooks: A.
 -   [x] **Task 1.13**: Scripts and environment (2025-08-13)
 	-   Description: Added standardized scripts for clear dev vs prod flows:
 		- `dev` – hot-reload server only (no SSR proxy) for fast iteration on server logic.
@@ -71,33 +71,33 @@ Detailed tasks
 		- `start:prod` – build then launch in prod-like mode (static assets; future SSR child processes will hook here).
 		- `typecheck` – TS compile with `--noEmit` for CI/lint gates.
 	-   Files: `server/package.json` (scripts), `server/websocket-server.ts` (mode banner log `mode_banner`).
-	-   Acceptance: Each script runs successfully; `dev:proxy` shows `mode_banner` with `mode=dev_proxy`; `start:prod` emits `mode_banner` with `mode=prod_static` after build; WebSocket path logged as `/ws`.
--   [ ] **Task 1.14**: Validation hooks `(YYYY-MM-DD)`
-	-   Description: Document validation steps for SSR proxy smoke, bundle discovery, child health, and WS register→ack→state_update.
-	-   Files: `VALIDATION.md` (add flows).
-	-   Acceptance: Clear validation instructions exist and can be executed independently from `/validation`.
+	-   Acceptance: Each script runs successfully; `dev:proxy` shows `mode_banner` with `mode=dev_proxy`; `start:prod` emits `mode_banner` with `mode=prod_static` after build; WebSocket path logged as `/ws`. Validation Hooks: A (startup context for server modes), F (dev proxy smoke), G (prod bundle presence – partial until SSR processes).
+-   [x] **Task 1.14**: Validation hooks (2025-08-13)
+	-   Description: Document validation steps for SSR proxy smoke, bundle discovery, child health (placeholder), WS register→ack→state_update, data seeding, navigation/control propagation, reconnection, and broadcast discipline as discrete, idempotent hooks.
+	-   Files: `VALIDATION.md` (Section 10 added: "Validation Hooks Quick Reference").
+	-   Acceptance: Section 10 enumerates hook identifiers A–J with prerequisites, minimal PASS criteria, and references to detailed flows; coverage spans Milestone 1 required behaviors (server startup/health, registration, data, navigation, control, ack-gated broadcast, reconnection). SSR child hook placeholder included for future Tasks 1.9/1.10. Validation Hooks Defined: A–J.
 -   [x] **Task 1.15**: FSM core (2025-08-13)
 	-   Description: Implemented authoritative FSM owning `ApplicationState` with guarded mutations for clients, navigation, playback, and action confirmations.
 	-   Enhancements: Dirty tracking + no-op detection (version only increments on real changes), defensive snapshot cloning, invariant-aware `recalcFsm` (preserves error state), granular navigation & control mutations (avoid redundant version bumps).
 	-   Files: `server/fsm.ts` (enhanced), integrated already via `websocket-server.ts` handlers.
-	-   Acceptance: Register/deregister, navigation, control, and action confirmation mutate state and increment version only on change; snapshot returns defensive copy; broadcast logic (Task 1.16) observes advancing versions.
+	-   Acceptance: Register/deregister, navigation, control, and action confirmation mutate state and increment version only on change; snapshot returns defensive copy; broadcast logic (Task 1.16) observes advancing versions. Validation Hooks Supported: B (registration state), C (navigation), D (control), E (broadcast discipline), I (data – structural support), J (reconnection – pending heartbeat Task 1.19).
 -   [x] **Task 1.16**: state_sync broadcast discipline (2025-08-13)
 	-   Description: Implemented ack-gated queued broadcasts. Only one `state_sync` in-flight; additional state changes collapse into a single pending version until all ACKs (or disconnects) received.
 	-   Files: `server/websocket-server.ts` (broadcast queue, ack handling), `server/fsm.ts` (unchanged interface leveraged).
 	-   Implementation: Added tracking vars (`currentBroadcastVersion`, `lastBroadcastVersion`, `pendingBroadcastVersion`, `outstandingAckClients`), per-client `lastStateAckVersion`, and new log events (`state_broadcast_deferred`, `state_broadcast_collapsed`, `state_broadcast_ack_progress`, `state_broadcast_complete`, `state_broadcast_complete_client_loss`). Updated validation to allow incoming `ack` messages.
-	-   Acceptance: Verified manual flows: rapid successive commands emit only final coalesced broadcast after ACK of prior; no overlapping broadcasts observed; skipped log when no state change.
--   [ ] **Task 1.17**: data handler `(YYYY-MM-DD)`
-	-   Description: Handle initial `data` from Remote; normalize/store in FSM.
-	-   Files: `server/websocket-server.ts`, `server/fsm.ts`.
-	-   Acceptance: After Remote connects and sends data, TV can render from server state.
--   [ ] **Task 1.18**: navigation/control handlers `(YYYY-MM-DD)`
-	-   Description: Process Remote commands, update FSM, and drive TV via downstream messages with ack.
-	-   Files: `server/websocket-server.ts`, `server/fsm.ts`.
-	-   Acceptance: Commands update state and propagate correctly.
+	-   Acceptance: Verified manual flows: rapid successive commands emit only final coalesced broadcast after ACK of prior; no overlapping broadcasts observed; skipped log when no state change. Validation Hooks: B (ack of initial sync), C/D (broadcast sequencing), E (stop-and-wait collapse), J (reconnect broadcast continuity).
+-   [x] **Task 1.17**: data handler (2025-08-13)
+	-   Description: Handle initial `data` from Remote; normalize/store in FSM (shallow merge, one-shot or incremental). Added `data` message type, `seedData` in FSM, validation & broadcast on change.
+	-   Files: `server/websocket-server.ts`, `server/fsm.ts`, protocol updates.
+	-   Acceptance: Remote stub sending `type: data` seeds FSM `data` field and triggers state_sync (observed via logs and stub state). Validation Hooks: I.
+-   [x] **Task 1.18**: navigation/control handlers (2025-08-13)
+	-   Description: Remote `navigation_command` & `control_command` messages validated, acked immediately, FSM mutators invoked (`navigationCommand`, `controlCommand`) with no-op suppression, and resulting state changes broadcast via queued ack-gated `state_sync` (Task 1.16).
+	-   Files: `server/websocket-server.ts` (switch cases), `server/fsm.ts` (mutation methods).
+	-   Acceptance: Manual stub tests confirm: (1) ack precedes broadcast, (2) version only increments on real change, (3) navigation stack updates correctly (breadcrumb, level transitions), (4) control actions mutate player state (play/pause/seek/volume/mute) with broadcast. Validation Hooks: C (navigation), D (control), E (ack-gated ordering), J (post-reconnect command resilience).
 -   [ ] **Task 1.19**: Heartbeat/recovery `(YYYY-MM-DD)`
 	-   Description: Detect dead connections via ack timeouts and optional pings; handle reconnection.
 	-   Files: `server/websocket-server.ts`, `server/fsm.ts`.
-	-   Acceptance: Disconnections are detected and recovered gracefully.
+	-   Acceptance: Disconnections are detected and recovered gracefully. Validation Hook Target: J (currently partial – functional reconnect without heartbeat timeouts).
 -   [ ] **Task 1.20**: Structured logging `(YYYY-MM-DD)`
 	-   Description: Standardize logs (JSON or leveled text) including connection IDs, message types, timing, and proxy/child status.
 	-   Files: `server/logger.ts`, integration across server.

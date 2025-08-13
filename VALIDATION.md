@@ -42,18 +42,18 @@ Section 7 flows map naturally:
 ### 2.1. Server-Side FSM (`server/websocket-server.ts`)
 
 -   **Method**: Automated unit tests.
--   **Scope**:
-    -   [ ] **State Transitions**: Verify all valid and invalid state transitions.
-    -   [ ] **Message Handling**: Test handlers for `register`, `navigation_command`, and `control_command`.
-    -   [ ] **State Sync**: Ensure `state_sync` messages are correctly generated and sent.
-    -   [ ] **ACK Logic**: Verify `ack` messages are correctly handled and timeouts are managed.
+-   **Validation Tasks**:
+    -   [ ] **Validation Task 2.1.1**: State Transitions `(YYYY-MM-DD)` – Verify all valid and invalid state transitions (including rejection paths and no-op suppression).
+    -   [ ] **Validation Task 2.1.2**: Message Handling `(YYYY-MM-DD)` – Test handlers for `register`, `navigation_command`, `control_command`, `data` (seed), and ensure invalid message rejection.
+    -   [ ] **Validation Task 2.1.3**: State Sync Generation `(YYYY-MM-DD)` – Ensure `state_sync` messages emitted only on real changes; version monotonicity enforced.
+    -   [ ] **Validation Task 2.1.4**: ACK Logic `(YYYY-MM-DD)` – Verify `ack` processing, outstanding ack tracking, timeout (future heartbeat Task 1.19) placeholders.
 
 ### 2.2. Client-Side Services (`shared/services/websocket-base.service.ts`)
 
 -   **Method**: Automated unit tests (Jasmine/Karma).
--   **Scope**:
-    -   [ ] **Connection Management**: Test WebSocket connection, registration, and reconnection logic.
-    -   [ ] **Message Serialization**: Verify correct message formatting and `ack` handling.
+-   **Validation Tasks**:
+    -   [ ] **Validation Task 2.2.1**: Connection Management `(YYYY-MM-DD)` – Test WebSocket connect, register, ack receipt, reconnection backoff, and state replay on reconnect.
+    -   [ ] **Validation Task 2.2.2**: Message Serialization `(YYYY-MM-DD)` – Verify correct outbound payload shapes and ack correlation; reject malformed sends.
 
 ---
 
@@ -385,3 +385,103 @@ Tests treat any `logging_failure` occurrence as a validation warning.
 - Correlation IDs (e.g., for multi-step command lifecycles) if/when needed.
 
 ---
+
+## 10. Validation Hooks Quick Reference (Task 1.14)
+
+Purpose: Provide a concise, script-friendly map of the smallest actionable checks ("hooks") that higher‑level validation drivers or ad‑hoc manual smoke tests can invoke independently. Each hook is idempotent and has a clearly defined PASS condition. Where a more detailed flow already exists in earlier sections, the hook references it instead of duplicating steps. These hooks are the canonical targets for the future quick‑run workflow (Task 4.2) and integration drivers (Task 4.4).
+
+Legend
+- Cmd: Representative command (PowerShell) you could execute manually today. (Future quick‑run will orchestrate.)
+- Expected: Minimal success criteria. (Any deviation → FAIL.)
+- Ref: Link to the fuller flow/spec section in this document.
+
+ - [ ] **Hook A – Server Startup & Health** `(YYYY-MM-DD)`
+1. Start server (dev static or prod_static mode).
+2. GET /live → 200 { status: "live" }
+3. GET /ready → 200 { status: "ready" } (after initialization)
+4. GET /health → 200 object containing at least { status: "ok" | "degraded" | "error" }
+Expected: All three endpoints reachable; no error logs (invalid_message / websocket_error) during startup.
+Ref: Section 4, Flow 4.
+
+ - [ ] **Hook B – Stub Pair Registration Round Trip** `(YYYY-MM-DD)`
+Prereq: Server running.
+1. Start TV Stub (`npm run stubs -w validation` OR individually `npm run tv-stub -w validation` plus Remote Stub) – both stubs connect.
+2. Observe server logs: two client_connected + two client_registered events.
+3. GET TV Stub /state → object with version >= 1.
+4. GET Remote Stub /state → object with version >= 1.
+Expected: Both stubs have received at least one state_sync and acknowledged it (implicit in internal ack logic).
+Ref: Section 7, Flow 8 (steps 1–3 plus state assertions).
+
+ - [ ] **Hook C – Navigation Command Propagation** `(YYYY-MM-DD)`
+Prereq: Hook B.
+1. POST Remote Stub /command { type: "navigation_command", payload: { view: "videos" } }.
+2. Server log sequence: navigation_command_handled (info) → state_broadcast_* events → state_broadcast_complete.
+3. GET TV Stub /state shows navigation.view == "videos".
+Expected: Single version increment for this command; no duplicate broadcasts (broadcast queue collapsed events allowed but only if other mutations occurred concurrently).
+Ref: Section 7, Flow 8 (steps 4–7).
+
+ - [ ] **Hook D – Control Command Propagation** `(YYYY-MM-DD)`
+Prereq: Hook C.
+1. POST Remote Stub /command { type: "control_command", payload: { action: "play", id: "vid-123" } }.
+2. Server logs control_command_handled + state_broadcast_* then completion.
+3. GET TV Stub /state playback.id == "vid-123" AND playback.status == "playing" (naming per ApplicationState schema; adjust if updated).
+Expected: Exactly one additional version increment vs previous hook snapshot.
+Ref: Section 7, Flow 8 (steps 8–11).
+
+ - [ ] **Hook E – Stop-and-Wait (Ack-Gated Broadcast Discipline)** `(YYYY-MM-DD)`
+Prereq: Hook B.
+1. Issue two rapid POST /command navigation_command requests (different views) to Remote Stub without waiting.
+2. Inspect server logs: Only one broadcast in-flight (no overlapping state_broadcast* with same version); potential state_broadcast_deferred/state_broadcast_collapsed events appear.
+3. Final TV Stub /state reflects the second command's view.
+Expected: Intermediate broadcast either skipped or collapsed; final state version advanced by at most 2 (register baseline + collapsed result) since Hook B snapshot.
+Ref: Task 1.16 description (IMPLEMENTATION.md) + Section 7 adaptation.
+
+ - [ ] **Hook F – Dev SSR Proxy Smoke** `(YYYY-MM-DD)`
+1. Start Angular dev SSR servers (TV 4203, Remote 4202).
+2. Start unified server with DEV_SSR=1 (`npm run dev:proxy -w server`).
+3. GET / (or /tv) returns HTML containing a root app marker (e.g., `<app-root`).
+4. GET /remote returns HTML containing remote root marker.
+Expected: 200 responses; no unexpected proxy error logs.
+Ref: Section 4, Flow 5.
+
+ - [ ] **Hook G – Prod Bundle Presence (Static Mode)** `(YYYY-MM-DD)`
+1. Build Angular apps (browser + server bundles) if present.
+2. Start server in prod_static (`npm run start:prod -w server`).
+3. Observe startup log SSR_STATUS lines for each app indicating serverDirExists boolean and an entry pick (or absence gracefully noted).
+Expected: Log lines present; absence of bundle does not crash; assets served at /assets and /remote/assets.
+Ref: Section 4, Flow 6 (initial steps) & Task 1.8 notes.
+
+ - [ ] **Hook H – (Future) SSR Child Process Health** `(YYYY-MM-DD)`
+Status: Placeholder until Tasks 1.9 & 1.10 implemented.
+Expected (future): /health includes children[].status == "healthy"; server logs child_start + child_ready events.
+Ref: Will map to updated Section 4 flows when SSR process manager lands.
+
+ - [ ] **Hook I – Data Seeding (Initial Data Handler)** `(YYYY-MM-DD)`
+1. After Hook B, POST Remote Stub /command { type: "seed", payload: { /* data subset */ } } (stub translates to `data` WS message once).
+2. Server logs data_message_handled (or generic message_received + state_broadcast events).
+3. TV Stub /state includes data field merged.
+Expected: Version increments by 1; subsequent identical seed attempt produces no version change (FSM no-op suppression).
+Ref: Task 1.17 acceptance (IMPLEMENTATION.md) + Section 7 adaptation.
+
+ - [ ] **Hook J – Reconnection Behavior** `(YYYY-MM-DD)`
+Prereq: Hook B.
+1. Terminate TV Stub process.
+2. Server logs client_disconnected + (optionally) state_broadcast reflecting loss of TV client.
+3. Restart TV Stub.
+4. Server logs client_connected/client_registered for TV again and issues latest state_sync.
+5. TV Stub /state version matches current server version (monotonic, >= prior to disconnect).
+Expected: No server crash; Remote Stub continuity preserved; version does NOT reset.
+Ref: Section 4, Flow 3 (subset) + Section 7 conceptual extension.
+
+---
+
+Automation Notes
+- Hooks A–E & I–J are the minimal set targeted for early integration drivers (Tasks 4.2 & 4.4).
+- Hooks F–G are environment/SSR oriented (optional for Milestone 1, but documented here).
+- Hook H deferred until SSR child processes are implemented.
+
+Failure Classification
+- Immediate FAIL: HTTP non-200, missing expected log event, version regression, duplicate overlapping broadcast, or unexpected invalid_message during happy path.
+- WARNING (non-blocking for Milestone 1): Extraneous log noise (to be tightened under future logging tasks) or absence of optional SSR artifacts in prod_static.
+
+This section (10) fulfills Task 1.14 by providing a durable, referenceable contract for validation automation without duplicating full flow narratives.

@@ -139,6 +139,11 @@ function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebS
   switch (type) {
     case 'register':
       return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Duplicate register' }; // no close
+    case 'data': {
+      // Accept any JSON object payload; silently ignore non-object
+      if (!payload || typeof payload !== 'object') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Data missing payload' };
+      return { ok: true, msg: raw as WebSocketMessage };
+    }
     case 'navigation_command': {
       if (!payload || typeof payload !== 'object') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Navigation missing payload' };
       if (!NAVIGATION_ACTION_SET.has(payload.action)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid navigation action' };
@@ -266,6 +271,19 @@ wss.on('connection', (ws: WebSocket) => {
     }
     // Already registered normal messages
     switch (msg.type) {
+      case 'data': {
+        // Only Remote should seed data (ignore if TV attempts)
+        const meta = clients.get(ws);
+        if (meta?.clientType !== 'remote') {
+          sendError(ws, ERROR_CODES.INVALID_MESSAGE_FORMAT, 'Only remote can send data');
+          break;
+        }
+        fsm.seedData((msg as any).payload);
+        ws.send(JSON.stringify(makeAck('server')));
+        broadcastStateIfChanged();
+        logInfo('data_seed_handled');
+        break;
+      }
       case 'navigation_command': {
   const nav = msg as NavigationCommandMessage;
   fsm.navigationCommand(nav.payload.action, nav.payload.targetId);

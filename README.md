@@ -154,6 +154,7 @@ Logging & Health:
 
 Single Source of Truth:
 - Protocol file surfaced via symlinks in app/server folders; edit only the canonical shared file.
+ - The `server/shared` directory is a filesystem symlink to the root `shared/` directory, ensuring models & protocol types are physically single-source (avoid accidental parallel edits).
 
 ## 🛠️ Implementation plan & progress
 

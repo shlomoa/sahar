@@ -1,4 +1,7 @@
 {
+  // NOTE: server/shared is a filesystem symlink to the repository root 'shared' directory.
+  // This ensures models (e.g., ApplicationState) and protocol types are truly single-source.
+  // Do not create parallel copies under server/; always modify the root shared/ content.
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2022"],
@@ -18,9 +21,11 @@
     "preserveSymlinks": true,
     "types": ["node"]
   },
-  "include": ["websocket-server.ts",
-              "shared/utils/logging.ts",
-              "shared/websocket/websocket-protocol.ts",
-              "shared/models/application-state.ts"],
+  "include": [
+    "websocket-server.ts",
+    "shared/utils/logging.ts",
+    "shared/websocket/websocket-protocol.ts",
+    "shared/models/application-state.ts"
+  ],
   "exclude": ["dist", "node_modules"]
 }

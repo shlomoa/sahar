@@ -2,40 +2,9 @@
 
 // =================================================================================================
 // CORE FSM STATE
-// The single source of truth for the application's state, managed by the server.
+// Imported single-source ApplicationState / ClientInfo from shared models to avoid duplication.
 // =================================================================================================
-export interface ApplicationState {
-  version: number; // Monotonic increasing version for state reconciliation
-  fsmState: 'initializing' | 'ready' | 'playing' | 'paused' | 'error';
-  connectedClients: {
-    tv?: ClientInfo;
-    remote?: ClientInfo;
-  };
-  navigation: {
-    currentLevel: 'performers' | 'videos' | 'scenes';
-    performerId?: string;
-    videoId?: string;
-    sceneId?: string;
-    breadcrumb: string[];
-  };
-  player: {
-    isPlaying: boolean;
-    currentTime: number;
-    duration: number;
-    volume: number;
-    muted: boolean;
-    youtubeId?: string;
-  };
-  error?: {
-    code: string;
-    message: string;
-  };
-}
-
-export interface ClientInfo {
-  deviceId: string;
-  deviceName: string;
-}
+import { ApplicationState, ClientInfo } from '@shared/models/application-state.js';
 
 // =================================================================================================
 // MESSAGE STRUCTURE
@@ -52,6 +21,7 @@ export interface WebSocketMessage {
 export type MessageType =
   // Client -> Server
   | 'register'
+  | 'data'              // Remote seeds initial domain data (one-shot best‑effort)
   | 'navigation_command'
   | 'control_command'
   | 'action_confirmation' // TV confirms action is done
@@ -113,6 +83,13 @@ export interface ActionConfirmationMessage extends WebSocketMessage {
   payload: ActionConfirmationPayload;
 }
 
+// Remote -> Server one-shot (best effort) domain data seeding
+export interface DataPayload { [key: string]: any; }
+export interface DataMessage extends WebSocketMessage {
+  type: 'data';
+  payload: DataPayload; // Accept any JSON object for Milestone 1
+}
+
 
 // =================================================================================================
 // SERVER -> CLIENT MESSAGES
@@ -148,6 +125,7 @@ export interface ErrorMessage extends WebSocketMessage {
 // Union type for all possible messages
 export type SaharMessage =
   | RegisterMessage
+  | DataMessage
   | NavigationCommandMessage
   | ControlCommandMessage
   | ActionConfirmationMessage

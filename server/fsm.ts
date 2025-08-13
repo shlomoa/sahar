@@ -1,5 +1,5 @@
-import { ApplicationState, ClientType, NavigationCommandPayload, ControlCommandPayload } 
-from '@shared/websocket/websocket-protocol';
+import { ApplicationState } from '@shared/models/application-state.js';
+import { ClientType, NavigationCommandPayload, ControlCommandPayload } from '@shared/websocket/websocket-protocol.js';
 
 /**
  * Authoritative Finite State Machine (Task 1.15)
@@ -18,6 +18,7 @@ export class SaharFsm {
       version: 1,
       fsmState: 'initializing',
       connectedClients: {},
+  // data field intentionally omitted until seeded (Task 1.17)
       navigation: {
         currentLevel: 'performers',
         breadcrumb: []
@@ -30,6 +31,24 @@ export class SaharFsm {
         muted: false
       }
     };
+  }
+
+  /** One-shot (best effort) data seeding from Remote (Task 1.17). Subsequent calls merge shallowly. */
+  seedData(payload: any) {
+    if (!payload || typeof payload !== 'object') return; // ignore invalid
+    if (!this.state.data) {
+      this.state.data = JSON.parse(JSON.stringify(payload));
+      this.dirty = true;
+      this.commit();
+      return;
+    }
+    // Shallow merge: add/overwrite top-level keys; detect real change
+    const before = JSON.stringify(this.state.data);
+    Object.assign(this.state.data, JSON.parse(JSON.stringify(payload)));
+    if (JSON.stringify(this.state.data) !== before) {
+      this.dirty = true;
+      this.commit();
+    }
   }
 
   /** Return a defensive deep copy so outside code cannot mutate internal state */

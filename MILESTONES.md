@@ -36,8 +36,8 @@ Server Core
 - [x] [Task 1.13 — Scripts and environment (dev/prod entry points)](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-13)`
 - [x] [Task 1.15 — FSM core](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-13)`
 - [x] [Task 1.16 — state_sync broadcast discipline](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-13)`
-- [ ] [Task 1.17 — data handler](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
-- [ ] [Task 1.18 — navigation/control handlers](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
+- [x] [Task 1.17 — data handler](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-13)`
+- [x] [Task 1.18 — navigation/control handlers](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-13)`
 - [ ] [Task 1.19 — Heartbeat/recovery](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
 - [x] [Task 1.20 — Structured logging](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-11)`
 - [x] [Task 1.21 — Invalid message handling](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-11)`
@@ -50,8 +50,8 @@ Early Completed (Out-of-scope SSR prep – not required for Milestone 1 DoD)
 - [x] Task 1.7 — Static assets passthrough (2025-08-13)
 - [x] Task 1.8 — SSR bundle presence (inline gating, simplified) (2025-08-13)
 
-Validation/Process
-- [ ] [Task 1.14 — Validation hooks (document flows in `VALIDATION.md`)](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
+ Validation/Process
+- [x] [Task 1.14 — Validation hooks (document flows in `VALIDATION.md`)](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-13)`
 - [ ] [Task 4.2 — Validation quick-run workflow](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
 - [ ] [Task 4.4 — Update/create integration tests in `/validation`](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
 - [ ] [Task 4.5 — Documentation sync](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
@@ -106,6 +106,26 @@ Automation
 ### 4. Milestone Completion
 
 Milestone 1 is complete when all DoD items and all required tasks/specs/flows above are checked with dates.
+
+#### 4.1 Validation Hook Progress (Section 10 in VALIDATION.md)
+
+Status of discrete hook tasks (A–J) underpinning Milestone 1 integration confidence:
+
+- [ ] Hook A – Server Startup & Health `(YYYY-MM-DD)`
+- [ ] Hook B – Stub Pair Registration Round Trip `(YYYY-MM-DD)`
+- [ ] Hook C – Navigation Command Propagation `(YYYY-MM-DD)`
+- [ ] Hook D – Control Command Propagation `(YYYY-MM-DD)`
+- [ ] Hook E – Stop-and-Wait (Ack-Gated Broadcast Discipline) `(YYYY-MM-DD)`
+- [ ] Hook F – Dev SSR Proxy Smoke (optional for Milestone 1) `(YYYY-MM-DD)`
+- [ ] Hook G – Prod Bundle Presence (optional for Milestone 1) `(YYYY-MM-DD)`
+- [ ] Hook H – SSR Child Process Health (future – pending Tasks 1.9/1.10) `(YYYY-MM-DD)`
+- [ ] Hook I – Data Seeding (Initial Data Handler) `(YYYY-MM-DD)`
+- [ ] Hook J – Reconnection Behavior `(YYYY-MM-DD)`
+
+Guidance:
+- For strict Milestone 1 closure, prioritize A, B, C, D, E, I, J.
+- F and G document early SSR readiness but are not gate criteria.
+- H deferred until SSR process manager (Tasks 1.9/1.10).
 
 Summary
 - [ ] Milestone 1 complete `(YYYY-MM-DD)`
