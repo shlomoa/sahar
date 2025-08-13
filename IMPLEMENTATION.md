@@ -29,14 +29,14 @@ Detailed tasks
 	-   Original Description: Provide unified config module (ports, SSR flags, cert paths, log level, protocol timing).
 	-   Rationale: Avoid premature abstraction. Minimal runtime protocol constants kept in `WEBSOCKET_CONFIG`; validation/backoff & stub settings moved to `validation/config/validation-config.ts` (Task 5.1.1). Remaining env-driven settings (SSR child ports, HTTPS cert paths, log level) will be added alongside Tasks 1.6–1.11 & 1.13.
 	-   Outcome: Task retired; configuration will accrete feature-by-feature.
--   [ ] **Task 1.6**: Dev reverse proxies (SSR dev) `(YYYY-MM-DD)`
+-   [x] **Task 1.6**: Dev reverse proxies (SSR dev) (2025-08-13)
 	-   Description: Reverse proxy SSR HTML:
 		-   `/` (or `/tv`) → TV dev SSR at 4203
 		-   `/remote` → Remote dev SSR at 4202
 	-   Keep `/health` and WebSocket (`/ws`) on the main origin.
 	-   Files: `server/websocket-server.ts` (proxy middleware).
 	-   Acceptance: With SSR dev servers running, GET `/` (or `/tv`) and `/remote` via the Unified Server return SSR HTML; `/health` OK; WS unaffected.
--   [ ] **Task 1.7**: Static assets passthrough `(YYYY-MM-DD)`
+-   [x] **Task 1.7**: Static assets passthrough (2025-08-13)
 	-   Description: Serve browser assets directly from built outputs while SSR HTML comes from SSR entries.
 	-   Mounts: `/assets` → `apps/tv/dist/sahar-tv/browser/assets`; `/remote/assets` → `apps/remote/dist/sahar-remote/browser/assets`.
 	-   Files: `server/websocket-server.ts` (express.static mounts, order-safe).
@@ -269,8 +269,138 @@ Detailed tasks
 	-   Added `mode:prod`, `tv-stub`, `remote-stub`, `stubs` scripts enabling selective process composition without helper JS files.
 
 ### 5.2 Follow-ups
-- Convert legacy PowerShell validation flows to pure Node drivers invoking mode scripts.
-- Add hashing/skip logic to avoid rebuilding unchanged Angular apps between mode switches.
-	-   Description: Unit-test FSM transitions (valid/invalid), message handlers (register/navigation/control), `state_sync` generation, and ack timeout behavior.
-	-   Files: Server-side test files under `server/` test setup (framework of choice) or lightweight harness.
-	-   Acceptance: Tests cover the listed scopes and pass locally.
+-   [ ] **Task 5.2.1**: Migrate PowerShell validation flows to Node drivers `(YYYY-MM-DD)`
+	-   Description: Replace remaining PowerShell orchestration pieces with cross-platform NodeJS driver scripts invoking existing validation modes (stubs, mode:prod) to enable CI portability.
+	-   Files: `validation/validate.js`, `validation/test-drivers/*.js`, remove or deprecate PowerShell-only segments in `sahar-validation.ps1` (commented reference kept).
+	-   Acceptance: A single Node invocation reproduces flows previously dependent on PowerShell; Windows/Linux run parity confirmed.
+-   [ ] **Task 5.2.2**: Build artifact hashing & skip logic `(YYYY-MM-DD)`
+	-   Description: Introduce content hash check on Angular app source (ts/html/scss) to skip redundant rebuilds between validation mode switches, reducing end-to-end validation time.
+	-   Files: `validation/utils/build-cache.ts` (new), hooks in `validation/validate.js`.
+	-   Acceptance: Second consecutive validation run with no source changes skips Angular rebuild (log event `build_skip`); modifying a file triggers rebuild.
+-   [ ] **Task 5.2.3**: Expanded FSM & handler unit tests `(YYYY-MM-DD)`
+	-   Description: Add deeper coverage beyond Task 4.13: invalid transitions, duplicate register, sequential navigation commands, broadcast gating, and ack-before-broadcast ordering.
+	-   Files: `server/tests/fsm-extended.test.ts`, `server/tests/handlers.test.ts` (or combined), test harness config.
+	-   Acceptance: Added tests pass; coverage reports show new suites; failure injection (invalid action) yields expected rejection behavior.
+
+---
+
+## 6. Logging Enhancements Plan (Robust Logging)
+
+Context: Initial structured logging (Task 1.12 / 1.20) provides JSON-esque event logs (event name + meta). The next iteration introduces controllable verbosity, consistent schema, and resilience-focused critical logging. This plan is documentation-only until individual tasks are scheduled (target: Milestone 2 "Robust logging" goal).
+
+### 6.1 Objectives
+- Provide runtime-configurable log level filtering (reduce noise in normal operation).
+- Standardize level taxonomy and event classification for predictable observability.
+- Improve incident forensics with correlation identifiers and state version tagging.
+- Capture and surface unrecoverable failures distinctly ("critical").
+- Enable automated schema validation (Task 4.11) without brittle parsing.
+
+### 6.2 Level Taxonomy
+| Level | Purpose | Typical Events |
+|-------|---------|----------------|
+| debug | High-volume diagnostic detail (development / deep troubleshooting) | message_received, state_broadcast_skipped, internal transition metrics |
+| info  | Normal life-cycle & material state changes | server_start, client_registered, state_broadcast, navigation_command_handled |
+| warn  | Client / environmental anomalies requiring attention but auto-recoverable | invalid_message (non-fatal), duplicate register attempts, slow_ack (future) |
+| error | Operation failed or data rejected with impact to current request/interaction | websocket_error, failed_action_confirmation |
+| critical | System integrity risk / process about to exit / invariant breach | uncaught_exception, unhandled_rejection, fatal_config_missing |
+
+### 6.3 Configuration Mechanism
+Priority order (first present wins):
+1. Command-line flag: `--log-level=<level>` (server start script enhancement).
+2. Environment variable: `LOG_LEVEL`.
+3. Default: `info`.
+
+Implementation Sketch:
+```ts
+// logger.ts enhancement
+const activeLevel = resolveLevelFrom(process.argv, process.env.LOG_LEVEL, 'info');
+export function createLogger(baseMeta) {
+	return {
+		debug: (e,m,msg) => emit('debug', e, m, msg),
+		info:  (e,m,msg) => emit('info', e, m, msg),
+		warn:  (e,m,msg) => emit('warn', e, m, msg),
+		error: (e,m,msg) => emit('error', e, m, msg),
+		critical: (e,m,msg) => emit('critical', e, m, msg)
+	};
+}
+```
+
+Filtering: Numeric precedence map; drop events below threshold early (no expensive meta computation when avoidable).
+
+### 6.4 Event Reclassification (Current → Target)
+- message_received: info → debug
+- state_broadcast_skipped: info → debug
+- client_connected/client_disconnected: info (keep)
+- navigation_command_handled/control_command_handled/action_confirmation_received: info (retain), add `state_version`
+- invalid_message: warn (with code)
+- websocket_error: error
+- server_start / server_ready: info
+- future fatal events: critical
+
+### 6.5 Metadata Schema (Incremental)
+Mandatory base fields per log line (flat JSON object):
+- ts (epoch ms)
+- level
+- event
+- message (optional human-readable)
+- state_version (if related to FSM change or broadcast)
+- client_type / device_id (when related to a specific client)
+- error_code (when applicable)
+- stack (on error/critical when available)
+
+Enhancement: Ensure creation of lightweight helpers to append `state_version` lazily (`fsm.getSnapshot().version`). Avoid multiple snapshot calls inside loops.
+
+### 6.6 Critical Error Handling
+Attach once (idempotent guard) in server bootstrap:
+```ts
+process.on('uncaughtException', err => logger.critical('uncaught_exception', { message: err.message, stack: err.stack }));
+process.on('unhandledRejection', (reason:any) => logger.critical('unhandled_rejection', { reason: reason?.message || String(reason) }));
+```
+Option: configurable auto-exit on critical vs continue (env: `EXIT_ON_CRITICAL=true|false`, default true in prod, false in dev).
+
+### 6.7 Validation Alignment
+- Task 4.11 (Log schema conformance) will target this schema; implement AFTER logger changes land.
+- Add sample fixture logs under `validation/samples/logs/*.jsonl` for test harness golden comparison (optional).
+
+### 6.8 Incremental Task Breakdown (Standardized Tasks)
+
+-   [ ] **Task 1.20a**: Log level filtering & taxonomy `(YYYY-MM-DD)`
+	-   Description: Implement log level precedence (debug, info, warn, error, critical) with env (`LOG_LEVEL`) and CLI (`--log-level`) overrides and early filtering.
+	-   Files: `server/shared/utils/logging.ts` (enhanced), `server/package.json` (start scripts), `server/websocket-server.ts` (integration).
+	-   Acceptance: Running with `LOG_LEVEL=warn` excludes debug/info events; `--log-level=debug` shows all levels; sample run demonstrates filtered output.
+-   [ ] **Task 1.20b**: Event reclassification & state_version tagging `(YYYY-MM-DD)`
+	-   Description: Reclassify existing events per taxonomy; add `state_version` meta to all FSM mutation & broadcast events; downgrade noisy events to debug.
+	-   Files: `server/websocket-server.ts`, `server/fsm.ts`, logging helper.
+	-   Acceptance: Log lines for a navigation command include `state_version`; `message_received` absent at info but present at debug level.
+-   [ ] **Task 1.20c**: Critical error handlers `(YYYY-MM-DD)`
+	-   Description: Add process handlers for `uncaughtException` & `unhandledRejection` emitting `critical` events with stack/reason and conditional process exit.
+	-   Files: `server/websocket-server.ts` (bootstrap), logging helper.
+	-   Acceptance: Simulated thrown error logs a `critical` event; exit behavior toggled via `EXIT_ON_CRITICAL` env.
+-   [ ] **Task 1.20d**: Log schema validation harness `(YYYY-MM-DD)`
+	-   Description: Implement validation utility parsing JSONL logs to assert required fields (ts, level, event; plus conditional fields) and integrate into validation flow (Task 4.11 linkage).
+	-   Files: `validation/utils/log-assert.ts`, `validation/test-drivers/log-schema-check.js`.
+	-   Acceptance: Harness passes on compliant logs; intentional malformed line triggers descriptive failure.
+-   [ ] **Task 1.20e**: Documentation synchronization `(YYYY-MM-DD)`
+	-   Description: Update `ARCHITECTURE.md` (logging section), `VALIDATION.md` (schema & sample), and this plan to reflect implemented logging features.
+	-   Files: `ARCHITECTURE.md`, `VALIDATION.md`, `IMPLEMENTATION.md` (this section update upon completion).
+	-   Acceptance: Docs list current events, levels, schema fields, configuration knobs; internal links valid.
+
+Scheduling: Bundle 1.20a–1.20c inside Milestone 2 ("Robust logging"). Tasks 1.20d–1.20e can trail with validation expansion.
+
+### 6.9 Non-Goals (For Now)
+- Log shipping / external aggregation connectors.
+- Sampling / rate limiting strategies.
+- Metrics extraction (separate future observability pass).
+
+### 6.10 Risks & Mitigations
+- Risk: Overhead from frequent snapshot calls. Mitigation: cache version inside handler prior to logging multiple events.
+- Risk: Inconsistent meta fields. Mitigation: central normalizeMeta helper enforcing schema defaults.
+- Risk: Developer drift on event naming. Mitigation: document event registry table inside ARCHITECTURE.md (future doc task).
+
+### 6.11 Success Criteria
+- Ability to reduce normal log volume to high-signal info/warn/error in production.
+- Debug mode surfaces skipped broadcasts & granular message receipt without code changes.
+- Critical failures always produce a final structured log line before exit.
+- Validation task (future) can parse and assert schema with <2% false positives.
+
+---

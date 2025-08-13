@@ -1,4 +1,5 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
+import httpProxy from 'http-proxy';
 import { createServer } from 'http';
 import { WebSocketServer, WebSocket, RawData } from 'ws';
 import path from 'path';
@@ -38,14 +39,38 @@ const __dirname = path.dirname(__filename);
 
 // Create Express application
 const app = express();
-// Single source of truth for port from shared protocol config
-const PORT = WEBSOCKET_CONFIG.SERVER_PORT;
+
+// ----------------------------------------------------------------------------
+// Task 1.6 / 1.7 Support: Dev reverse proxies & static asset passthrough
+// ----------------------------------------------------------------------------
+// Mode detection: if SSR dev servers are expected to be running we proxy HTML.
+// Simple heuristic/env control: DEV_SSR=1 enables proxy behavior.
+const DEV_SSR = process.env.DEV_SSR === '1' || process.env.DEV_SSR === 'true';
+// Ports for running Angular SSR dev servers (defaults align with plan)
+
+// Lazy http-proxy instances (created only if needed)
+const proxy = httpProxy.createProxyServer({ changeOrigin: true, ws: false });
+proxy.on('error', (err: Error, _req: any, res: any) => {
+  logError('proxy_error', { message: err.message });
+  if (res && !res.headersSent) {
+    res.statusCode = 502;
+    res.end('Upstream dev server unavailable');
+  }
+});
+
+function devProxy(target: string) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!DEV_SSR) return next();
+    proxy.web(req, res, { target });
+  };
+}
 
 // Create HTTP server from the express app
 const server = createServer(app);
 
-// Create and attach WebSocket server
-const wss = new WebSocketServer({ server });
+// Create and attach WebSocket server on configured path
+const wss = new WebSocketServer({ server, path: WEBSOCKET_CONFIG.WS_PATH });
+logInfo('websocket_path_bound', { path: WEBSOCKET_CONFIG.WS_PATH });
 
 // --- Finite State Machine (FSM) ---
 
@@ -269,16 +294,38 @@ app.use(express.static('public'));
 const tvAppPath = path.join(__dirname, '../../apps/tv/dist/sahar-tv');
 const remoteAppPath = path.join(__dirname, '../../apps/remote/dist/sahar-remote');
 
-// Serve the TV app, with a catch-all to redirect to index.html for Angular routing.
-app.use('/tv', express.static(tvAppPath));
-app.get('/tv/*splat', (req: Request, res: Response) => {
-  res.sendFile(path.join(tvAppPath, 'index.html'));
+// Task 1.7: Static asset passthrough (served regardless of DEV_SSR if they exist)
+// We serve browser asset folders directly so dev/prod share URL shape.
+app.use('/assets', express.static(path.join(tvAppPath, 'browser/assets'), { fallthrough: true }));
+app.use('/remote/assets', express.static(path.join(remoteAppPath, 'browser/assets'), { fallthrough: true }));
+
+// Task 1.6: Dev reverse proxies for SSR HTML (when DEV_SSR=1) else fall back to built assets
+// TV base route: '/' (root) and '/tv'
+app.get(['/','/tv'], (req: Request, res: Response, next: NextFunction) => {
+  if (DEV_SSR) return devProxy(`http://localhost:${WEBSOCKET_CONFIG.TV_DEV_PORT}`)(req, res, next);
+  // Fallback to built index.html (prod-like)
+  res.sendFile(path.join(tvAppPath, 'browser/index.html'));
 });
 
-// Serve the Remote app, with a catch-all to redirect to index.html for Angular routing.
-app.use('/remote', express.static(remoteAppPath));
-app.get('/remote/*splat', (req: Request, res: Response) => {
-  res.sendFile(path.join(remoteAppPath, 'index.html'));
+// Remote base route '/remote'
+app.get('/remote', (req: Request, res: Response, next: NextFunction) => {
+  if (DEV_SSR) return devProxy(`http://localhost:${WEBSOCKET_CONFIG.REMOTE_DEV_PORT}`)(req, res, next);
+  res.sendFile(path.join(remoteAppPath, 'browser/index.html'));
+});
+
+// Catch-all deep links for Angular routing (non-asset) for TV
+app.get(['/tv/*','/*'], (req: Request, res: Response, next: NextFunction) => {
+  // Ignore if request looks like a file (has an extension) to avoid hijacking static/health
+  if (/\.[a-zA-Z0-9]+$/.test(req.path)) return next();
+  if (DEV_SSR) return devProxy(`http://localhost:${WEBSOCKET_CONFIG.TV_DEV_PORT}`)(req, res, next);
+  res.sendFile(path.join(tvAppPath, 'browser/index.html'));
+});
+
+// Catch-all deep links for Remote
+app.get('/remote/*', (req: Request, res: Response, next: NextFunction) => {
+  if (/\.[a-zA-Z0-9]+$/.test(req.path)) return next();
+  if (DEV_SSR) return devProxy(`http://localhost:${WEBSOCKET_CONFIG.REMOTE_DEV_PORT}`)(req, res, next);
+  res.sendFile(path.join(remoteAppPath, 'browser/index.html'));
 });
 
 // Liveness endpoint (process up)
@@ -313,9 +360,9 @@ app.get('/health', (_req: Request, res: Response) => {
 });
 
 // Start the server
-server.listen(PORT, () => {
-  logInfo('server_start', { port: PORT });
-  logInfo('server_status', { express: true, httpListening: true, tvRoute: '/tv', remoteRoute: '/remote', websocket: true });
+server.listen(WEBSOCKET_CONFIG.SERVER_PORT, () => {
+  logInfo('server_start', { port: WEBSOCKET_CONFIG.SERVER_PORT });
+  logInfo('server_status', { express: true, httpListening: true, tvRoute: '/tv', remoteRoute: '/remote', websocket: true, devSsr: DEV_SSR, tvDevPort: WEBSOCKET_CONFIG.TV_DEV_PORT, remoteDevPort: WEBSOCKET_CONFIG.REMOTE_DEV_PORT });
   markReady();
   logInfo('server_ready');
 });

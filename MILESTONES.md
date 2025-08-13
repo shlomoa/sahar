@@ -116,6 +116,7 @@ Future milestones will build on this baseline to add Angular SSR hosting, real T
 Goals
 - Goal 1: POC for YouTube
 - Goal 2: POC for QR code enabling
+- Goal 3: Robust logging (log level control, reclassified events, critical handlers)
 
 Definition of Done (DoD)
 - [ ] Basic YouTube playback demonstrated in the TV context (helper wired; minimal controls) `(YYYY-MM-DD)`

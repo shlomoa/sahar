@@ -157,6 +157,8 @@ export type SaharMessage =
 
 // Protocol Configuration
 export const WEBSOCKET_CONFIG = {
+  TV_DEV_PORT: 4203,
+  REMOTE_DEV_PORT: 4202,
   SERVER_PORT: 8080,
   ACK_TIMEOUT: 5000, // ms
   WS_PATH: '/ws',

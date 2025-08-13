@@ -11,12 +11,14 @@
     "typecheck": "tsc -p tsconfig.server.json --noEmit"
   },
   "dependencies": {
-    "ws": "^8.14.2"
+    "ws": "^8.14.2",
+    "http-proxy": "^1.18.1"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
     "@types/node": "^24.2.0",
     "@types/ws": "^8.18.1",
+    "@types/http-proxy": "^1.17.14",
     "express": "^5.1.0",
     "nodemon": "^3.0.2",
     "ts-node": "^10.9.2",
