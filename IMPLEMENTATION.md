@@ -41,12 +41,11 @@ Detailed tasks
 	-   Mounts: `/assets` → `apps/tv/dist/sahar-tv/browser/assets`; `/remote/assets` → `apps/remote/dist/sahar-remote/browser/assets`.
 	-   Files: `server/websocket-server.ts` (express.static mounts, order-safe).
 	-   Acceptance: Static assets load from main server; SSR HTML remains correct in both dev and prod.
--   [ ] **Task 1.8**: SSR bundle discovery (prod) `(YYYY-MM-DD)`
-	-   Description: On startup, discover SSR entry files without hard-coding names:
-		-   TV: `apps/tv/dist/sahar-tv/server/main*.mjs|js`
-		-   Remote: `apps/remote/dist/sahar-remote/server/main*.mjs|js`
-	-   Files: `server/ssr-discovery.ts` (new), used by server.
-	-   Acceptance: Discovered paths logged; clear error if missing.
+-   [x] **Task 1.8**: SSR bundle presence (inline gating) (2025-08-13)
+	-   Modified Scope: Replaced planned filesystem “discovery” module with minimal inline directory existence + heuristic entry pick (first main*/index* .mjs|.js) inside `websocket-server.ts`.
+	-   Reasoning: Milestone 1 does not require full SSR hosting; avoiding extra abstraction (`ssr-discovery.ts`) keeps surface small while still emitting telemetry (`ssr_dir_status`) needed for future Tasks 1.9/1.10.
+	-   Implementation: Added `SSR_STATUS` export with booleans & picked paths; logs one line per app at startup in prod-static mode (not in dev proxy).
+	-   Acceptance (met): On prod-static startup, logs indicate existence of `server` dirs for TV/Remote and (if present) a representative entry file; absence does not crash.
 -   [ ] **Task 1.9**: SSR process manager (prod) `(YYYY-MM-DD)`
 	-   Description: Spawn each SSR bundle in a child process with env (dedicated PORTs, base paths). Add health checks and auto-restart with backoff.
 	-   Files: `server/ssr-manager.ts` (new), integrate in server lifecycle.
@@ -63,22 +62,30 @@ Detailed tasks
 -   [x] **Task 1.12**: Health/readiness/logging (2025-08-12)
 	-   Description: `/live`, `/ready`, `/health` implemented; structured JSON logger in place.
 	-   Acceptance: Endpoints return JSON; logs show lifecycle events.
--   [ ] **Task 1.13**: Scripts and environment `(YYYY-MM-DD)`
-	-   Description: Scripts: `dev` (proxies; assumes dev SSR servers), `start:prod` (assumes built bundles/assets; starts process manager).
-	-   Files: `server/package.json` (scripts), `README.md` notes if needed.
-	-   Acceptance: One-command dev and prod flows.
+-   [x] **Task 1.13**: Scripts and environment (2025-08-13)
+	-   Description: Added standardized scripts for clear dev vs prod flows:
+		- `dev` – hot-reload server only (no SSR proxy) for fast iteration on server logic.
+		- `dev:proxy` – enables SSR HTML proxying (`DEV_SSR=1`) to Angular dev servers at `TV_DEV_PORT` / `REMOTE_DEV_PORT`.
+		- `build` – compile TypeScript (server only) with path alias rewrites.
+		- `start` – run previously built artifacts.
+		- `start:prod` – build then launch in prod-like mode (static assets; future SSR child processes will hook here).
+		- `typecheck` – TS compile with `--noEmit` for CI/lint gates.
+	-   Files: `server/package.json` (scripts), `server/websocket-server.ts` (mode banner log `mode_banner`).
+	-   Acceptance: Each script runs successfully; `dev:proxy` shows `mode_banner` with `mode=dev_proxy`; `start:prod` emits `mode_banner` with `mode=prod_static` after build; WebSocket path logged as `/ws`.
 -   [ ] **Task 1.14**: Validation hooks `(YYYY-MM-DD)`
 	-   Description: Document validation steps for SSR proxy smoke, bundle discovery, child health, and WS register→ack→state_update.
 	-   Files: `VALIDATION.md` (add flows).
 	-   Acceptance: Clear validation instructions exist and can be executed independently from `/validation`.
--   [ ] **Task 1.15**: FSM core `(YYYY-MM-DD)`
-	-   Description: Implement authoritative FSM for application state (clients, navigation/video state) on the server.
-	-   Files: `server/fsm.ts` (new), server integration.
-	-   Acceptance: Server maintains and exposes state transitions.
--   [ ] **Task 1.16**: state_update broadcast `(YYYY-MM-DD)`
-	-   Description: Broadcast `state_update` on any state change to all clients with ack tracking.
-	-   Files: `server/websocket-server.ts`, `server/fsm.ts`.
-	-   Acceptance: All clients receive updates; stop-and-wait discipline enforced.
+-   [x] **Task 1.15**: FSM core (2025-08-13)
+	-   Description: Implemented authoritative FSM owning `ApplicationState` with guarded mutations for clients, navigation, playback, and action confirmations.
+	-   Enhancements: Dirty tracking + no-op detection (version only increments on real changes), defensive snapshot cloning, invariant-aware `recalcFsm` (preserves error state), granular navigation & control mutations (avoid redundant version bumps).
+	-   Files: `server/fsm.ts` (enhanced), integrated already via `websocket-server.ts` handlers.
+	-   Acceptance: Register/deregister, navigation, control, and action confirmation mutate state and increment version only on change; snapshot returns defensive copy; broadcast logic (Task 1.16) observes advancing versions.
+-   [x] **Task 1.16**: state_sync broadcast discipline (2025-08-13)
+	-   Description: Implemented ack-gated queued broadcasts. Only one `state_sync` in-flight; additional state changes collapse into a single pending version until all ACKs (or disconnects) received.
+	-   Files: `server/websocket-server.ts` (broadcast queue, ack handling), `server/fsm.ts` (unchanged interface leveraged).
+	-   Implementation: Added tracking vars (`currentBroadcastVersion`, `lastBroadcastVersion`, `pendingBroadcastVersion`, `outstandingAckClients`), per-client `lastStateAckVersion`, and new log events (`state_broadcast_deferred`, `state_broadcast_collapsed`, `state_broadcast_ack_progress`, `state_broadcast_complete`, `state_broadcast_complete_client_loss`). Updated validation to allow incoming `ack` messages.
+	-   Acceptance: Verified manual flows: rapid successive commands emit only final coalesced broadcast after ACK of prior; no overlapping broadcasts observed; skipped log when no state change.
 -   [ ] **Task 1.17**: data handler `(YYYY-MM-DD)`
 	-   Description: Handle initial `data` from Remote; normalize/store in FSM.
 	-   Files: `server/websocket-server.ts`, `server/fsm.ts`.

@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
+import { existsSync, readdirSync } from 'fs';
 import httpProxy from 'http-proxy';
 import { createServer } from 'http';
 import { WebSocketServer, WebSocket, RawData } from 'ws';
@@ -18,9 +19,9 @@ import {
   NAVIGATION_ACTION_SET,
   CONTROL_ACTION_SET,
   ClientType
-} from './shared/websocket/websocket-protocol.js';
+} from '@shared/websocket/websocket-protocol.js';
 import { SaharFsm } from './fsm.js';
-import { createLogger } from './shared/utils/logging.js';
+import { createLogger } from '@shared/utils/logging.js';
 
 // --- Structured Logger (shared) ---------------------------------------------------------------
 const logger = createLogger({ component: 'server' });
@@ -78,11 +79,14 @@ logInfo('websocket_path_bound', { path: WEBSOCKET_CONFIG.WS_PATH });
 
 // FSM encapsulating authoritative state (now versioned)
 const fsm = new SaharFsm();
-// Track last broadcast version to enforce broadcast discipline (Task 1.16)
-let lastBroadcastVersion = 0;
+// Broadcast discipline tracking (Task 1.16)
+let lastBroadcastVersion = 0; // last fully ACKed broadcast version
+let currentBroadcastVersion: number | null = null; // version currently awaiting ACKs
+let pendingBroadcastVersion: number | null = null; // queued latest version while waiting
+let outstandingAckClients: Set<WebSocket> | null = null; // clients yet to ACK current broadcast
 
-// Track client connections and their type
-const clients = new Map<WebSocket, { clientType: ClientType; deviceId: string; deviceName: string }>();
+// Track client connections and their type (plus last ACKed state version for observability)
+const clients = new Map<WebSocket, { clientType: ClientType; deviceId: string; deviceName: string; lastStateAckVersion?: number }>();
 
 // Readiness flag (infrastructure readiness: HTTP + WS initialized)
 let isReady = false;
@@ -103,9 +107,6 @@ function sendError(ws: WebSocket, code: string, message: string, opts: { close?:
 }
 
 // --- Validation ---
-// Use canonical action sets from shared protocol
-const NAV_ACTIONS = NAVIGATION_ACTION_SET;
-const CTRL_ACTIONS = CONTROL_ACTION_SET;
 
 function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebSocketMessage } | { ok: false; code: string; reason: string; close?: boolean } {
   if (typeof raw !== 'object' || raw === null) {
@@ -140,13 +141,13 @@ function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebS
       return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Duplicate register' }; // no close
     case 'navigation_command': {
       if (!payload || typeof payload !== 'object') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Navigation missing payload' };
-      if (!NAV_ACTIONS.has(payload.action)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid navigation action' };
+      if (!NAVIGATION_ACTION_SET.has(payload.action)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid navigation action' };
       if (payload.targetId && typeof payload.targetId !== 'string') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid targetId' };
       return { ok: true, msg: raw as WebSocketMessage };
     }
     case 'control_command': {
       if (!payload || typeof payload !== 'object') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Control missing payload' };
-      if (!CTRL_ACTIONS.has(payload.action)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid control action' };
+      if (!CONTROL_ACTION_SET.has(payload.action)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid control action' };
       if (payload.startTime && typeof payload.startTime !== 'number') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid startTime' };
       if (payload.seekTime && typeof payload.seekTime !== 'number') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid seekTime' };
       if (payload.volume && (typeof payload.volume !== 'number' || payload.volume < 0 || payload.volume > 1)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid volume' };
@@ -157,7 +158,10 @@ function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebS
       if (payload.status !== 'success' && payload.status !== 'failure') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid confirmation status' };
       return { ok: true, msg: raw as WebSocketMessage };
     }
-    case 'ack':
+    case 'ack': {
+      // Allow bare ack (payload optional)
+      return { ok: true, msg: raw as WebSocketMessage };
+    }
     case 'state_sync':
     case 'error':
       return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Client cannot send server-only type' };
@@ -166,26 +170,58 @@ function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebS
   }
 }
 
-/**
- * Broadcast the current application state to all connected clients only if
- * the version advanced since the last broadcast (ack discipline Step 2).
- */
-const broadcastStateIfChanged = (force = false) => {
-  const snapshot = fsm.getSnapshot();
-  if (!force && snapshot.version === lastBroadcastVersion) {
-    logInfo('state_broadcast_skipped', { version: snapshot.version, reason: 'version_unchanged' });
-    return;
-  }
-  lastBroadcastVersion = snapshot.version;
+// ---- Ack‑gated broadcast queue (Task 1.16) -----------------------------------------------
+function performBroadcast(version: number) {
   const stateMsg = JSON.stringify(makeStateSync('server'));
+  outstandingAckClients = new Set();
   let sent = 0;
   for (const client of wss.clients) {
     if (client.readyState === WebSocket.OPEN) {
       client.send(stateMsg);
+      outstandingAckClients.add(client);
       sent++;
     }
   }
-  logInfo('state_broadcast', { version: snapshot.version, clients: sent, forced: force });
+  currentBroadcastVersion = version;
+  logInfo('state_broadcast', { version, clients: sent });
+  if (sent === 0) {
+    // Nothing to wait for – mark complete immediately
+    lastBroadcastVersion = version;
+    currentBroadcastVersion = null;
+    outstandingAckClients = null;
+    flushPending();
+  }
+}
+
+function flushPending() {
+  if (currentBroadcastVersion !== null) return; // busy
+  if (pendingBroadcastVersion && pendingBroadcastVersion > lastBroadcastVersion) {
+    const snap = fsm.getSnapshot();
+    // Use latest snapshot version (could have advanced further than pending) to collapse bursts
+    const latest = snap.version;
+    pendingBroadcastVersion = null;
+    if (latest > lastBroadcastVersion) performBroadcast(latest);
+  }
+}
+
+const broadcastStateIfChanged = (force = false) => {
+  const snap = fsm.getSnapshot();
+  const v = snap.version;
+  if (!force && v === lastBroadcastVersion) {
+    logInfo('state_broadcast_skipped', { version: v, reason: 'version_unchanged' });
+    return;
+  }
+  if (currentBroadcastVersion !== null) {
+    // A broadcast in flight – queue newest version (collapse older pending)
+    if (!pendingBroadcastVersion || v > pendingBroadcastVersion) {
+      pendingBroadcastVersion = v;
+      logInfo('state_broadcast_deferred', { version: v, current: currentBroadcastVersion });
+    } else {
+      logInfo('state_broadcast_collapsed', { version: v, pending: pendingBroadcastVersion });
+    }
+    return;
+  }
+  performBroadcast(v);
 };
 
 wss.on('connection', (ws: WebSocket) => {
@@ -254,6 +290,22 @@ wss.on('connection', (ws: WebSocket) => {
         logInfo('action_confirmation_received', { status: confirm.payload.status });
         break;
       }
+      case 'ack': {
+        if (currentBroadcastVersion !== null && outstandingAckClients && outstandingAckClients.has(ws)) {
+          outstandingAckClients.delete(ws);
+          const meta = clients.get(ws);
+          if (meta) meta.lastStateAckVersion = currentBroadcastVersion;
+          logInfo('state_broadcast_ack_progress', { version: currentBroadcastVersion, remaining: outstandingAckClients.size });
+          if (outstandingAckClients.size === 0) {
+            lastBroadcastVersion = currentBroadcastVersion;
+            logInfo('state_broadcast_complete', { version: currentBroadcastVersion });
+            currentBroadcastVersion = null;
+            outstandingAckClients = null;
+            flushPending();
+          }
+        }
+        break;
+      }
       case 'register': {
         // Should not reach here due to validation, but guard anyway
         sendError(ws, ERROR_CODES.INVALID_MESSAGE_FORMAT, 'Duplicate register attempt');
@@ -271,8 +323,19 @@ wss.on('connection', (ws: WebSocket) => {
     const info = clients.get(ws);
     if (info) {
       clients.delete(ws);
-  fsm.deregisterClient(info.clientType);
-  broadcastStateIfChanged();
+      // Treat disconnect as implicit ACK if waiting
+      if (currentBroadcastVersion !== null && outstandingAckClients && outstandingAckClients.has(ws)) {
+        outstandingAckClients.delete(ws);
+        if (outstandingAckClients.size === 0) {
+          lastBroadcastVersion = currentBroadcastVersion;
+          logWarn('state_broadcast_complete_client_loss', { version: currentBroadcastVersion });
+          currentBroadcastVersion = null;
+          outstandingAckClients = null;
+          flushPending();
+        }
+      }
+      fsm.deregisterClient(info.clientType);
+      broadcastStateIfChanged();
     }
   });
 
@@ -294,6 +357,14 @@ app.use(express.static('public'));
 const tvAppPath = path.join(__dirname, '../../apps/tv/dist/sahar-tv');
 const remoteAppPath = path.join(__dirname, '../../apps/remote/dist/sahar-remote');
 
+// Inline SSR status object (Milestone 1 minimal gating – log only, no fail-fast)
+export let SSR_STATUS: { tv: boolean; remote: boolean; tvPath: string; remotePath: string } = {
+  tv: false,
+  remote: false,
+  tvPath: '',
+  remotePath: ''
+};
+
 // Task 1.7: Static asset passthrough (served regardless of DEV_SSR if they exist)
 // We serve browser asset folders directly so dev/prod share URL shape.
 app.use('/assets', express.static(path.join(tvAppPath, 'browser/assets'), { fallthrough: true }));
@@ -314,7 +385,7 @@ app.get('/remote', (req: Request, res: Response, next: NextFunction) => {
 });
 
 // Catch-all deep links for Angular routing (non-asset) for TV
-app.get(['/tv/*','/*'], (req: Request, res: Response, next: NextFunction) => {
+app.get(['/tv/*splat','/*splat'], (req: Request, res: Response, next: NextFunction) => {
   // Ignore if request looks like a file (has an extension) to avoid hijacking static/health
   if (/\.[a-zA-Z0-9]+$/.test(req.path)) return next();
   if (DEV_SSR) return devProxy(`http://localhost:${WEBSOCKET_CONFIG.TV_DEV_PORT}`)(req, res, next);
@@ -322,7 +393,7 @@ app.get(['/tv/*','/*'], (req: Request, res: Response, next: NextFunction) => {
 });
 
 // Catch-all deep links for Remote
-app.get('/remote/*', (req: Request, res: Response, next: NextFunction) => {
+app.get('/remote/*splat', (req: Request, res: Response, next: NextFunction) => {
   if (/\.[a-zA-Z0-9]+$/.test(req.path)) return next();
   if (DEV_SSR) return devProxy(`http://localhost:${WEBSOCKET_CONFIG.REMOTE_DEV_PORT}`)(req, res, next);
   res.sendFile(path.join(remoteAppPath, 'browser/index.html'));
@@ -365,6 +436,33 @@ server.listen(WEBSOCKET_CONFIG.SERVER_PORT, () => {
   logInfo('server_status', { express: true, httpListening: true, tvRoute: '/tv', remoteRoute: '/remote', websocket: true, devSsr: DEV_SSR, tvDevPort: WEBSOCKET_CONFIG.TV_DEV_PORT, remoteDevPort: WEBSOCKET_CONFIG.REMOTE_DEV_PORT });
   markReady();
   logInfo('server_ready');
+  logInfo('mode_banner', {
+    mode: DEV_SSR ? 'dev_proxy' : 'prod_static',
+    wsPath: WEBSOCKET_CONFIG.WS_PATH,
+    serverPort: WEBSOCKET_CONFIG.SERVER_PORT,
+    tvDevPort: WEBSOCKET_CONFIG.TV_DEV_PORT,
+    remoteDevPort: WEBSOCKET_CONFIG.REMOTE_DEV_PORT
+  });
+  // Minimal inline SSR gating (no discovery abstraction). Only in non-dev-proxy mode.
+  if (!DEV_SSR) {
+    const tvServerDir = path.join(tvAppPath, 'server');
+    const remoteServerDir = path.join(remoteAppPath, 'server');
+    const tvDirExists = existsSync(tvServerDir);
+    const remoteDirExists = existsSync(remoteServerDir);
+    // Try to pick a representative entry file (first .mjs or .js) if directory exists
+    const pickEntry = (dir: string) => {
+      try {
+        const files = readdirSync(dir);
+        const cand = files.find(f => /^(main|index).*\.(mjs|js)$/i.test(f)) || files.find(f => /\.(mjs|js)$/i.test(f));
+        return cand ? path.join(dir, cand) : '';
+      } catch { return ''; }
+    };
+    const tvEntry = tvDirExists ? pickEntry(tvServerDir) : '';
+    const remoteEntry = remoteDirExists ? pickEntry(remoteServerDir) : '';
+    SSR_STATUS = { tv: tvDirExists, remote: remoteDirExists, tvPath: tvEntry, remotePath: remoteEntry };
+    logInfo('ssr_dir_status', { app: 'tv', dir: tvServerDir, exists: tvDirExists, pickedEntry: tvEntry || null });
+    logInfo('ssr_dir_status', { app: 'remote', dir: remoteServerDir, exists: remoteDirExists, pickedEntry: remoteEntry || null });
+  }
 });
 
 // Graceful shutdown

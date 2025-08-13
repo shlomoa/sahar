@@ -8,7 +8,7 @@
     "rootDir": ".",
     "strict": true,
     "skipLibCheck": true,
-    "esModuleInterop": false,
+    "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "baseUrl": "./",
@@ -18,6 +18,9 @@
     "preserveSymlinks": true,
     "types": ["node"]
   },
-  "include": ["websocket-server.ts", "shared/websocket/**/*.ts"],
+  "include": ["websocket-server.ts",
+              "shared/utils/logging.ts",
+              "shared/websocket/websocket-protocol.ts",
+              "shared/models/application-state.ts"],
   "exclude": ["dist", "node_modules"]
 }

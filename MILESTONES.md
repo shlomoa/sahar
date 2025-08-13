@@ -33,9 +33,9 @@ Scope Notes
 Server Core
 - [x] [Task 1.5 — Centralized server config (Retired)](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-12)`
 - [x] [Task 1.12 — Health/readiness/logging endpoints](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-12)`
-- [ ] [Task 1.13 — Scripts and environment (dev/prod entry points)](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
-- [ ] [Task 1.15 — FSM core](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
-- [ ] [Task 1.16 — state_update broadcast](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
+- [x] [Task 1.13 — Scripts and environment (dev/prod entry points)](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-13)`
+- [x] [Task 1.15 — FSM core](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-13)`
+- [x] [Task 1.16 — state_sync broadcast discipline](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-13)`
 - [ ] [Task 1.17 — data handler](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
 - [ ] [Task 1.18 — navigation/control handlers](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
 - [ ] [Task 1.19 — Heartbeat/recovery](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
@@ -44,6 +44,11 @@ Server Core
 
 Nice-to-have for Milestone 1 (optional)
 - [ ] [Task 1.11 — HTTPS/WSS enablement](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
+
+Early Completed (Out-of-scope SSR prep – not required for Milestone 1 DoD)
+- [x] Task 1.6 — Dev reverse proxies (2025-08-13)
+- [x] Task 1.7 — Static assets passthrough (2025-08-13)
+- [x] Task 1.8 — SSR bundle presence (inline gating, simplified) (2025-08-13)
 
 Validation/Process
 - [ ] [Task 1.14 — Validation hooks (document flows in `VALIDATION.md`)](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
