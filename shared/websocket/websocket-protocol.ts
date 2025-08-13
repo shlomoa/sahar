@@ -4,8 +4,8 @@
 // CORE FSM STATE
 // The single source of truth for the application's state, managed by the server.
 // =================================================================================================
-
 export interface ApplicationState {
+  version: number; // Monotonic increasing version for state reconciliation
   fsmState: 'initializing' | 'ready' | 'playing' | 'paused' | 'error';
   connectedClients: {
     tv?: ClientInfo;
@@ -70,6 +70,8 @@ export interface RegisterPayload {
   deviceId: string;
   deviceName: string;
 }
+// Canonical client device type used across server FSM and handlers
+export type ClientType = RegisterPayload['clientType'];
 export interface RegisterMessage extends WebSocketMessage {
   type: 'register';
   payload: RegisterPayload;

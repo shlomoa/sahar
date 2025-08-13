@@ -4,7 +4,6 @@ import { WebSocketServer, WebSocket, RawData } from 'ws';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import {
-  ApplicationState,
   WebSocketMessage,
   RegisterMessage,
   NavigationCommandMessage,
@@ -16,8 +15,10 @@ import {
   WEBSOCKET_CONFIG,
   ERROR_CODES,
   NAVIGATION_ACTION_SET,
-  CONTROL_ACTION_SET
+  CONTROL_ACTION_SET,
+  ClientType
 } from './shared/websocket/websocket-protocol.js';
+import { SaharFsm } from './fsm.js';
 import { createLogger } from './shared/utils/logging.js';
 
 // --- Structured Logger (shared) ---------------------------------------------------------------
@@ -48,24 +49,12 @@ const wss = new WebSocketServer({ server });
 
 // --- Finite State Machine (FSM) ---
 
-type ClientType = 'tv' | 'remote';
+// ClientType now imported from protocol single-source-of-truth
 
-// The single source of truth for the application state
-let applicationState: ApplicationState = {
-  fsmState: 'initializing',
-  connectedClients: {},
-  navigation: {
-    currentLevel: 'performers',
-    breadcrumb: []
-  },
-  player: {
-    isPlaying: false,
-    currentTime: 0,
-    duration: 0,
-    volume: 1,
-    muted: false
-  }
-};
+// FSM encapsulating authoritative state (now versioned)
+const fsm = new SaharFsm();
+// Track last broadcast version to enforce broadcast discipline (Task 1.16)
+let lastBroadcastVersion = 0;
 
 // Track client connections and their type
 const clients = new Map<WebSocket, { clientType: ClientType; deviceId: string; deviceName: string }>();
@@ -76,7 +65,7 @@ const markReady = () => { isReady = true; };
 
 // --- Message helpers ---
 const makeAck = (source: 'server'): AckMessage => ({ type: 'ack', timestamp: Date.now(), source, payload: {} });
-const makeStateSync = (source: 'server'): StateSyncMessage => ({ type: 'state_sync', timestamp: Date.now(), source, payload: applicationState });
+const makeStateSync = (source: 'server'): StateSyncMessage => ({ type: 'state_sync', timestamp: Date.now(), source, payload: fsm.getSnapshot() });
 const makeError = (source: 'server', code: string, message: string): ErrorMessage => ({ type: 'error', timestamp: Date.now(), source, payload: { code, message } });
 
 // --- Error sending helper ---
@@ -153,15 +142,25 @@ function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebS
 }
 
 /**
- * Broadcasts the current application state to all connected clients.
+ * Broadcast the current application state to all connected clients only if
+ * the version advanced since the last broadcast (ack discipline Step 2).
  */
-const broadcastState = () => {
+const broadcastStateIfChanged = (force = false) => {
+  const snapshot = fsm.getSnapshot();
+  if (!force && snapshot.version === lastBroadcastVersion) {
+    logInfo('state_broadcast_skipped', { version: snapshot.version, reason: 'version_unchanged' });
+    return;
+  }
+  lastBroadcastVersion = snapshot.version;
   const stateMsg = JSON.stringify(makeStateSync('server'));
+  let sent = 0;
   for (const client of wss.clients) {
     if (client.readyState === WebSocket.OPEN) {
       client.send(stateMsg);
+      sent++;
     }
   }
+  logInfo('state_broadcast', { version: snapshot.version, clients: sent, forced: force });
 };
 
 wss.on('connection', (ws: WebSocket) => {
@@ -188,47 +187,45 @@ wss.on('connection', (ws: WebSocket) => {
       const reg = msg as RegisterMessage;
       const { clientType, deviceId, deviceName } = reg.payload;
       // Enforce single TV / Remote uniqueness
-      if (clientType === 'tv' && applicationState.connectedClients.tv) {
+  const snapshot = fsm.getSnapshot();
+  if (clientType === 'tv' && snapshot.connectedClients.tv) {
         sendError(ws, ERROR_CODES.CLIENT_TYPE_MISMATCH, 'A TV client is already connected.', { close: true, meta: { attempted: 'tv' } });
         return;
       }
-      if (clientType === 'remote' && applicationState.connectedClients.remote) {
+  if (clientType === 'remote' && snapshot.connectedClients.remote) {
         sendError(ws, ERROR_CODES.CLIENT_TYPE_MISMATCH, 'A Remote client is already connected.', { close: true, meta: { attempted: 'remote' } });
         return;
       }
       clients.set(ws, { clientType, deviceId, deviceName });
-      applicationState.connectedClients[clientType] = { deviceId, deviceName };
-      if (applicationState.connectedClients.remote && applicationState.connectedClients.tv) {
-        applicationState.fsmState = 'ready';
-      }
-      ws.send(JSON.stringify(makeAck('server')));
-      broadcastState();
+  fsm.registerClient(clientType, deviceId, deviceName);
+  ws.send(JSON.stringify(makeAck('server'))); // Ack first, then broadcast new state
+  broadcastStateIfChanged();
       logInfo('client_registered', { clientType, deviceId });
       return;
     }
     // Already registered normal messages
     switch (msg.type) {
       case 'navigation_command': {
-        const nav = msg as NavigationCommandMessage;
-        handleNavigationCommand(nav);
-        ws.send(JSON.stringify(makeAck('server')));
-        broadcastState();
+  const nav = msg as NavigationCommandMessage;
+  fsm.navigationCommand(nav.payload.action, nav.payload.targetId);
+  ws.send(JSON.stringify(makeAck('server'))); // Ack before broadcast
+  broadcastStateIfChanged();
         logInfo('navigation_command_handled', { action: nav.payload.action });
         break;
       }
       case 'control_command': {
-        const ctl = msg as ControlCommandMessage;
-        handleControlCommand(ctl);
-        ws.send(JSON.stringify(makeAck('server')));
-        broadcastState();
+  const ctl = msg as ControlCommandMessage;
+  fsm.controlCommand(ctl.payload);
+  ws.send(JSON.stringify(makeAck('server')));
+  broadcastStateIfChanged();
         logInfo('control_command_handled', { action: ctl.payload.action });
         break;
       }
       case 'action_confirmation': {
-        const confirm = msg as ActionConfirmationMessage;
-        handleActionConfirmation(confirm);
-        ws.send(JSON.stringify(makeAck('server')));
-        broadcastState();
+  const confirm = msg as ActionConfirmationMessage;
+  fsm.actionConfirmation(confirm.payload.status, confirm.payload.errorMessage);
+  ws.send(JSON.stringify(makeAck('server')));
+  broadcastStateIfChanged();
         logInfo('action_confirmation_received', { status: confirm.payload.status });
         break;
       }
@@ -249,15 +246,8 @@ wss.on('connection', (ws: WebSocket) => {
     const info = clients.get(ws);
     if (info) {
       clients.delete(ws);
-      if (info.clientType === 'tv') delete applicationState.connectedClients.tv;
-      if (info.clientType === 'remote') delete applicationState.connectedClients.remote;
-      // If no clients, go back to initializing; if only remote, still initializing; if both, ready
-      if (applicationState.connectedClients.tv && applicationState.connectedClients.remote) {
-        applicationState.fsmState = 'ready';
-      } else {
-        applicationState.fsmState = 'initializing';
-      }
-      broadcastState();
+  fsm.deregisterClient(info.clientType);
+  broadcastStateIfChanged();
     }
   });
 
@@ -267,79 +257,7 @@ wss.on('connection', (ws: WebSocket) => {
 });
 
 // --- Handlers ---
-function handleNavigationCommand(msg: NavigationCommandMessage) {
-  const { action, targetId } = msg.payload;
-  switch (action) {
-    case 'navigate_home':
-      applicationState.navigation = { currentLevel: 'performers', breadcrumb: [] };
-      break;
-    case 'navigate_back': {
-      const bc = applicationState.navigation.breadcrumb;
-      bc.pop();
-      if (applicationState.navigation.currentLevel === 'scenes') {
-        applicationState.navigation.currentLevel = 'videos';
-        delete applicationState.navigation.sceneId;
-      } else if (applicationState.navigation.currentLevel === 'videos') {
-        applicationState.navigation.currentLevel = 'performers';
-        delete applicationState.navigation.videoId;
-      }
-      break;
-    }
-    case 'navigate_to_performer':
-      applicationState.navigation.currentLevel = 'videos';
-      applicationState.navigation.performerId = targetId;
-      applicationState.navigation.breadcrumb.push(`performer:${targetId}`);
-      break;
-    case 'navigate_to_video':
-      applicationState.navigation.currentLevel = 'scenes';
-      applicationState.navigation.videoId = targetId;
-      applicationState.navigation.breadcrumb.push(`video:${targetId}`);
-      break;
-    case 'navigate_to_scene':
-      applicationState.navigation.sceneId = targetId;
-      applicationState.navigation.breadcrumb.push(`scene:${targetId}`);
-      break;
-  }
-}
-
-function handleControlCommand(msg: ControlCommandMessage) {
-  const { action, youtubeId, startTime, seekTime, volume } = msg.payload;
-  switch (action) {
-    case 'play':
-      if (youtubeId) applicationState.player.youtubeId = youtubeId;
-      applicationState.player.isPlaying = true;
-      if (typeof startTime === 'number') applicationState.player.currentTime = startTime;
-      applicationState.fsmState = 'playing';
-      break;
-    case 'pause':
-      applicationState.player.isPlaying = false;
-      applicationState.fsmState = 'paused';
-      break;
-    case 'seek':
-      if (typeof seekTime === 'number') applicationState.player.currentTime = seekTime;
-      break;
-    case 'set_volume':
-      if (typeof volume === 'number') applicationState.player.volume = Math.max(0, Math.min(1, volume));
-      break;
-    case 'mute':
-      applicationState.player.muted = true;
-      break;
-    case 'unmute':
-      applicationState.player.muted = false;
-      break;
-  }
-}
-
-function handleActionConfirmation(msg: ActionConfirmationMessage) {
-  const { status, errorMessage } = msg.payload;
-  if (status === 'failure') {
-    applicationState.error = { code: 'COMMAND_FAILED', message: errorMessage || 'Unknown failure' };
-    applicationState.fsmState = 'error';
-  } else {
-    // On success, clear error if any
-    if (applicationState.error) delete applicationState.error;
-  }
-}
+// Legacy handler functions removed; FSM methods now used directly.
 
 // Middleware for parsing JSON and serving static files
 
@@ -382,13 +300,14 @@ app.get('/health', (_req: Request, res: Response) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     uptimeSeconds: process.uptime(),
-    fsmState: applicationState.fsmState,
+  fsmState: fsm.getSnapshot().fsmState,
     wsConnections,
     registeredClients: registered,
-    navigationLevel: applicationState.navigation.currentLevel,
+  navigationLevel: fsm.getSnapshot().navigation.currentLevel,
     playerState: {
-      isPlaying: applicationState.player.isPlaying,
-      currentTime: applicationState.player.currentTime
+      isPlaying: fsm.getSnapshot().player.isPlaying,
+      currentTime: fsm.getSnapshot().player.currentTime,
+      version: fsm.getSnapshot().version
     }
   });
 });
