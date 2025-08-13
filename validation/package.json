@@ -22,7 +22,9 @@
   "start": "npm run mode:prod",
   "tv-stub": "npm run mode:tv-stub",
   "remote-stub": "npm run mode:remote-stub",
-  "stubs": "npm run mode:stubs"
+  "stubs": "npm run mode:stubs",
+  "quick": "node validate.js quick",
+  "quick:dev": "node validate.js quick --debug"
   },
   "dependencies": {
     "concurrently": "^8.2.2",

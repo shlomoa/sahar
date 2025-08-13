@@ -18,11 +18,10 @@
     "types": ["node"]
   },
   "include": [
-    "validation/stubs/**/*.ts",
-    "validation/test-drivers/**/*.ts",
-    "validation/config/**/*.ts",
+    "stubs/**/*.ts",
+    "config/validation-configs.ts",
     "shared/websocket/websocket-protocol.ts",
-    "shared/utils/**/*.ts"
+    "shared/utils/logging.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }
