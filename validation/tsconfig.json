@@ -19,7 +19,7 @@
   },
   "include": [
     "stubs/**/*.ts",
-    "config/validation-configs.ts",
+    "config/validation-config.ts",
     "shared/websocket/websocket-protocol.ts",
     "shared/utils/logging.ts"
   ],
