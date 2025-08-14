@@ -368,6 +368,39 @@ wss.on('connection', (ws: WebSocket) => {
 // Middleware for parsing JSON and serving static files
 
 app.use(express.json());
+
+// Health endpoints must be registered early so they are not captured by Angular catch-all routes
+// Liveness endpoint (process up)
+app.get('/live', (_req: Request, res: Response) => {
+  res.status(200).json({ status: 'live' });
+});
+
+// Readiness endpoint (infrastructure ready to accept clients)
+app.get('/ready', (_req: Request, res: Response) => {
+  if (isReady) return res.status(200).json({ status: 'ready' });
+  return res.status(503).json({ status: 'not_ready' });
+});
+
+// Enriched health snapshot (debug / monitoring)
+app.get('/health', (_req: Request, res: Response) => {
+  const wsConnections = [...wss.clients].length;
+  const registered = [...clients.values()].map(c => ({ type: c.clientType, deviceId: c.deviceId }));
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptimeSeconds: process.uptime(),
+    fsmState: fsm.getSnapshot().fsmState,
+    wsConnections,
+    registeredClients: registered,
+    navigationLevel: fsm.getSnapshot().navigation.currentLevel,
+    playerState: {
+      isPlaying: fsm.getSnapshot().player.isPlaying,
+      currentTime: fsm.getSnapshot().player.currentTime,
+      version: fsm.getSnapshot().version
+    }
+  });
+});
+
 app.use('/.well-known', express.static('public/.well-known', { dotfiles: 'allow' }))
 app.use(express.static('public'));
 
@@ -417,36 +450,7 @@ app.get('/remote/*splat', (req: Request, res: Response, next: NextFunction) => {
   res.sendFile(path.join(remoteAppPath, 'browser/index.html'));
 });
 
-// Liveness endpoint (process up)
-app.get('/live', (_req: Request, res: Response) => {
-  res.status(200).json({ status: 'live' });
-});
-
-// Readiness endpoint (infrastructure ready to accept clients)
-app.get('/ready', (_req: Request, res: Response) => {
-  if (isReady) return res.status(200).json({ status: 'ready' });
-  return res.status(503).json({ status: 'not_ready' });
-});
-
-// Enriched health snapshot (debug / monitoring)
-app.get('/health', (_req: Request, res: Response) => {
-  const wsConnections = [...wss.clients].length;
-  const registered = [...clients.values()].map(c => ({ type: c.clientType, deviceId: c.deviceId }));
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptimeSeconds: process.uptime(),
-  fsmState: fsm.getSnapshot().fsmState,
-    wsConnections,
-    registeredClients: registered,
-  navigationLevel: fsm.getSnapshot().navigation.currentLevel,
-    playerState: {
-      isPlaying: fsm.getSnapshot().player.isPlaying,
-      currentTime: fsm.getSnapshot().player.currentTime,
-      version: fsm.getSnapshot().version
-    }
-  });
-});
+// (health routes moved earlier)
 
 // Start the server
 server.listen(WEBSOCKET_CONFIG.SERVER_PORT, () => {

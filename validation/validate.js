@@ -35,7 +35,8 @@ function log(msg){ if(DEBUG) console.log(`[validate] ${msg}`); }
 
 function spawnProc(key, command, args, opts={}) {
 	log(`spawn ${key}: ${command} ${args.join(' ')}`);
-	const proc = spawn(command, args, { cwd: opts.cwd||process.cwd(), env: { ...process.env, ...opts.env }, stdio: DEBUG? 'inherit' : 'pipe' });
+	const useShell = process.platform === 'win32' && /\.(cmd|bat)$/i.test(command);
+	const proc = spawn(command, args, { cwd: opts.cwd||process.cwd(), env: { ...process.env, ...opts.env }, stdio: DEBUG? 'inherit' : 'pipe', shell: useShell });
 	state.processes[key] = proc;
 	proc.on('exit', code => { if(!state.exiting) log(`${key} exited with code ${code}`); });
 	return proc;
@@ -150,9 +151,9 @@ async function startEnvironment() {
 	// Start server
 	spawnProc('server','node', ['../server/dist/websocket-server.js']);
 		await delay(START_SERVER_WAIT_MS);
-	// Start stubs via ts-node (fastest; assumes ts-node installed locally)
-	spawnProc('tvStub', NPX, ['ts-node','stubs/tv-stub.ts']);
-	spawnProc('remoteStub', NPX, ['ts-node','stubs/remote-stub.ts']);
+	// Start stubs using Node's ESM loader for ts-node so TS ESM imports resolve without precompiling
+	spawnProc('tvStub', 'node', ['./dist/stubs/tv-stub.js']);
+	spawnProc('remoteStub', 'node', ['./dist/stubs/remote-stub.js']);
 		await delay(START_STUBS_WAIT_MS);
 }
 
