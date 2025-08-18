@@ -98,10 +98,10 @@ Detailed tasks
 	-   Description: Detect dead connections via ack timeouts and optional pings; handle reconnection.
 	-   Files: `server/websocket-server.ts`, `server/fsm.ts`.
 	-   Acceptance: Disconnections are detected and recovered gracefully. Validation Hook Target: J (currently partial – functional reconnect without heartbeat timeouts).
--   [ ] **Task 1.20**: Structured logging `(YYYY-MM-DD)`
+-   [x] **Task 1.20**: Structured logging `(2025-08-11)`
 	-   Description: Standardize logs (JSON or leveled text) including connection IDs, message types, timing, and proxy/child status.
 	-   Files: `server/logger.ts`, integration across server.
-	-   Acceptance: Logs support debugging and audits.
+	-   Acceptance: Logs support debugging and audits. Note: Advanced logging enhancements are tracked as Tasks 1.20a–1.20e and scheduled under Milestone 2.
 -   [x] **Task 1.21**: Invalid message handling (2025-08-12)
 	-   Implemented error response & logging path; invalid messages rejected without state mutation.
 

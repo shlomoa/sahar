@@ -133,7 +133,11 @@ Goals
 - Goal 2: POC for QR code enabling
 - Goal 3: Robust logging (log level control, reclassified events, critical handlers)
 
+### Planned Tasks
 - [ ] [Task 1.19 — Heartbeat/recovery](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
+- [ ] [Task 1.20a — Log level filtering & taxonomy](./IMPLEMENTATION.md#68-incremental-task-breakdown-standardized-tasks) `(YYYY-MM-DD)`
+- [ ] [Task 1.20b — Event reclassification & state_version tagging](./IMPLEMENTATION.md#68-incremental-task-breakdown-standardized-tasks) `(YYYY-MM-DD)`
+- [ ] [Task 1.20c — Critical error handlers](./IMPLEMENTATION.md#68-incremental-task-breakdown-standardized-tasks) `(YYYY-MM-DD)`
 - [ ] [Section 2.2  — Client-Side WebSocket base service unit tests](./VALIDATION.md#2-unit-testing) `(YYYY-MM-DD)`
 - [ ] [Task 4.11 — Log schema conformance checks](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
 - [ ] [Task 4.12 — Health payload completeness tests](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
