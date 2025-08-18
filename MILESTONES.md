@@ -134,20 +134,61 @@ Goals
 - Goal 3: Robust logging (log level control, reclassified events, critical handlers).
 
 ### Planned Tasks
-- [ ] [Task 2.5 — Ensure stateless rendering from state_update (YouTube helper wiring in TV)](./IMPLEMENTATION.md#31-tv-application-appstv) `(YYYY-MM-DD)`
-- [ ] [Flow 7 — QR Onboarding (TV renders QR linking to /remote; end-to-end scan/load)](./VALIDATION.md#flow-7-qr-onboarding) `(YYYY-MM-DD)`
-- [ ] TV: YouTube component unit tests — playback init and control toggles (see [VALIDATION.md §2 Unit Testing](./VALIDATION.md#2-unit-testing)) `(YYYY-MM-DD)`
-- [ ] [Task 2.19 — Player renders when videoId is present](./IMPLEMENTATION.md#31-tv-application-appstv) `(YYYY-MM-DD)`
-- [ ] [Task 2.20 — Playback init without errors](./IMPLEMENTATION.md#31-tv-application-appstv) `(YYYY-MM-DD)`
-- [ ] [Task 2.21 — Control toggle invokes player API or updates bound state](./IMPLEMENTATION.md#31-tv-application-appstv) `(YYYY-MM-DD)`
-- [ ] [Task 2.22 — Changing videoId loads the new video](./IMPLEMENTATION.md#31-tv-application-appstv) `(YYYY-MM-DD)`
+
+Server (Unified)
 - [ ] [Task 1.19 — Heartbeat/recovery](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
 - [ ] [Task 1.20a — Log level filtering & taxonomy](./IMPLEMENTATION.md#68-incremental-task-breakdown-standardized-tasks) `(YYYY-MM-DD)`
 - [ ] [Task 1.20b — Event reclassification & state_version tagging](./IMPLEMENTATION.md#68-incremental-task-breakdown-standardized-tasks) `(YYYY-MM-DD)`
 - [ ] [Task 1.20c — Critical error handlers](./IMPLEMENTATION.md#68-incremental-task-breakdown-standardized-tasks) `(YYYY-MM-DD)`
-- [ ] [Section 2.2  — Client-Side WebSocket base service unit tests](./VALIDATION.md#2-unit-testing) `(YYYY-MM-DD)`
+- [ ] [Task 4.12 — Health payload completeness tests](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
+- [ ] Task 1.22 — Player state fidelity: ensure FSM tracks `isPlaying`, `currentTime`, `currentVideoId`, `volume`; reflected in `state_sync` (see [ARCHITECTURE.md — ApplicationState](./ARCHITECTURE.md#server-owned-applicationstate-authoritative-schema)) `(YYYY-MM-DD)`
+- [ ] Task 1.23 — Ack-gated broadcast metrics: add counts/timings to logs for validation (see [ARCHITECTURE.md — Stop-and-Wait](./ARCHITECTURE.md#synchronous-stop-and-wait-acknowledgement-model)) `(YYYY-MM-DD)`
+
+Shared (Types/Utils)
+- [ ] [Task 2.16 — Update websocket-protocol.ts to match ARCHITECTURE.md](./IMPLEMENTATION.md#33-shared-functionality-shared) `(YYYY-MM-DD)`
+- [ ] [Task 2.17 — Verify shared utilities are integrated (incl. youtube-helpers tests)](./IMPLEMENTATION.md#33-shared-functionality-shared) `(YYYY-MM-DD)` (see also [ARCHITECTURE.md — Video Integration](./ARCHITECTURE.md#5-video-integration))
+- [ ] Task 2.15a — websocket-base.service unit tests: reconnect/backoff and ack handling (see [VALIDATION.md — Unit Testing](./VALIDATION.md#2-unit-testing)) `(YYYY-MM-DD)`
+
+TV App (Stateless rendering + YouTube)
+- [ ] [Task 2.5 — Ensure stateless rendering from state_update (YouTube helper wiring in TV)](./IMPLEMENTATION.md#31-tv-application-appstv) `(YYYY-MM-DD)`
+- [ ] Task 2.23 — YouTube integration: wire @angular/youtube-player; map control_command/state to player API (see [ARCHITECTURE.md — Video Integration](./ARCHITECTURE.md#5-video-integration)) `(YYYY-MM-DD)`
+- [ ] Task 2.24 — Action confirmations: send `action_confirmation` on play started/seek reached; handle failure path (see [ARCHITECTURE.md — Protocol](./ARCHITECTURE.md#4-unified-communication-protocol)) `(YYYY-MM-DD)`
+- [ ] Task 2.25 — Error handling: surface unplayable video/invalid state; structured logs (see [ARCHITECTURE.md — Protocol](./ARCHITECTURE.md#4-unified-communication-protocol)) `(YYYY-MM-DD)`
+- [ ] [Task 2.19 — Player renders when videoId is present](./IMPLEMENTATION.md#31-tv-application-appstv) `(YYYY-MM-DD)`
+- [ ] [Task 2.20 — Playback init without errors](./IMPLEMENTATION.md#31-tv-application-appstv) `(YYYY-MM-DD)`
+- [ ] [Task 2.21 — Control toggle invokes player API or updates bound state](./IMPLEMENTATION.md#31-tv-application-appstv) `(YYYY-MM-DD)`
+- [ ] [Task 2.22 — Changing videoId loads the new video](./IMPLEMENTATION.md#31-tv-application-appstv) `(YYYY-MM-DD)`
+- [ ] Task 2.26 — QR display: show Remote entry URL as QR using angularx-qrcode (encode `${location.origin}/remote`) (see [ARCHITECTURE.md — Discovery Flow (QR)](./ARCHITECTURE.md#discovery-flow-qr-based)) `(YYYY-MM-DD)`
+- [ ] Task 2.27 — Connected status: indicator for remote connected/disconnected from `state_sync` (see [ARCHITECTURE.md — ApplicationState](./ARCHITECTURE.md#server-owned-applicationstate-authoritative-schema)) `(YYYY-MM-DD)`
+
+Remote App (Data owner + controls)
+- [ ] [Task 2.8 — Refactor WebsocketService to shared base](./IMPLEMENTATION.md#32-remote-application-appsremote) `(YYYY-MM-DD)`
+- [ ] [Task 2.9 — Remove peer-discovery/direct TV sockets](./IMPLEMENTATION.md#32-remote-application-appsremote) `(YYYY-MM-DD)`
+- [ ] [Task 2.10 — Send initial data on connection](./IMPLEMENTATION.md#32-remote-application-appsremote) `(YYYY-MM-DD)`
+- [ ] [Task 2.11 — Route all navigation/control to server](./IMPLEMENTATION.md#32-remote-application-appsremote) `(YYYY-MM-DD)`
+- [ ] [Task 2.12 — Decide Remote delivery model (SSR vs SPA PWA)](./IMPLEMENTATION.md#32-remote-application-appsremote) `(YYYY-MM-DD)`
+- [ ] [Task 2.13 — PWA hardening](./IMPLEMENTATION.md#32-remote-application-appsremote) `(YYYY-MM-DD)`
+- [ ] [Task 2.14 — Build/scripts for chosen model](./IMPLEMENTATION.md#32-remote-application-appsremote) `(YYYY-MM-DD)`
+- [ ] Task 2.28 — UI states: show connecting/connected/blocked; basic error toasts for protocol errors (see [ARCHITECTURE.md — Protocol](./ARCHITECTURE.md#4-unified-communication-protocol)) `(YYYY-MM-DD)`
+
+Validation & Tests
+- [ ] [Flow 2 — Video Playback Control](./VALIDATION.md#flow-2-video-playback-control): verify end-to-end play/pause/seek/volume `(YYYY-MM-DD)`
+- [ ] [Flow 7 — QR Onboarding](./VALIDATION.md#flow-7-qr-onboarding): Android camera scan → Chrome opens `/remote`; Remote connects `(YYYY-MM-DD)`
+- [ ] [Section 2.2 — Client-Side WebSocket base service unit tests](./VALIDATION.md#2-unit-testing) `(YYYY-MM-DD)`
 - [ ] [Task 4.11 — Log schema conformance checks](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
 - [ ] [Task 4.12 — Health payload completeness tests](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
+- [ ] Task 4.14 — Extend stubs minimally for new actions if needed (see [VALIDATION.md — Stub Specs §6](./VALIDATION.md#61-common-stub-contract)) `(YYYY-MM-DD)`
+- [ ] Task 4.15 — Validation scripts: surface POC checks in quick flow summary (see [VALIDATION.md — Flows](./VALIDATION.md#4-full-integration-testing-validation)) `(YYYY-MM-DD)`
+
+Docs
+- [ ] Task 4.16 — `IMPLEMENTATION.md`: ensure tasks 2.5, 2.19–2.22, 1.19, 1.20a–c listed with acceptance criteria (see [IMPLEMENTATION.md](./IMPLEMENTATION.md)) `(YYYY-MM-DD)`
+- [ ] Task 4.17 — `MILESTONES.md`: update statuses as work progresses; keep DoD linking Flow 2 & Flow 7 (see [VALIDATION.md — Flow 2](./VALIDATION.md#flow-2-video-playback-control) and [Flow 7](./VALIDATION.md#flow-7-qr-onboarding)) `(YYYY-MM-DD)`
+- [ ] Task 4.18 — READMEs: keep schema centralized (links only); QR package links in TV/Remote READMEs (see [ARCHITECTURE.md — Diagram/Protocol/Network](./ARCHITECTURE.md#2-system-components--architecture-diagram)) `(YYYY-MM-DD)`
+
+Tooling/CI
+- [ ] Task 4.19 — npm scripts: add tv/remote test scripts if missing; ensure root/validation workflows run tests (see [IMPLEMENTATION.md — Validation Principles](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation)) `(YYYY-MM-DD)`
+- [ ] Task 4.20 — VS Code tasks (optional): add “Run TV tests” / “Run Remote tests” tasks (see [IMPLEMENTATION.md — Validation Principles](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation)) `(YYYY-MM-DD)`
+- [ ] Task 4.21 — Pre-push hook (optional): run server FSM tests + affected app unit tests (see [VALIDATION.md — Unit Testing](./VALIDATION.md#2-unit-testing)) `(YYYY-MM-DD)`
 
 ### Optional
 - [ ] [Task 1.11 — HTTPS/WSS enablement](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
