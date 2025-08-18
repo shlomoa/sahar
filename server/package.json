@@ -7,7 +7,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.server.json && tsc-alias -p tsconfig.server.json",
     "start": "node dist/websocket-server.js",
-    "typecheck": "tsc -p tsconfig.server.json --noEmit"
+  "typecheck": "tsc -p tsconfig.server.json --noEmit",
+  "test": "npm run build && node --test dist/tests/**/*.test.js"
   },
   "dependencies": {
     "http-proxy": "^1.18.1",

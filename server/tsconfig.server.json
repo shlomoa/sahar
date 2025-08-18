@@ -22,10 +22,12 @@
     "types": ["node"]
   },
   "include": [
+  "fsm.ts",
     "websocket-server.ts",
     "shared/utils/logging.ts",
     "shared/websocket/websocket-protocol.ts",
-    "shared/models/application-state.ts"
+  "shared/models/application-state.ts",
+  "tests/**/*.ts"
   ],
   "exclude": ["dist", "node_modules"]
 }
