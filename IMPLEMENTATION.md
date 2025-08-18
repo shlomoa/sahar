@@ -94,7 +94,7 @@ Detailed tasks
 	-   Description: Remote `navigation_command` & `control_command` messages validated, acked immediately, FSM mutators invoked (`navigationCommand`, `controlCommand`) with no-op suppression, and resulting state changes broadcast via queued ack-gated `state_sync` (Task 1.16).
 	-   Files: `server/websocket-server.ts` (switch cases), `server/fsm.ts` (mutation methods).
 	-   Acceptance: Manual stub tests confirm: (1) ack precedes broadcast, (2) version only increments on real change, (3) navigation stack updates correctly (breadcrumb, level transitions), (4) control actions mutate player state (play/pause/seek/volume/mute) with broadcast. Validation Hooks: C (navigation), D (control), E (ack-gated ordering), J (post-reconnect command resilience).
--   [ ] **Task 1.19**: Heartbeat/recovery `(YYYY-MM-DD)`
+-   [ ] **Task 1.19**: Heartbeat/recovery — Deferred to Milestone 2 `(deferred 2025-08-18)`
 	-   Description: Detect dead connections via ack timeouts and optional pings; handle reconnection.
 	-   Files: `server/websocket-server.ts`, `server/fsm.ts`.
 	-   Acceptance: Disconnections are detected and recovered gracefully. Validation Hook Target: J (currently partial – functional reconnect without heartbeat timeouts).

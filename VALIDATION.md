@@ -46,7 +46,7 @@ Section 7 flows map naturally:
     -   [ ] **Validation Task 2.1.1**: State Transitions `(YYYY-MM-DD)` – Verify all valid and invalid state transitions (including rejection paths and no-op suppression).
     -   [ ] **Validation Task 2.1.2**: Message Handling `(YYYY-MM-DD)` – Test handlers for `register`, `navigation_command`, `control_command`, `data` (seed), and ensure invalid message rejection.
     -   [ ] **Validation Task 2.1.3**: State Sync Generation `(YYYY-MM-DD)` – Ensure `state_sync` messages emitted only on real changes; version monotonicity enforced.
-    -   [ ] **Validation Task 2.1.4**: ACK Logic `(YYYY-MM-DD)` – Verify `ack` processing, outstanding ack tracking, timeout (future heartbeat Task 1.19) placeholders.
+    -   [ ] **Validation Task 2.1.4**: ACK Logic `(YYYY-MM-DD)` – Verify `ack` processing, outstanding ack tracking. Timeout/heartbeat checks deferred to Milestone 2 (Task 1.19).
 
 ### 2.2. Client-Side Services (`shared/services/websocket-base.service.ts`)
 
@@ -470,7 +470,7 @@ Prereq: Hook B.
 3. Restart TV Stub.
 4. Server logs client_connected/client_registered for TV again and issues latest state_sync.
 5. TV Stub /state version matches current server version (monotonic, >= prior to disconnect).
-Expected: No server crash; Remote Stub continuity preserved; version does NOT reset.
+Expected: No server crash; Remote Stub continuity preserved; version does NOT reset. Note: Heartbeat/ack-timeout enforcement is deferred to Milestone 2; this hook validates reconnect without timeout simulation.
 Ref: Section 4, Flow 3 (subset) + Section 7 conceptual extension.
 
 ---
