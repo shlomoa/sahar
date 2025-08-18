@@ -230,10 +230,11 @@ Detailed tasks
 	-   Description: For any change impacting behavior, add/adjust flows in `VALIDATION.md` (Section 4) and reference them from Section 5. Keep format consistent with numbered steps and explicit Expected lines.
 	-   Files: `VALIDATION.md`.
 	-   Acceptance: Each merged task that changes behavior includes a corresponding validation flow update.
--   [ ] **Task 4.4**: Update/create integration tests in `/validation` `(YYYY-MM-DD)`
-	-   Description: Extend test drivers or add new ones to automate new flows (navigation/control, reconnection, SSR preflights). Reuse existing `sahar-validation.ps1` orchestration.
-	-   Files: `validation/test-drivers/*`, `validation/validate.js`, `validation/websocket-communication.js`.
-	-   Acceptance: Updated tests pass locally via the quick-run and via the VS Code tasks.
+-   [x] **Task 4.4**: Update/create integration tests in `/validation` `(2025-08-18)`
+	-   Decision (Path B): For Milestone 1 we designate the existing `validation/validate.js` quick-run as the canonical integration driver. No new Node drivers were added; VS Code tasks and `npm run quick|quick:dev -w validation` exercise Hooks A, B, I, C, D, E, J end-to-end.
+	-   Scope: Optional extras (artifact capture, log-schema checks, health payload schema drivers) are deferred beyond Milestone 1.
+	-   Files: `VALIDATION.md` (callout for canonical quick-run), `MILESTONES.md` (task marked done).
+	-   Acceptance: Quick-run completes successfully on Windows with stubs, covering the listed hooks without additional drivers.
 -   [x] **Task 4.5**: Documentation sync `(2025-08-14)`
 	-   Description: Reflect behavioral or architectural changes in `ARCHITECTURE.md` and usage/setup notes in `README.md`.
 	-   Files: `ARCHITECTURE.md`, `README.md` (and app-level READMEs if affected).

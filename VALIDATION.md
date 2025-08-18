@@ -104,6 +104,9 @@ These tests are performed manually by running the server and one client applicat
 -   **Objective**: Automate end-to-end user stories involving the real server and both client applications.
 -   **Method**: Prefer the npm mode scripts (`mode:prod`) for standing up the environment. The legacy `sahar-validation.ps1` tasks remain available (VS Code tasks: Environment Check / Start Applications / Integration Tests) but are being phased out in favor of pure package scripts.
 
+Canonical driver (Milestone 1, Path B)
+- Use `npm run quick -w validation` (or `npm run quick:dev -w validation`) as the canonical automation entrypoint. This executes Hooks A, B, I, C, D, E, J end-to-end using the existing `validation/validate.js` orchestrator. Optional artifact capture and schema checks are deferred.
+
 -   **Flow 1: Full System Startup & Navigation**
     1.  `sahar-validation.ps1 start`: Starts the server, TV app, and Remote app.
     2.  **Expected**: Server logs show both clients connect and register successfully.
