@@ -144,6 +144,20 @@ Detailed tasks
 	-   Files: `apps/tv/package.json` (scripts), Angular builders.
 	-   Acceptance: `ng build` produces TV SSR/browser bundles at the expected paths.
 
+#### Note: YouTube POC (Angular YouTube package)
+- Use the Angular YouTube package to embed a minimal player in the TV app. If the package exposes built-in controls, render them (no custom controls required for the POC).
+- Wire the player where applicable via the existing server-driven state (stateless rendering from `state_update`, see Task 2.5).
+
+Tasks (YouTube unit tests — TV)
+-   [ ] **Task 2.19**: Player renders when `videoId` is present (apps/tv) `(YYYY-MM-DD)`
+-   [ ] **Task 2.20**: Playback init without errors (spy on ready/init) `(YYYY-MM-DD)`
+-   [ ] **Task 2.21**: Control toggle invokes player API or updates bound state `(YYYY-MM-DD)`
+-   [ ] **Task 2.22**: Changing `videoId` loads the new video `(YYYY-MM-DD)`
+
+Notes
+- Keep tests shallow and deterministic (mock/stub the player API); avoid loading the real iframe in unit tests.
+- Validation of end-to-end playback remains in `VALIDATION.md` (Flow 2 — Video Playback Control).
+
 ### 3.2 Remote Application (`apps/remote/`)
 
 Detailed tasks

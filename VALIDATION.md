@@ -168,13 +168,19 @@ Canonical driver (Milestone 1, Path B)
 
 -   **Flow 7: QR Onboarding**
     1.  TV displays a QR encoding `http(s)://<server-ip>:<port>/remote`.
-    2.  **Expected**: URL is reachable from the iPad on the same network.
-    3.  Scan QR with the iPad camera and open the detected URL in the browser.
-    4.  **Expected**: Remote app loads successfully.
+    2.  Using an Android phone on the same Wi‑Fi, open the Camera app and scan the QR.
+    3.  Tap the prompt to open the link in Chrome.
+    4.  **Expected**: Remote loads in Chrome at `/remote`.
     5.  Remote connects to WebSocket at `/ws` and sends `register`.
     6.  **Expected**: Server responds with `ack`.
     7.  Remote receives `state_sync` and renders initial UI.
     8.  **Expected**: Default Remote screen is displayed and responsive.
+
+    Verification Procedure
+    - Preconditions: Server is reachable from the phone (same network); firewall allows inbound to server port.
+    - Observe server logs: look for `client_registered` with `client_type: "remote"` and subsequent `state_broadcast`.
+    - On the phone: confirm `/remote` loads without mixed‑content errors; UI interactive after initial `state_sync`.
+    - Optional: From Remote, trigger a simple navigation command and verify TV reflects it (see Flow 1/2 expectations).
 
 ---
 

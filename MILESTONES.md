@@ -129,11 +129,18 @@ Future milestones will build on this baseline to add Angular SSR hosting, real T
 ## Milestone 2 — POCs: YouTube + QR Onboarding
 
 Goals
-- Goal 1: POC for YouTube
-- Goal 2: POC for QR code enabling
-- Goal 3: Robust logging (log level control, reclassified events, critical handlers)
+- Goal 1: YouTube POC using the Angular YouTube package; if built-in controls are available, display them; include unit tests.
+- Goal 2: QR onboarding POC where an Android phone scans the TV’s QR, opens the link in Chrome, and the Remote actually connects (register → ack).
+- Goal 3: Robust logging (log level control, reclassified events, critical handlers).
 
 ### Planned Tasks
+- [ ] [Task 2.5 — Ensure stateless rendering from state_update (YouTube helper wiring in TV)](./IMPLEMENTATION.md#31-tv-application-appstv) `(YYYY-MM-DD)`
+- [ ] [Flow 7 — QR Onboarding (TV renders QR linking to /remote; end-to-end scan/load)](./VALIDATION.md#flow-7-qr-onboarding) `(YYYY-MM-DD)`
+- [ ] TV: YouTube component unit tests — playback init and control toggles (see [VALIDATION.md §2 Unit Testing](./VALIDATION.md#2-unit-testing)) `(YYYY-MM-DD)`
+- [ ] [Task 2.19 — Player renders when videoId is present](./IMPLEMENTATION.md#31-tv-application-appstv) `(YYYY-MM-DD)`
+- [ ] [Task 2.20 — Playback init without errors](./IMPLEMENTATION.md#31-tv-application-appstv) `(YYYY-MM-DD)`
+- [ ] [Task 2.21 — Control toggle invokes player API or updates bound state](./IMPLEMENTATION.md#31-tv-application-appstv) `(YYYY-MM-DD)`
+- [ ] [Task 2.22 — Changing videoId loads the new video](./IMPLEMENTATION.md#31-tv-application-appstv) `(YYYY-MM-DD)`
 - [ ] [Task 1.19 — Heartbeat/recovery](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
 - [ ] [Task 1.20a — Log level filtering & taxonomy](./IMPLEMENTATION.md#68-incremental-task-breakdown-standardized-tasks) `(YYYY-MM-DD)`
 - [ ] [Task 1.20b — Event reclassification & state_version tagging](./IMPLEMENTATION.md#68-incremental-task-breakdown-standardized-tasks) `(YYYY-MM-DD)`
@@ -146,8 +153,10 @@ Goals
 - [ ] [Task 1.11 — HTTPS/WSS enablement](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
 
 Definition of Done (DoD)
-- [ ] Basic YouTube playback demonstrated in the TV context (helper wired; minimal controls) `(YYYY-MM-DD)`
-- [ ] TV shows a QR that opens `/remote` on same network and loads Remote app `(YYYY-MM-DD)`
+- [ ] YouTube POC: TV uses the Angular YouTube package; if it ships controls, they are visible and usable `(YYYY-MM-DD)`
+	- Acceptance: Validated via [Flow 2 — Video Playback Control](./VALIDATION.md#flow-2-video-playback-control); unit tests pass for basic playback init and control toggles (apps/tv).
+- [ ] QR onboarding: TV shows a QR to `/remote`; using an Android phone camera, opening in Chrome loads Remote and it connects (register → ack) `(YYYY-MM-DD)`
+	- Acceptance: Validated via [Flow 7 — QR Onboarding](./VALIDATION.md#flow-7-qr-onboarding); server logs show `client_registered` for remote and subsequent `state_sync`.
 - [ ] Notes captured in docs and validation updated `(YYYY-MM-DD)`
 
 Summary
