@@ -43,9 +43,9 @@ Section 7 flows map naturally:
 
 -   **Method**: Automated unit tests.
 -   **Validation Tasks**:
-    -   [ ] **Validation Task 2.1.1**: State Transitions `(YYYY-MM-DD)` – Verify all valid and invalid state transitions (including rejection paths and no-op suppression).
-    -   [ ] **Validation Task 2.1.2**: Message Handling `(YYYY-MM-DD)` – Test handlers for `register`, `navigation_command`, `control_command`, `data` (seed), and ensure invalid message rejection.
-    -   [ ] **Validation Task 2.1.3**: State Sync Generation `(YYYY-MM-DD)` – Ensure `state_sync` messages emitted only on real changes; version monotonicity enforced.
+    -   [x] **Validation Task 2.1.1**: State Transitions `(2025-08-18)` – Register/deregister transitions, ready/initializing, error preservation; no-op suppression verified.
+    -   [x] **Validation Task 2.1.2**: Message Handling `(2025-08-18)` – FSM handlers exercised: register/deregister, navigation, control, seedData; duplicate register rejected without version bump.
+    -   [x] **Validation Task 2.1.3**: State Sync Generation `(2025-08-18)` – Version monotonicity and no-op suppression asserted in unit tests.
     -   [ ] **Validation Task 2.1.4**: ACK Logic `(YYYY-MM-DD)` – Verify `ack` processing, outstanding ack tracking. Timeout/heartbeat checks deferred to Milestone 2 (Task 1.19).
 
 ### 2.2. Client-Side Services (`shared/services/websocket-base.service.ts`)

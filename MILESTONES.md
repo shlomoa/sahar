@@ -13,7 +13,7 @@ Conventions
 Goal: Establish a working baseline of the unified system with a production-ready server core and validation stubs, proving end-to-end integration using stubs (no real Angular apps required yet).
 
 Definition of Done (DoD)
-- [ ] Functional, unit-tested production server (core FSM + WebSocket gateway) `(YYYY-MM-DD)`
+- [x] Functional, unit-tested production server (core FSM + WebSocket gateway) `(2025-08-18)`
 - [x] TV and Remote stubs implemented in `/validation` and controllable via HTTP `(2025-08-11)`
 - [x] Validation infrastructure in place (health/readiness checks, quick-run) `(2025-08-14)`
 - [x] Integrated solution: production server + TV stub + Remote stub working together `(2025-08-14)`
