@@ -46,7 +46,7 @@ Section 7 flows map naturally:
     -   [x] **Validation Task 2.1.1**: State Transitions `(2025-08-18)` – Register/deregister transitions, ready/initializing, error preservation; no-op suppression verified.
     -   [x] **Validation Task 2.1.2**: Message Handling `(2025-08-18)` – FSM handlers exercised: register/deregister, navigation, control, seedData; duplicate register rejected without version bump.
     -   [x] **Validation Task 2.1.3**: State Sync Generation `(2025-08-18)` – Version monotonicity and no-op suppression asserted in unit tests.
-    -   [ ] **Validation Task 2.1.4**: ACK Logic `(YYYY-MM-DD)` – Verify `ack` processing, outstanding ack tracking. Timeout/heartbeat checks deferred to Milestone 2 (Task 1.19).
+    -   [ ] **Validation Task 2.1.4**: ACK Logic `(YYYY-MM-DD)` – Verify `ack` processing, outstanding ack tracking. Timeout/heartbeat checks will be addressed in Milestone 2 (Task 1.19).
 
 ### 2.2. Client-Side Services (`shared/services/websocket-base.service.ts`)
 
@@ -105,7 +105,7 @@ These tests are performed manually by running the server and one client applicat
 -   **Method**: Prefer the npm mode scripts (`mode:prod`) for standing up the environment. The legacy `sahar-validation.ps1` tasks remain available (VS Code tasks: Environment Check / Start Applications / Integration Tests) but are being phased out in favor of pure package scripts.
 
 Canonical driver (Milestone 1, Path B)
-- Use `npm run quick -w validation` (or `npm run quick:dev -w validation`) as the canonical automation entrypoint. This executes Hooks A, B, I, C, D, E, J end-to-end using the existing `validation/validate.js` orchestrator. Optional artifact capture and schema checks are deferred.
+- Use `npm run quick -w validation` (or `npm run quick:dev -w validation`) as the canonical automation entrypoint. This executes Hooks A, B, I, C, D, E, J end-to-end using the existing `validation/validate.js` orchestrator. Optional artifact capture and schema checks are planned for Milestone 2.
 
 -   **Flow 1: Full System Startup & Navigation**
     1.  `sahar-validation.ps1 start`: Starts the server, TV app, and Remote app.
@@ -473,7 +473,7 @@ Prereq: Hook B.
 3. Restart TV Stub.
 4. Server logs client_connected/client_registered for TV again and issues latest state_sync.
 5. TV Stub /state version matches current server version (monotonic, >= prior to disconnect).
-Expected: No server crash; Remote Stub continuity preserved; version does NOT reset. Note: Heartbeat/ack-timeout enforcement is deferred to Milestone 2; this hook validates reconnect without timeout simulation.
+Expected: No server crash; Remote Stub continuity preserved; version does NOT reset. Note: Heartbeat/ack-timeout enforcement will be implemented in Milestone 2; this hook validates reconnect without timeout simulation.
 Ref: Section 4, Flow 3 (subset) + Section 7 conceptual extension.
 
 ---
@@ -481,7 +481,7 @@ Ref: Section 4, Flow 3 (subset) + Section 7 conceptual extension.
 Automation Notes
 - Hooks A–E & I–J are the minimal set targeted for early integration drivers (Tasks 4.2 & 4.4).
 - Hooks F–G are environment/SSR oriented (optional for Milestone 1, but documented here).
-- Hook H deferred until SSR child processes are implemented.
+- Hook H will be implemented when SSR child processes are available.
 
 Failure Classification
 - Immediate FAIL: HTTP non-200, missing expected log event, version regression, duplicate overlapping broadcast, or unexpected invalid_message during happy path.

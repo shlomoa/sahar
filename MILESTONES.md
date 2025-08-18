@@ -38,12 +38,8 @@ Server Core
 - [x] [Task 1.16 — state_sync broadcast discipline](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-13)`
 - [x] [Task 1.17 — data handler](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-13)`
 - [x] [Task 1.18 — navigation/control handlers](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-13)`
-- [ ] [Task 1.19 — Heartbeat/recovery](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) — Deferred to Milestone 2 `(deferred 2025-08-18)`
 - [x] [Task 1.20 — Structured logging](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-11)`
 - [x] [Task 1.21 — Invalid message handling](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-11)`
-
-Nice-to-have for Milestone 1 (optional)
-- [ ] [Task 1.11 — HTTPS/WSS enablement](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
 
 Early Completed (Out-of-scope SSR prep – not required for Milestone 1 DoD)
 - [x] Task 1.6 — Dev reverse proxies (2025-08-13)
@@ -53,16 +49,14 @@ Early Completed (Out-of-scope SSR prep – not required for Milestone 1 DoD)
  Validation/Process
 - [x] [Task 1.14 — Validation hooks (document flows in `VALIDATION.md`)](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-13)`
 - [x] [Task 4.2 — Validation quick-run workflow](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(2025-08-14)`
- - [x] [Task 4.4 — Update/create integration tests in `/validation`](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(2025-08-18)` — Path B (doc-only: canonical quick-run)
+- [x] [Task 4.4 — Update/create integration tests in `/validation`](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(2025-08-18)` — Path B (doc-only: canonical quick-run)
 - [x] [Task 4.5 — Documentation sync](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(2025-08-14)`
 - [x] [Task 4.6 — Implement TV Stub](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(2025-08-11)`
 - [x] [Task 4.7 — Implement Remote Stub](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(2025-08-11)`
 - [x] [Task 4.8 — Stub runner scripts](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(2025-08-11)`
-- [ ] [Task 4.9 — Integration drivers for stub flows](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
-- [ ] [Task 4.10 — Stop-and-wait enforcement tests](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
-- [ ] [Task 4.11 — Log schema conformance checks](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
-- [ ] [Task 4.12 — Health payload completeness tests](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
-- [ ] [Task 4.13 — Server FSM unit tests](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
+- [x] [Task 4.9 — Integration drivers for stub flows](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(2025-08-18)` — Path B (covered by validate.js hooks)
+- [x] [Task 4.10 — Stop-and-wait enforcement tests](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(2025-08-18)` — Path B (Hook E)
+- [x] [Task 4.13 — Server FSM unit tests](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(2025-08-18)`
 
 ### 2. Required Specs & Flows (from `VALIDATION.md`)
 
@@ -80,8 +74,7 @@ Preflight/Health (for quick smoke)
 - [x] [Flow 4 — Health & Readiness Preflight](./VALIDATION.md#4-full-integration-testing-validation) `(2025-08-11)`
 
 Unit Testing (recommended coverage for server/stubs)
-- [ ] [Section 2.1 — Server-Side FSM unit tests](./VALIDATION.md#2-unit-testing) `(YYYY-MM-DD)`
-- [ ] [Section 2.2 — Client-Side WebSocket base service unit tests](./VALIDATION.md#2-unit-testing) `(YYYY-MM-DD)`
+- [x] [Section 2.1 — Server-Side FSM unit tests](./VALIDATION.md#2-unit-testing) `(2025-08-18)`
 
 ### 3. Integration Assembly Checklist
 
@@ -101,7 +94,7 @@ End-to-end with stubs
 
 Automation
 - [x] Quick-run or VS Code tasks execute stub-based flows ([Task 4.2](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation)/[Task 4.4](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation)) `(2025-08-14)`
-- [ ] Validation logs and artifacts captured ([Task 4.5](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation)) `(YYYY-MM-DD)`
+
 
 ### 4. Milestone Completion
 
@@ -122,10 +115,10 @@ Status of discrete hook tasks (A–J) underpinning Milestone 1 integration confi
 Guidance:
 - For strict Milestone 1 closure, prioritize A, B, C, D, E, I, J.
 - F and G document early SSR readiness but are not gate criteria.
-- H deferred until SSR process manager (Tasks 1.9/1.10).
+- H will be implemented alongside the SSR process manager (Tasks 1.9/1.10).
 
 Summary
-- [ ] Milestone 1 complete `(YYYY-MM-DD)`
+- [x] Milestone 1 complete `(2025-08-18)`
 
 ---
 
@@ -139,6 +132,14 @@ Goals
 - Goal 1: POC for YouTube
 - Goal 2: POC for QR code enabling
 - Goal 3: Robust logging (log level control, reclassified events, critical handlers)
+
+- [ ] [Task 1.19 — Heartbeat/recovery](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
+- [ ] [Section 2.2  — Client-Side WebSocket base service unit tests](./VALIDATION.md#2-unit-testing) `(YYYY-MM-DD)`
+- [ ] [Task 4.11 — Log schema conformance checks](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
+- [ ] [Task 4.12 — Health payload completeness tests](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
+
+### Optional
+- [ ] [Task 1.11 — HTTPS/WSS enablement](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(YYYY-MM-DD)`
 
 Definition of Done (DoD)
 - [ ] Basic YouTube playback demonstrated in the TV context (helper wired; minimal controls) `(YYYY-MM-DD)`

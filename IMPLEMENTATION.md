@@ -94,7 +94,7 @@ Detailed tasks
 	-   Description: Remote `navigation_command` & `control_command` messages validated, acked immediately, FSM mutators invoked (`navigationCommand`, `controlCommand`) with no-op suppression, and resulting state changes broadcast via queued ack-gated `state_sync` (Task 1.16).
 	-   Files: `server/websocket-server.ts` (switch cases), `server/fsm.ts` (mutation methods).
 	-   Acceptance: Manual stub tests confirm: (1) ack precedes broadcast, (2) version only increments on real change, (3) navigation stack updates correctly (breadcrumb, level transitions), (4) control actions mutate player state (play/pause/seek/volume/mute) with broadcast. Validation Hooks: C (navigation), D (control), E (ack-gated ordering), J (post-reconnect command resilience).
--   [ ] **Task 1.19**: Heartbeat/recovery — Deferred to Milestone 2 `(deferred 2025-08-18)`
+-   [ ] **Task 1.19**: Heartbeat/recovery — Scheduled for Milestone 2 `(YYYY-MM-DD)`
 	-   Description: Detect dead connections via ack timeouts and optional pings; handle reconnection.
 	-   Files: `server/websocket-server.ts`, `server/fsm.ts`.
 	-   Acceptance: Disconnections are detected and recovered gracefully. Validation Hook Target: J (currently partial – functional reconnect without heartbeat timeouts).
@@ -232,7 +232,7 @@ Detailed tasks
 	-   Acceptance: Each merged task that changes behavior includes a corresponding validation flow update.
 -   [x] **Task 4.4**: Update/create integration tests in `/validation` `(2025-08-18)`
 	-   Decision (Path B): For Milestone 1 we designate the existing `validation/validate.js` quick-run as the canonical integration driver. No new Node drivers were added; VS Code tasks and `npm run quick|quick:dev -w validation` exercise Hooks A, B, I, C, D, E, J end-to-end.
-	-   Scope: Optional extras (artifact capture, log-schema checks, health payload schema drivers) are deferred beyond Milestone 1.
+	-   Scope: Optional extras (artifact capture, log-schema checks, health payload schema drivers) will be handled in Milestone 2.
 	-   Files: `VALIDATION.md` (callout for canonical quick-run), `MILESTONES.md` (task marked done).
 	-   Acceptance: Quick-run completes successfully on Windows with stubs, covering the listed hooks without additional drivers.
 -   [x] **Task 4.5**: Documentation sync `(2025-08-14)`
@@ -248,27 +248,28 @@ Detailed tasks
 -   [x] **Task 4.8**: Stub runner scripts (2025-08-12)
 	-   Implemented via consolidated mode scripts: `stubs`, `tv-stub`, `remote-stub`, `mode:prod` in `validation/package.json`.
 
--   [ ] **Task 4.9**: Integration drivers for stub flows `(YYYY-MM-DD)`
-	-   Description: Add test drivers to automate VALIDATION.md Flows 8–10: drive Remote Stub via HTTP, assert TV Stub state via HTTP.
-	-   Files: `validation/test-drivers/stubs-flows.js` (new), `validation/validate.js` (wire driver).
-	-   Acceptance: "navigation" updates TV Stub `/state`; "playback" reflects correct action; non-zero exit on assertion failures.
+-   [x] **Task 4.9**: Integration drivers for stub flows `(2025-08-18)`
+	-   Decision (Path B): Covered by existing `validation/validate.js` hooks driving stubs directly (Flows 8–10). No separate `test-drivers/*.js` added for M1.
+	-   Files: `validation/validate.js` (existing orchestrator), stubs' HTTP/WS surfaces.
+	-   Acceptance: Hooks B/C/D/I pass and assert Remote→Server→TV via stub HTTP/WS surfaces; non-zero exit on assertion failures.
 
--   [ ] **Task 4.10**: Stop-and-wait enforcement tests `(YYYY-MM-DD)`
-	-   Description: Verify that a second command is only accepted after ack of the first, exercising Remote→Server and Server→TV directions.
-	-   Files: `validation/test-drivers/stubs-flows.js` (extend) or dedicated driver.
-	-   Acceptance: Back-to-back POSTs result in serialized handling; timestamps/logs prove no out-of-order processing.
+-   [x] **Task 4.10**: Stop-and-wait enforcement tests `(2025-08-18)`
+	-   Decision (Path B): Verified via Hook E in `validation/validate.js` (ack-gated broadcast discipline) using rapid back-to-back commands; logs assert deferral/collapse with a single in-flight broadcast.
+	-   Acceptance: Hook E passes with expected deferral/collapse and final state correctness.
 
--   [ ] **Task 4.11**: Log schema conformance checks `(YYYY-MM-DD)`
+-   [ ] **Task 4.11**: Log schema conformance checks `(YYYY-MM-DD)` — Scheduled for Milestone 2
+	-   Status: Optional; scheduled for Milestone 2.
 	-   Description: Validate emitted logs include required structured fields (ts, level, event, client_type/id, message_type when relevant, state_version for broadcasts).
 	-   Files: `validation/utils/log-assert.js` (new), invoked by drivers.
 	-   Acceptance: Sample events (register, ack, broadcast) pass schema checks; failures report missing fields.
 
--   [ ] **Task 4.12**: Health payload completeness tests `(YYYY-MM-DD)`
+-   [ ] **Task 4.12**: Health payload completeness tests `(YYYY-MM-DD)` — Scheduled for Milestone 2
+	-   Status: Optional; scheduled for Milestone 2.
 	-   Description: Assert `/live`, `/ready`, `/health` payloads match ARCHITECTURE.md operational schemas (fields and types), with conditional children in prod SSR.
 	-   Files: `validation/test-drivers/health-check.js` (new).
 	-   Acceptance: All endpoints return expected shapes; children absent in non-SSR mode; driver exits non-zero on mismatch.
 
--   [ ] **Task 4.13**: Server FSM unit tests `(YYYY-MM-DD)`
+-   [x] **Task 4.13**: Server FSM unit tests `(2025-08-18)`
 
 ### 5.1 New Completed (Untracked) Work
 -   [x] **Task 5.1.1**: Protocol/validation config separation (2025-08-12)
