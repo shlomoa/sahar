@@ -222,7 +222,7 @@ Detailed tasks
 	-   Description: Introduce a PR checklist that enforces validation and docs updates for every task (VALIDATION.md updated, tests updated/passing, docs updated, build/lint clean).
 	-   Files: `.github/pull_request_template.md` (new); reference this DoD at the top of `IMPLEMENTATION.md` if needed.
 	-   Acceptance: All new PRs show the DoD checklist; reviewers can gate merges on it.
--   [ ] **Task 4.2**: Validation quick-run workflow `(YYYY-MM-DD)`
+-   [x] **Task 4.2**: Validation quick-run workflow `(2025-08-14)`
 	-   Description: Provide a single command to run environment check and integration tests locally.
 	-   Files: `validation/package.json` (add `scripts`: `quick` to run `node validate.js check && node validate.js test` or invoke the existing PowerShell harness); project `README.md` (usage snippet).
 	-   Acceptance: One command runs preflight plus core integration flows; documented in README.
@@ -234,7 +234,7 @@ Detailed tasks
 	-   Description: Extend test drivers or add new ones to automate new flows (navigation/control, reconnection, SSR preflights). Reuse existing `sahar-validation.ps1` orchestration.
 	-   Files: `validation/test-drivers/*`, `validation/validate.js`, `validation/websocket-communication.js`.
 	-   Acceptance: Updated tests pass locally via the quick-run and via the VS Code tasks.
--   [ ] **Task 4.5**: Documentation sync `(YYYY-MM-DD)`
+-   [x] **Task 4.5**: Documentation sync `(2025-08-14)`
 	-   Description: Reflect behavioral or architectural changes in `ARCHITECTURE.md` and usage/setup notes in `README.md`.
 	-   Files: `ARCHITECTURE.md`, `README.md` (and app-level READMEs if affected).
 	-   Acceptance: Docs accurately describe current behavior; links/ports/paths verified.

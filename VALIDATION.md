@@ -395,7 +395,7 @@ Legend
 - Expected: Minimal success criteria. (Any deviation → FAIL.)
 - Ref: Link to the fuller flow/spec section in this document.
 
- - [ ] **Hook A – Server Startup & Health** `(YYYY-MM-DD)`
+ - [x] **Hook A – Server Startup & Health** `(2025-08-14)`
 1. Start server (dev static or prod_static mode).
 2. GET /live → 200 { status: "live" }
 3. GET /ready → 200 { status: "ready" } (after initialization)
@@ -403,7 +403,7 @@ Legend
 Expected: All three endpoints reachable; no error logs (invalid_message / websocket_error) during startup.
 Ref: Section 4, Flow 4.
 
- - [ ] **Hook B – Stub Pair Registration Round Trip** `(YYYY-MM-DD)`
+ - [x] **Hook B – Stub Pair Registration Round Trip** `(2025-08-14)`
 Prereq: Server running.
 1. Start TV Stub (`npm run stubs -w validation` OR individually `npm run tv-stub -w validation` plus Remote Stub) – both stubs connect.
 2. Observe server logs: two client_connected + two client_registered events.
@@ -412,7 +412,7 @@ Prereq: Server running.
 Expected: Both stubs have received at least one state_sync and acknowledged it (implicit in internal ack logic).
 Ref: Section 7, Flow 8 (steps 1–3 plus state assertions).
 
- - [ ] **Hook C – Navigation Command Propagation** `(YYYY-MM-DD)`
+ - [x] **Hook C – Navigation Command Propagation** `(2025-08-14)`
 Prereq: Hook B.
 1. POST Remote Stub /command { type: "navigation_command", payload: { view: "videos" } }.
 2. Server log sequence: navigation_command_handled (info) → state_broadcast_* events → state_broadcast_complete.
@@ -420,7 +420,7 @@ Prereq: Hook B.
 Expected: Single version increment for this command; no duplicate broadcasts (broadcast queue collapsed events allowed but only if other mutations occurred concurrently).
 Ref: Section 7, Flow 8 (steps 4–7).
 
- - [ ] **Hook D – Control Command Propagation** `(YYYY-MM-DD)`
+ - [x] **Hook D – Control Command Propagation** `(2025-08-14)`
 Prereq: Hook C.
 1. POST Remote Stub /command { type: "control_command", payload: { action: "play", id: "vid-123" } }.
 2. Server logs control_command_handled + state_broadcast_* then completion.
@@ -428,7 +428,7 @@ Prereq: Hook C.
 Expected: Exactly one additional version increment vs previous hook snapshot.
 Ref: Section 7, Flow 8 (steps 8–11).
 
- - [ ] **Hook E – Stop-and-Wait (Ack-Gated Broadcast Discipline)** `(YYYY-MM-DD)`
+ - [x] **Hook E – Stop-and-Wait (Ack-Gated Broadcast Discipline)** `(2025-08-14)`
 Prereq: Hook B.
 1. Issue two rapid POST /command navigation_command requests (different views) to Remote Stub without waiting.
 2. Inspect server logs: Only one broadcast in-flight (no overlapping state_broadcast* with same version); potential state_broadcast_deferred/state_broadcast_collapsed events appear.
@@ -456,14 +456,14 @@ Status: Placeholder until Tasks 1.9 & 1.10 implemented.
 Expected (future): /health includes children[].status == "healthy"; server logs child_start + child_ready events.
 Ref: Will map to updated Section 4 flows when SSR process manager lands.
 
- - [ ] **Hook I – Data Seeding (Initial Data Handler)** `(YYYY-MM-DD)`
+ - [x] **Hook I – Data Seeding (Initial Data Handler)** `(2025-08-14)`
 1. After Hook B, POST Remote Stub /command { type: "seed", payload: { /* data subset */ } } (stub translates to `data` WS message once).
 2. Server logs data_message_handled (or generic message_received + state_broadcast events).
 3. TV Stub /state includes data field merged.
 Expected: Version increments by 1; subsequent identical seed attempt produces no version change (FSM no-op suppression).
 Ref: Task 1.17 acceptance (IMPLEMENTATION.md) + Section 7 adaptation.
 
- - [ ] **Hook J – Reconnection Behavior** `(YYYY-MM-DD)`
+ - [x] **Hook J – Reconnection Behavior** `(2025-08-14)`
 Prereq: Hook B.
 1. Terminate TV Stub process.
 2. Server logs client_disconnected + (optionally) state_broadcast reflecting loss of TV client.

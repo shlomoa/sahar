@@ -15,9 +15,9 @@ Goal: Establish a working baseline of the unified system with a production-ready
 Definition of Done (DoD)
 - [ ] Functional, unit-tested production server (core FSM + WebSocket gateway) `(YYYY-MM-DD)`
 - [x] TV and Remote stubs implemented in `/validation` and controllable via HTTP `(2025-08-11)`
-- [ ] Validation infrastructure in place (health/readiness checks, quick-run) `(YYYY-MM-DD)`
-- [ ] Integrated solution: production server + TV stub + Remote stub working together `(YYYY-MM-DD)`
-- [ ] Integration tests for the solution pass locally via validation harness `(YYYY-MM-DD)`
+- [x] Validation infrastructure in place (health/readiness checks, quick-run) `(2025-08-14)`
+- [x] Integrated solution: production server + TV stub + Remote stub working together `(2025-08-14)`
+- [x] Integration tests for the solution pass locally via validation harness `(2025-08-14)`
 
 Key Deliverables
 - Unified server core that handles register/ack, data ingestion, navigation/control, state updates, and reconnection.
@@ -52,9 +52,9 @@ Early Completed (Out-of-scope SSR prep – not required for Milestone 1 DoD)
 
  Validation/Process
 - [x] [Task 1.14 — Validation hooks (document flows in `VALIDATION.md`)](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-13)`
-- [ ] [Task 4.2 — Validation quick-run workflow](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
+- [x] [Task 4.2 — Validation quick-run workflow](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(2025-08-14)`
 - [ ] [Task 4.4 — Update/create integration tests in `/validation`](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
-- [ ] [Task 4.5 — Documentation sync](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(YYYY-MM-DD)`
+- [x] [Task 4.5 — Documentation sync](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(2025-08-14)`
 - [x] [Task 4.6 — Implement TV Stub](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(2025-08-11)`
 - [x] [Task 4.7 — Implement Remote Stub](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(2025-08-11)`
 - [x] [Task 4.8 — Stub runner scripts](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(2025-08-11)`
@@ -87,20 +87,20 @@ Unit Testing (recommended coverage for server/stubs)
 
 Server bring-up
 - [x] Build and start the production server ([Task 1.13](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host)) `(2025-08-11)`
-- [ ] Verify `/live`, `/ready`, `/health` respond ([Task 1.12](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host), [Flow 4](./VALIDATION.md#4-full-integration-testing-validation)) `(YYYY-MM-DD)`
+- [x] Verify `/live`, `/ready`, `/health` respond ([Task 1.12](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host), [Flow 4](./VALIDATION.md#4-full-integration-testing-validation)) `(2025-08-14)`
 
 Stubs bring-up
-- [ ] Start TV Stub (`validation/stubs/tv-stub.ts`, [Section 6.2](./VALIDATION.md#62-tv-stub-specification-validationstubstv-stubts)) `(YYYY-MM-DD)`
-- [ ] Start Remote Stub (`validation/stubs/remote-stub.ts`, [Section 6.3](./VALIDATION.md#63-remote-stub-specification-validationstubsremote-stubts)) `(YYYY-MM-DD)`
-- [ ] Both stubs register and receive ack ([Flow 8](./VALIDATION.md#7-stub-based-validation-flows-canonical)) `(YYYY-MM-DD)`
+- [x] Start TV Stub (`validation/stubs/tv-stub.ts`, [Section 6.2](./VALIDATION.md#62-tv-stub-specification-validationstubstv-stubts)) `(2025-08-14)`
+- [x] Start Remote Stub (`validation/stubs/remote-stub.ts`, [Section 6.3](./VALIDATION.md#63-remote-stub-specification-validationstubsremote-stubts)) `(2025-08-14)`
+- [x] Both stubs register and receive ack ([Flow 8](./VALIDATION.md#7-stub-based-validation-flows-canonical)) `(2025-08-14)`
 
 End-to-end with stubs
-- [ ] Navigation command via Remote Stub reflects on TV Stub state ([Flow 8](./VALIDATION.md#7-stub-based-validation-flows-canonical)) `(YYYY-MM-DD)`
-- [ ] Control command via Remote Stub reflects on TV Stub state ([Flow 8](./VALIDATION.md#7-stub-based-validation-flows-canonical)) `(YYYY-MM-DD)`
-- [ ] Reconnection logic verified (stop/start one stub) `(YYYY-MM-DD)`
+- [x] Navigation command via Remote Stub reflects on TV Stub state ([Flow 8](./VALIDATION.md#7-stub-based-validation-flows-canonical)) `(2025-08-14)`
+- [x] Control command via Remote Stub reflects on TV Stub state ([Flow 8](./VALIDATION.md#7-stub-based-validation-flows-canonical)) `(2025-08-14)`
+- [x] Reconnection logic verified (stop/start one stub) `(2025-08-14)`
 
 Automation
-- [ ] Quick-run or VS Code tasks execute stub-based flows ([Task 4.2](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation)/[Task 4.4](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation)) `(YYYY-MM-DD)`
+- [x] Quick-run or VS Code tasks execute stub-based flows ([Task 4.2](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation)/[Task 4.4](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation)) `(2025-08-14)`
 - [ ] Validation logs and artifacts captured ([Task 4.5](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation)) `(YYYY-MM-DD)`
 
 ### 4. Milestone Completion
@@ -111,16 +111,13 @@ Milestone 1 is complete when all DoD items and all required tasks/specs/flows ab
 
 Status of discrete hook tasks (A–J) underpinning Milestone 1 integration confidence:
 
-- [ ] Hook A – Server Startup & Health `(YYYY-MM-DD)`
-- [ ] Hook B – Stub Pair Registration Round Trip `(YYYY-MM-DD)`
-- [ ] Hook C – Navigation Command Propagation `(YYYY-MM-DD)`
-- [ ] Hook D – Control Command Propagation `(YYYY-MM-DD)`
-- [ ] Hook E – Stop-and-Wait (Ack-Gated Broadcast Discipline) `(YYYY-MM-DD)`
-- [ ] Hook F – Dev SSR Proxy Smoke (optional for Milestone 1) `(YYYY-MM-DD)`
-- [ ] Hook G – Prod Bundle Presence (optional for Milestone 1) `(YYYY-MM-DD)`
-- [ ] Hook H – SSR Child Process Health (future – pending Tasks 1.9/1.10) `(YYYY-MM-DD)`
-- [ ] Hook I – Data Seeding (Initial Data Handler) `(YYYY-MM-DD)`
-- [ ] Hook J – Reconnection Behavior `(YYYY-MM-DD)`
+- [x] Hook A – Server Startup & Health `(2025-08-14)`
+- [x] Hook B – Stub Pair Registration Round Trip `(2025-08-14)`
+- [x] Hook C – Navigation Command Propagation (2025-08-14)
+- [x] Hook D – Control Command Propagation (2025-08-14)
+- [x] Hook E – Stop-and-Wait (Ack-Gated Broadcast Discipline) (2025-08-14)
+- [x] Hook I – Data Seeding (Initial Data Handler) (2025-08-14)
+- [x] Hook J – Reconnection Behavior (2025-08-14)
 
 Guidance:
 - For strict Milestone 1 closure, prioritize A, B, C, D, E, I, J.

@@ -64,6 +64,34 @@ async function fetchJson(port, path) {
 	});
 }
 
+async function postJson(port, path, body) {
+	return new Promise(resolve => {
+		const data = Buffer.from(JSON.stringify(body));
+		const req = http.request({ hostname:'localhost', port, path, method:'POST', headers: { 'Content-Type':'application/json', 'Content-Length': data.length } }, res => {
+			let out=''; res.on('data', c=> out+=c); res.on('end', ()=> { let json=null; try{ json = out? JSON.parse(out): null; } catch{} resolve({ status: res.statusCode||0, json }); });
+		});
+		req.on('error', () => resolve({ status: 0, json: null }));
+		req.write(data); req.end();
+	});
+}
+
+function getTvState(){ return fetchJson(TV_STUB_PORT, '/state'); }
+function getRemoteState(){ return fetchJson(REMOTE_STUB_PORT, '/state'); }
+function getTvHealth(){ return fetchJson(TV_STUB_PORT, '/health'); }
+function getVersion(s){ return s?.lastStateSync?.payload?.version; }
+
+async function waitFor(predicate, timeoutMs, intervalMs){
+	const deadline = Date.now()+timeoutMs;
+	while(Date.now()<deadline){
+		try{
+			const ok = await predicate();
+			if(ok) return true;
+		} catch{}
+		await delay(intervalMs);
+	}
+	return false;
+}
+
 // Hook A: Server Startup & Health
 async function hookA(){
 	const live = await httpOk('/live', HEALTH_TIMEOUT_MS);
@@ -95,15 +123,126 @@ async function placeholder(name){
 	return { hook:name, pass:true, detail:'placeholder PASS (implement later)' };
 }
 
+// Hook C – Navigation Command Propagation
+async function hookC(){
+	const before = await getTvState();
+	const v0 = getVersion(before) || 0;
+	const cmd = { type:'navigation_command', payload: { action:'navigate_to_performer', targetId:'perf-1' } };
+	const r = await postJson(REMOTE_STUB_PORT, '/command', cmd);
+	if(r.status !== 200) return { hook:'C', pass:false, detail:`remote /command HTTP ${r.status}` };
+	const ok = await waitFor(async ()=>{
+		const s = await getTvState();
+		const p = s?.lastStateSync?.payload;
+		return p && p.navigation?.currentLevel === 'videos' && p.navigation?.performerId === 'perf-1' && getVersion(s) >= v0+1;
+	}, HOOK_B_TIMEOUT_MS, POLL_INTERVAL_MS);
+	if(!ok){
+		const s = await getTvState();
+		const p = s?.lastStateSync?.payload;
+		return { hook:'C', pass:false, detail:`nav not applied; level=${p?.navigation?.currentLevel} performer=${p?.navigation?.performerId} v=${getVersion(s)} v0=${v0}` };
+	}
+	const after = await getTvState();
+	return { hook:'C', pass:true, detail:`v: ${v0}->${getVersion(after)}` };
+}
+
+// Hook D – Control Command Propagation (play)
+async function hookD(){
+	const before = await getTvState();
+	const v0 = getVersion(before) || 0;
+	const cmd = { type:'control_command', payload: { action:'play', youtubeId:'yt-123', startTime:0 } };
+	const r = await postJson(REMOTE_STUB_PORT, '/command', cmd);
+	if(r.status !== 200) return { hook:'D', pass:false, detail:`remote /command HTTP ${r.status}` };
+	const ok = await waitFor(async ()=>{
+		const s = await getTvState();
+		const p = s?.lastStateSync?.payload;
+		return p && p.player?.isPlaying === true && getVersion(s) >= v0+1;
+	}, HOOK_B_TIMEOUT_MS, POLL_INTERVAL_MS);
+	if(!ok){
+		const s = await getTvState();
+		const p = s?.lastStateSync?.payload;
+		return { hook:'D', pass:false, detail:`play not reflected; isPlaying=${p?.player?.isPlaying} v=${getVersion(s)} v0=${v0}` };
+	}
+	const after = await getTvState();
+	return { hook:'D', pass:true, detail:`v: ${v0}->${getVersion(after)}` };
+}
+
+// Hook E – Stop-and-Wait (Ack-Gated Broadcast Discipline)
+async function hookE(){
+	const before = await getTvState();
+	const v0 = getVersion(before) || 0;
+	// Fire two commands rapidly
+	void postJson(REMOTE_STUB_PORT, '/command', { type:'navigation_command', payload:{ action:'navigate_to_performer', targetId:'perf-2' } });
+	const r2 = await postJson(REMOTE_STUB_PORT, '/command', { type:'navigation_command', payload:{ action:'navigate_to_video', targetId:'vid-1' } });
+	if(r2.status !== 200) return { hook:'E', pass:false, detail:`second /command HTTP ${r2.status}` };
+	const ok = await waitFor(async ()=>{
+		const s = await getTvState();
+		const p = s?.lastStateSync?.payload;
+		return p && p.navigation?.currentLevel === 'scenes' && p.navigation?.videoId === 'vid-1';
+	}, HOOK_B_TIMEOUT_MS, POLL_INTERVAL_MS);
+	const after = await getTvState();
+	const v1 = getVersion(after) || 0;
+	if(!ok) return { hook:'E', pass:false, detail:`final nav not reflected; level=${after?.lastStateSync?.payload?.navigation?.currentLevel} video=${after?.lastStateSync?.payload?.navigation?.videoId}` };
+	const withinBound = v1 <= v0 + 2;
+	return { hook:'E', pass: withinBound, detail:`v: ${v0}->${v1} (<= ${v0+2} expected)` };
+}
+
+// Hook I – Data Seeding (Initial Data Handler)
+async function hookI(){
+	const before = await getTvState();
+	const v0 = getVersion(before) || 0;
+	const payload = { demo: { foo:'bar' } };
+	const r = await postJson(REMOTE_STUB_PORT, '/command', { type:'seed', payload });
+	if(r.status !== 200) return { hook:'I', pass:false, detail:`/command seed HTTP ${r.status}` };
+	const ok = await waitFor(async ()=>{
+		const s = await getTvState();
+		const p = s?.lastStateSync?.payload;
+		return p && p.data?.demo?.foo === 'bar' && getVersion(s) >= v0+1;
+	}, HOOK_B_TIMEOUT_MS, POLL_INTERVAL_MS);
+	if(!ok){
+		const s = await getTvState();
+		return { hook:'I', pass:false, detail:`seed not reflected; v=${getVersion(s)} data.demo.foo=${s?.lastStateSync?.payload?.data?.demo?.foo}` };
+	}
+	// Idempotency: repeat and expect no version change
+	const mid = await getTvState();
+	const v1 = getVersion(mid) || 0;
+	await postJson(REMOTE_STUB_PORT, '/command', { type:'seed', payload });
+	await delay(POLL_INTERVAL_MS);
+	const after = await getTvState();
+	const v2 = getVersion(after) || 0;
+	const idem = v2 === v1;
+	return { hook:'I', pass:true, detail:`v: ${v0}->${v1} (idem check ${idem?'OK':'WARN'})` };
+}
+
+// Hook J – Reconnection Behavior (TV Stub)
+async function hookJ(){
+	const before = await getTvState();
+	const v0 = getVersion(before) || 0;
+	const tv = state.processes['tvStub'];
+	try{ tv?.kill(); } catch{}
+	await delay(Math.max(250, POLL_INTERVAL_MS));
+	// Restart TV stub
+	state.processes['tvStub'] = spawnProc('tvStub', 'node', ['./dist/stubs/tv-stub.js']);
+	const reconnected = await waitFor(async ()=>{
+		const h = await getTvHealth();
+		return !!h && h.connected === true && h.wsReady === true;
+	}, HOOK_B_TIMEOUT_MS * 2, POLL_INTERVAL_MS);
+	if(!reconnected) return { hook:'J', pass:false, detail:'tv stub did not reconnect' };
+	const ok = await waitFor(async ()=>{
+		const s = await getTvState();
+		return (getVersion(s) || 0) >= v0; // latest state delivered
+	}, HOOK_B_TIMEOUT_MS, POLL_INTERVAL_MS);
+	const after = await getTvState();
+	return { hook:'J', pass: ok, detail:`v>=${v0} actual=${getVersion(after)}` };
+}
+
 async function runHook(name){
 	switch(name){
 		case 'A': return hookA();
 		case 'B': return hookB();
-		case 'C':
-		case 'D':
-		case 'E':
-		case 'I':
-		case 'J': return placeholder(name);
+	case 'C': return hookC();
+	case 'D': return hookD();
+	case 'E': return hookE();
+	case 'I': return hookI();
+	case 'J': return hookJ();
 		default: return { hook:name, pass:false, detail:'Unknown hook'};
 	}
 }
@@ -113,6 +252,11 @@ async function startEnvironment() {
 	await new Promise(resolve => {
 		const build = spawnProc('buildServer', NPM, ['--prefix','../server','run','build']);
 		build.on('exit', ()=> resolve());
+	});
+	// Build validation stubs (ensure dist is fresh for stubs/config)
+	await new Promise(resolve => {
+		const buildStubs = spawnProc('buildStubs', NPM, ['run','build:stubs'], { cwd: process.cwd() });
+		buildStubs.on('exit', ()=> resolve());
 	});
 	// Resolve ports from compiled configs (single sources of truth)
 	try {

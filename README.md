@@ -180,6 +180,12 @@ curl http://localhost:8080/health
 npm run stubs -w validation
 ```
 
+Quick validation (one command):
+```powershell
+# Runs the consolidated quick flow (preflight + hooks) with debug logs
+npm run quick:dev -w validation # hooks A, B, I, C, D, E, J (all passing as of 2025-08-14)
+```
+
 Manual Angular build verification:
 ```bash
 cd apps/tv && npm run build

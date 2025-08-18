@@ -5,7 +5,6 @@
  * - HTTP control: /health /state /logs /reset /command
  */
 import http, { IncomingMessage, ServerResponse } from 'http';
-import url from 'url';
 import WebSocket from 'ws';
 import { createLogger } from '../shared/utils/logging.js';
 import { NavigationCommandPayload, ControlCommandPayload, WEBSOCKET_CONFIG } from '../shared/websocket/websocket-protocol.js';
@@ -139,7 +138,8 @@ function sendJson(res: ServerResponse, code: number, body: any) {
 }
 
 const server = http.createServer(async (req, res) => {
-  const { pathname } = url.parse(req.url || '', true);
+  const u = new URL(req.url || '/', 'http://localhost');
+  const pathname = u.pathname;
   if (req.method === 'GET' && pathname === '/health') return sendJson(res, 200, { status: 'ok', connected: state.connected, wsReady: state.wsReady });
   if (req.method === 'GET' && pathname === '/state') return sendJson(res, 200, { lastStateSync: state.lastStateSync });
   if (req.method === 'GET' && pathname === '/logs') return sendJson(res, 200, logBuffer);
