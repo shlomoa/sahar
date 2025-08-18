@@ -1,40 +1,51 @@
 # SAHAR Validation Suite
 
-This suite contains scripts and tools for testing the SAHAR "Unified Appliance Model".
+Scripts and modes to validate the Unified Appliance Model quickly and consistently.
 
-> **🔧 For technical implementation details, see [ARCHITECTURE.md](../ARCHITECTURE.md)**  
-> **� For the step-by-step plan, see [IMPLEMENTATION.md](../IMPLEMENTATION.md)**  
-> **✅ For testing strategies and status, see [VALIDATION.md](../VALIDATION.md)**
+> Canonical architecture:
+> - [System Components & Architecture Diagram](../ARCHITECTURE.md#2-system-components--architecture-diagram)
+> - [Unified Communication Protocol](../ARCHITECTURE.md#4-unified-communication-protocol)
+> - [Network Architecture & Discovery](../ARCHITECTURE.md#6-network-architecture--discovery)
+> For implementation tasks, see [IMPLEMENTATION.md](../IMPLEMENTATION.md)
+> For flows and hooks, see [VALIDATION.md](../VALIDATION.md)
 
 ## 🚀 Quick Start
 
-All validation tasks are executed via the `sahar-validation.ps1` script.
-
+Install once:
 ```powershell
-# Install dependencies (run from this directory)
+cd validation
 npm install
-
-# Run a full system check
-.\\sahar-validation.ps1 full
 ```
 
-## 📋 Available Commands
-
-Use the `sahar-validation.ps1` script with one of the following arguments:
-
--   `check`: Performs an environment check to ensure all required tools and dependencies are available.
--   `start`: Builds the client applications and starts the Unified Server.
--   `test`: Runs the integration test suite against the running applications.
--   `full`: Executes `check`, `start`, and `test` in sequence.
-
-## 📁 File Structure
-
+Run canonical quick flow:
+```powershell
+npm run quick:dev -w validation
 ```
-validation/
-├── sahar-validation.ps1      # Main validation script
-├── package.json              # Node.js dependencies
-├── README.md                 # This file
-├── websocket-communication.js # WebSocket communication tests
-└── test-drivers/
-    └── tv-app-test-driver.js # TV application test driver
+This runs Hooks A, B, I, C, D, E, J end-to-end via `validation/validate.js`.
+
+## 🔀 Modes
+
+Choose the lightest mode that exercises the layer you’re changing:
+
+Mode | Purpose | Angular Builds | Processes
+-----|---------|----------------|----------
+mode:prod | Full stack (both real UIs) | tv + remote | server
+tv-stub | Real Remote UI, simulated TV | remote | server + tv stub
+remote-stub | Real TV UI, simulated Remote | tv | server + remote stub
+stubs | Protocol/server only (fast loop) | none | server + both stubs
+
+Examples:
+```powershell
+npm run mode:prod -w validation
+npm run tv-stub -w validation
+npm run remote-stub -w validation
+npm run stubs -w validation
 ```
+
+## 🧪 Flows
+
+See [../VALIDATION.md](../VALIDATION.md) Section 4 (Full Integration Testing) and Section 7 (Stub-Based Flows) for details.
+
+Key references:
+- Flow 2 — Video Playback Control
+- Flow 7 — QR Onboarding

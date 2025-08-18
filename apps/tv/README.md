@@ -1,14 +1,14 @@
 # TV Application
 
-*WebSocket server and display component of the SAHAR TV Remote Control System.*
+Stateless display/player connected to the Unified Server.
 
 ## 🎯 Purpose
 
-The TV application serves as the **WebSocket server** and **display component** in the direct communication architecture. It receives all content data from the Remote app and provides video playback capabilities.
+The TV application serves as the **display/player client** in the Unified Server architecture. It connects over WebSocket to the server, receives all content/state from the server, and provides video playback capabilities.
 
 **Role**: Display and Video Player
-- **WebSocket Server**: Listens on ports 5544-5547 for Remote connections
-- **Data Receiver**: Receives all content data from Remote app (no local data)
+- **WebSocket Client**: Connects to Unified Server at `ws://localhost:8080/ws`
+- **Data Receiver**: Receives `state_sync` and content from server (no local data)
 - **Video Player**: YouTube integration with scene-based seeking
 - **Display Interface**: Large-screen optimized Material Design UI
 
@@ -18,40 +18,35 @@ The TV application serves as the **WebSocket server** and **display component** 
 # Install dependencies
 npm install
 
-# Start development server
+# Start development server (app only)
 ng serve --port 4203
 
 # Build for production
 ng build --configuration production
 ```
 
-**Access**: http://localhost:4203
+**Access**: http://localhost:4203 (dev app server)
 
 ## 🏗️ Architecture Overview
 
 *For complete system architecture, see [../../ARCHITECTURE.md](../../ARCHITECTURE.md)*
 
-### TV App Role in Direct Communication
-```
-┌─────────────────┐    WebSocket     ┌─────────────────┐
-│   Remote App    │◄──────────────►  │     TV App      │
-│  (Data Owner)   │   Protocol v2.0  │ (Display/Player)│
-│   Port: 4202    │                  │   Port: 4203    │
-│                 │                  │                 │
-│ • All Data      │ ──── Sends ────► │ • Receives Data │
-│ • Discovery     │      Content     │ • Shows Grid    │
-│ • Enhanced UI   │                  │ • Plays Videos  │
-│                 │ ◄── Confirms ─── │ • WebSocket     │
-│                 │      State       │   Server        │
-└─────────────────┘                  └─────────────────┘
-```
+### TV App Role (Unified Server model)
+For the canonical communication schema (Remote ↔ Unified Server ↔ TV over `/ws`), see ARCHITECTURE.md:
+- [System Components & Architecture Diagram](../../ARCHITECTURE.md#2-system-components--architecture-diagram)
+- [Unified Communication Protocol](../../ARCHITECTURE.md#4-unified-communication-protocol)
+- [Network Architecture & Discovery](../../ARCHITECTURE.md#6-network-architecture--discovery)
+
+Note:
+- QR code rendering (onboarding): use `angularx-qrcode` in Angular components
+	- Package: https://www.npmjs.com/package/angularx-qrcode
 
 ### Key Responsibilities
-1. **WebSocket Server**: Auto-starts on first available port (5544-5547)
-2. **Data Reception**: Receives complete performers/videos/scenes from Remote
-3. **Content Display**: Shows synchronized navigation grids
-4. **Video Playback**: YouTube player with @angular/youtube-player
-5. **State Synchronization**: Confirms navigation changes to Remote
+1. **WebSocket Client**: Connects to Unified Server `/ws`
+2. **Content Display**: Renders navigation grids from server `state_sync`
+3. **Video Playback**: YouTube player with @angular/youtube-player
+4. **Stateless**: No outbound status; all state owned by server
+
 
 ---
 

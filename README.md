@@ -62,8 +62,10 @@ Integrated validation flows: see [VALIDATION.md](./VALIDATION.md).
 
 ### System Components
 
-For the canonical diagram and detailed component breakdown, see:
-- [ARCHITECTURE.md — System Components & Architecture Diagram](./ARCHITECTURE.md#2-system-components--architecture-diagram)
+Canonical architecture references (single source of truth):
+- [System Components & Architecture Diagram](./ARCHITECTURE.md#2-system-components--architecture-diagram)
+- [Unified Communication Protocol](./ARCHITECTURE.md#4-unified-communication-protocol)
+- [Network Architecture & Discovery](./ARCHITECTURE.md#6-network-architecture--discovery)
 
 Roles at a glance (details in ARCHITECTURE.md → Application Details):
 - [Unified Server](./ARCHITECTURE.md#server-app-unified-nodejs-server): Serves apps, owns the FSM, manages protocol, relays messages.
@@ -71,7 +73,7 @@ Roles at a glance (details in ARCHITECTURE.md → Application Details):
 - [Remote Application](./ARCHITECTURE.md#remote-application-appsremote): Control and data owner; connects to server and sends commands/data.
 
 Dev ports and discovery are defined here:
-- [ARCHITECTURE.md — Network Architecture & Discovery](./ARCHITECTURE.md#6-network-architecture--discovery)
+- [Network Architecture & Discovery](./ARCHITECTURE.md#6-network-architecture--discovery)
 
 ### Core Principles
 1. **Single Source of Truth**: Remote app owns all content data
