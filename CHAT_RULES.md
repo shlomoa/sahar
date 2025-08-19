@@ -75,10 +75,10 @@ Document written following numerous incidents in which GH
 To enforce the rules above in day-to-day collaboration, GH will operate as follows:
 
 ### 1. Planning First
-	- Before any change or task execution, GH will present a short, numbered plan and wait for approval.
+- Before any change or task execution, GH will present a short, numbered plan and wait for approval.
 
 ### 2. Explicit Approval Per Step
-	- GH will proceed only after SA reply with a "go" command preceded with one of the enumerated options GH proposed, for example:
+- GH will proceed only after SA reply with a "go" command preceded with one of the enumerated options GH proposed, for example:
 	GH proposes:
 	go "1.1" to proceed with step 1.1
 	or go "2.3" to proceed with step 2.3
@@ -88,7 +88,7 @@ To enforce the rules above in day-to-day collaboration, GH will operate as follo
 	GH will then proceed executing step 1.1 only.
 
 ### 3. Read-Only actions
-	- GH may gather context via read-only actions:
+- GH may gather context via read-only actions:
 		- Requesting for information
 		- Searching the web for solutions
 		- Reading files in the repo.
@@ -96,35 +96,43 @@ To enforce the rules above in day-to-day collaboration, GH will operate as follo
 		- reading terminal contents (input and output).
 		- Listing directories.
 		- Searching in files.
-	- GH will communicate with SA freely for any purposes: produce reports,  request feedback and guidance or decision making, etc.
-	- Read-only examples (allowed without approval): open/read files, list directories, search/grep, view logs/output, show git status/diff, preview configs, read documentation.
-	- Not read-only (requires approval): any command that modifies disk, environment, processes, network state, or external systems—e.g., npm/yarn/pnpm install, ng build/serve, starting servers, running validation tasks, writing files, changing configs, killing processes.
-	- Examples:
-		- Allowed without approval: read_file of X, list_dir Y, grep_search Z, show git status/diff.
-		- Requires approval: run tasks, start/stop servers, ng build/serve, npm install, apply file edits, delete/move files, call external APIs.
-	- If uncertain whether something is read-only, GH must treat it as an action and request approval.
+- GH will communicate with SA freely for any purposes: produce reports,  request feedback and guidance or decision making, etc.
+- Read-only examples (allowed without approval): open/read files, list directories, search/grep, view logs/output, show git status/diff, preview configs, read documentation.
+- Not read-only (requires approval): any command that modifies disk, environment, processes, network state, or external systems—e.g., npm/yarn/pnpm install, ng build/serve, starting servers, running validation tasks, writing files, changing configs, killing processes.
+- Examples:
+	- Allowed without approval: read_file of X, list_dir Y, grep_search Z, show git status/diff.
+	- Requires approval: run tasks, start/stop servers, ng build/serve, npm install, apply file edits, delete/move files, call external APIs.
+- If uncertain whether something is read-only, GH must treat it as an action and request approval.
 
 ### 4. Freshness Check Before Edits
-	- Right before applying any edit, GH will re-open the target files to ensure they reflect latest manual changes.
+- Right before applying any edit, GH will re-open the target files to ensure they reflect latest manual changes.
 
 ### 5. Concise Change Preview
-	- Before seeking approval, GH will summarize the intended edits (files to touch and a brief delta description) to make approvals precise.
+- Before seeking approval, GH will summarize the intended edits (files to touch and a brief delta description) to make approvals precise.
 
 ### 6. Checkpoints
-	- After 3–5 read-only operations or after any edits, GH will provide a compact checkpoint: what was done and what’s next.
+- After several operations or edits, GH will provide a compact checkpoint: what was done and what’s next.
+- as a rule a below is a table consisting tasks and expected latency, if the expected number exceeds thann it should be broken to smaller steps.
+
+| Type | Max latency | checkpoint threashold |
+|---|---|---|
+| Code change | 2m | 30s |
+| Validation | 5m | 30s |
+| Setup | 30s | 30s |
+
 
 ### 7. Delta-Only Communication
-	- GH will avoid repeating unchanged tasks, plans, or rules.
-	- GH will discuss progress and unfinished work without repeating content from past tasks.
+- GH will avoid repeating unchanged tasks, plans, or rules.
+- GH will discuss progress and unfinished work without repeating content from past tasks.
 
 ### 8. Documentation Routing
-	- Architecture updates go to ARCHITECTURE.md; implementation details to IMPLEMENTATION.md; validation procedures/results to VALIDATION.md — only after explicit approval.
+- Architecture updates go to ARCHITECTURE.md; implementation details to IMPLEMENTATION.md; validation procedures/results to VALIDATION.md — only after explicit approval.
 
 ### 9. Ask When Unsure
-	- If requirements are unclear or underspecified, GH will formulate and ask precise questions until requirements are accurate and ready for execution.
+- If requirements are unclear or underspecified, GH will formulate and ask precise questions until requirements are accurate and ready for execution.
 
 ### 10. Highlight Shlomo's errors/inaccuracies/inconsistencies
-	- If GH notices any errors or inconsistencies in instructions or changes, It will highlight them for SA review and correction.
+- If GH notices any errors or inconsistencies in instructions or changes, It will highlight them for SA review and correction.
 
 ---
 
