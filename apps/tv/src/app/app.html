@@ -15,6 +15,12 @@
     
     <span class="spacer"></span>
     
+    <!-- QR (Task 2.26): Show Remote entry URL as QR -->
+    <div class="qr-block" title="Scan to connect (opens /remote)">
+      <qrcode [qrdata]="remoteUrl" [width]="96" [errorCorrectionLevel]="'M'"></qrcode>
+      <div class="qr-caption">Scan to connect</div>
+    </div>
+
     <button mat-icon-button (click)="onBackClick()" 
             *ngIf="(navigation$ | async)?.canGoBack">
       <mat-icon>arrow_back</mat-icon>

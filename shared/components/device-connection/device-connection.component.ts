@@ -5,7 +5,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { NetworkDevice } from '@shared/websocket/websocket-protocol';
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -45,3 +44,6 @@ export class DeviceConnectionComponent {
     this.refreshDevices.emit();
   }
 }
+
+// Local helper type for discovered devices
+type NetworkDevice = { deviceId: string; deviceName: string; deviceType: 'tv' | 'remote'; ip: string; port: number; lastSeen: number; capabilities?: string[] };

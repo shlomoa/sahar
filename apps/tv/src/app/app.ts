@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -7,6 +7,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
+import { QRCodeComponent } from 'angularx-qrcode';
 import { VideoNavigationService } from '@shared/services/video-navigation.service';
 import { WebSocketService } from './services/websocket.service';
 import { NavigationState, VideoItem, Video, LikedScene, Performer } from '@shared/models/video-navigation';
@@ -25,6 +26,7 @@ import { Observable, Subscription } from 'rxjs';
     MatButtonModule,
     MatIconModule,
     MatSnackBarModule,
+  QRCodeComponent,
     VideoPlayerComponent,
     SharedPerformersGridComponent,
     SharedVideosGridComponent,
@@ -34,6 +36,7 @@ import { Observable, Subscription } from 'rxjs';
   styleUrl: './app.scss'
 })
 export class App implements OnInit, OnDestroy {
+  @ViewChild(VideoPlayerComponent) private videoPlayer?: VideoPlayerComponent;
   protected title = 'Sahar TV';
   navigation$: Observable<NavigationState>;
   private subscriptions: Subscription[] = [];
@@ -41,6 +44,9 @@ export class App implements OnInit, OnDestroy {
   // Video playback state
   currentVideo: Video | null = null;
   currentScene: LikedScene | null = null;
+
+  // QR: Remote entry URL to encode
+  remoteUrl = '';
 
   // Current navigation level helpers for templates
   get currentPerformers(): Performer[] {
@@ -86,6 +92,8 @@ export class App implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+  // Compute QR target URL (per spec: encode `${location.origin}/remote`)
+  this.remoteUrl = `${window.location.origin}/remote`;
     // Navigation service automatically initializes to home
     this.navigation$.subscribe(nav => {
       console.log('Navigation state updated:', nav);
@@ -119,6 +127,49 @@ export class App implements OnInit, OnDestroy {
 
     // Initialize WebSocket connection
     this.initializeWebSocket();
+
+    // Task 2.23: Wire control commands to YouTube player
+    const controlSub = this.webSocketService.tvMessages$.subscribe((msg: any) => {
+      if (!msg || msg.type !== 'control') return;
+      const action = msg.payload?.action;
+      const payload = msg.payload || {};
+      switch (action) {
+        case 'play':
+        case 'resume':
+          this.videoPlayer?.play();
+          break;
+        case 'pause':
+          this.videoPlayer?.pause();
+          break;
+        case 'stop':
+          this.videoPlayer?.stop();
+          break;
+        case 'seek':
+        case 'seek_video': {
+          const seekType = payload.seekType || 'absolute';
+          const time = payload.time ?? payload.seekTime ?? 0;
+          if (seekType === 'relative') {
+            const current = this.videoPlayer?.getCurrentTime() ?? 0;
+            this.videoPlayer?.seekTo(current + time);
+          } else {
+            this.videoPlayer?.seekTo(time);
+          }
+          break;
+        }
+        case 'set_volume':
+        case 'volume_change': {
+          if (typeof payload.volume === 'number') this.videoPlayer?.setVolume(payload.volume);
+          break;
+        }
+        // Optional advanced actions — best‑effort mapping
+        case 'play_video': {
+          // If currentVideo exists, just play; deeper wiring requires domain context
+          this.videoPlayer?.play();
+          break;
+        }
+      }
+    });
+    this.subscriptions.push(controlSub);
   }
 
   ngOnDestroy(): void {
