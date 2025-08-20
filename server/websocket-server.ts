@@ -93,9 +93,9 @@ let isReady = false;
 const markReady = () => { isReady = true; };
 
 // --- Message helpers ---
-const makeAck = (source: 'server'): AckMessage => ({ type: 'ack', timestamp: Date.now(), source, payload: {} });
-const makeStateSync = (source: 'server'): StateSyncMessage => ({ type: 'state_sync', timestamp: Date.now(), source, payload: fsm.getSnapshot() });
-const makeError = (source: 'server', code: string, message: string): ErrorMessage => ({ type: 'error', timestamp: Date.now(), source, payload: { code, message } });
+const makeAck = (source: 'server'): AckMessage => ({ type: 'ack', timestamp: Date.now(), source, payload: {type: 'any'} });
+const makeStateSync = (source: 'server'): StateSyncMessage => ({ type: 'state_sync', timestamp: Date.now(), source, payload: {type: 'any', ...fsm.getSnapshot() }});
+const makeError = (source: 'server', code: string, message: string): ErrorMessage => ({ type: 'error', timestamp: Date.now(), source, payload: {type: 'Error', code, message }});
 
 // --- Error sending helper ---
 function sendError(ws: WebSocket, code: string, message: string, opts: { close?: boolean; meta?: any } = {}) {

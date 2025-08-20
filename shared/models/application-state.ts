@@ -8,7 +8,10 @@ export interface ApplicationState {
     remote?: ClientInfo;
   };
   // Domain data seeded by Remote (Task 1.17). Shape intentionally loose for Milestone 1.
-  data?: undefined;
+  data?: {
+    videos?: { id: string }[];
+    // Add other seeded data properties as needed
+  };
   navigation: {
     currentLevel: 'performers' | 'videos' | 'scenes';
     performerId?: string;
