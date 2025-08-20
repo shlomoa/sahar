@@ -134,18 +134,18 @@ Goal 2: Cleanup dead code, AKA "legacy"
 Goal 3: Establish a working solution an create a process to lead to "always alive"
 
 Planned Tasks
-- [ ] Task 1.5.1 — Review architecture, User stories, UI/UX in ARCHITECTURE.md and VALIDATION.md.
+- [ ] Task 1.5.1 — Review architecture, User stories, UI/UX in ARCHITECTURE.md and VALIDATION.md `(YYYY-MM-DD)`
 - [ ] Task 1.5.1.1 — Move development principles and practices into README.md `(YYYY-MM-DD)`
 - [ ] Task 1.5.1.2 — Move validation principles into VALIDATION.md `(YYYY-MM-DD)`
 - [ ] Task 1.5.1.2 — Seperate ARCHITECTURE.md into comprehensive sections `(YYYY-MM-DD)`
-- [ ] Task 1.5.2 — Establish a working development process and document in README.md 
+- [ ] Task 1.5.2 — Establish a working development process and document in README.md `(YYYY-MM-DD)`
 - [ ] Task 1.5.2.1 — Move task management from IMPLEMENTATION.md VALIDATION.md and MILESTONE.md into GitHub `(YYYY-MM-DD)`
 - [ ] Task 1.5.2.2 — Implementation details will be inlined in each package/app `(YYYY-MM-DD)`
-- [ ] Task 1.5.3 — Establish a clean solution
+- [ ] Task 1.5.3 — Establish a clean solution `(YYYY-MM-DD)`
 - [ ] Task 1.5.3.1 — Create a branch in GitHub from the main branch `(YYYY-MM-DD)`
 - [ ] Task 1.5.3.2 — Move all code to backup `(YYYY-MM-DD)`
 - [ ] Task 1.5.3.3 — Define production and development environment - document in README.md `(YYYY-MM-DD)`
-- [ ] Task 1.5.4 — Establish a working highlevel validation environment
+- [ ] Task 1.5.4 — Establish a working highlevel validation environment `(YYYY-MM-DD)`
 - [ ] Task 1.5.4.1 — Create a skeleton validation environment: shared, tv and remote stubs apps and server `(YYYY-MM-DD)`
 - [ ] Task 1.5.5 — Review and refactor the shared folder to reflect architecture `(YYYY-MM-DD)`
 - [ ] Task 1.5.5.1 — Review and refactor the shared folder to reflect architecture `(YYYY-MM-DD)`
