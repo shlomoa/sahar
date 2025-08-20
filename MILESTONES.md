@@ -126,6 +126,43 @@ Future milestones will build on this baseline to add Angular SSR hosting, real T
 
 ---
 
+## Milestone 1.5 — GitHub Copilot garbage collection
+
+Goals
+Goal 1: Realign existing solution in the repo with architecture.
+Goal 2: Cleanup dead code, AKA "legacy"
+Goal 3: Establish a working solution an create a process to lead to "always alive"
+
+Planned Tasks
+- [ ] Task 1.5.1 — Review architecture, User stories, UI/UX in ARCHITECTURE.md and VALIDATION.md.
+- [ ] Task 1.5.1.1 — Move development principles and practices into README.md `(YYYY-MM-DD)`
+- [ ] Task 1.5.1.2 — Move validation principles into VALIDATION.md `(YYYY-MM-DD)`
+- [ ] Task 1.5.1.2 — Seperate ARCHITECTURE.md into comprehensive sections `(YYYY-MM-DD)`
+- [ ] Task 1.5.2 — Establish a working development process and document in README.md 
+- [ ] Task 1.5.2.1 — Move task management from IMPLEMENTATION.md VALIDATION.md and MILESTONE.md into GitHub `(YYYY-MM-DD)`
+- [ ] Task 1.5.2.2 — Implementation details will be inlined in each package/app `(YYYY-MM-DD)`
+- [ ] Task 1.5.3 — Establish a clean solution
+- [ ] Task 1.5.3.1 — Create a branch in GitHub from the main branch `(YYYY-MM-DD)`
+- [ ] Task 1.5.3.2 — Move all code to backup `(YYYY-MM-DD)`
+- [ ] Task 1.5.3.3 — Define production and development environment - document in README.md `(YYYY-MM-DD)`
+- [ ] Task 1.5.4 — Establish a working highlevel validation environment
+- [ ] Task 1.5.4.1 — Create a skeleton validation environment: shared, tv and remote stubs apps and server `(YYYY-MM-DD)`
+- [ ] Task 1.5.5 — Review and refactor the shared folder to reflect architecture `(YYYY-MM-DD)`
+- [ ] Task 1.5.5.1 — Review and refactor the shared folder to reflect architecture `(YYYY-MM-DD)`
+- [ ] Task 1.5.6 — Establish a working highlevel production environment `(YYYY-MM-DD)`
+- [ ] Task 1.5.6.1 — Create a skeleton production environment - shared, tv and remote apps and server `(YYYY-MM-DD)`
+- [ ] Task 1.5.7 — Move relevant validation functionals from backup to validation environment `(YYYY-MM-DD)`
+- [ ] Task 1.5.8 — Move relevant production functional from backup to thier proper place `(YYYY-MM-DD)`
+
+Definition of Done (DoD)
+- [ ] Project is alive: all UI and and other implemented functionals are functional `(YYYY-MM-DD)`
+- [ ] A procedure to maintain alwayys alive is establised and becomes part of the development process `(YYYY-MM-DD)`
+- [ ] All code is used and verified - 100% highlevel coverage `(YYYY-MM-DD)`
+
+Summary
+- [ ] Milestone 1.5 complete `(YYYY-MM-DD)`
+
+
 ## Milestone 2 — POCs: YouTube + QR Onboarding
 
 Goals
