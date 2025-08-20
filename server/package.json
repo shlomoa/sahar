@@ -7,8 +7,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.server.json && tsc-alias -p tsconfig.server.json",
     "start": "node dist/websocket-server.js",
-  "typecheck": "tsc -p tsconfig.server.json --noEmit",
-  "test": "npm run build && node --test dist/tests/**/*.test.js"
+    "typecheck": "tsc -p tsconfig.server.json --noEmit",
+    "test": "npm run build && node --test dist/tests/**/*.test.js"
   },
   "dependencies": {
     "http-proxy": "^1.18.1",
@@ -19,6 +19,9 @@
     "@types/http-proxy": "^1.17.14",
     "@types/node": "^24.2.0",
     "@types/ws": "^8.18.1",
+    "@typescript-eslint/eslint-plugin": "^8.40.0",
+    "@typescript-eslint/parser": "^8.40.0",
+    "eslint": "^9.33.0",
     "express": "^5.1.0",
     "tsc-alias": "^1.8.8",
     "typescript": "^5.9.2"

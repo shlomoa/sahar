@@ -112,7 +112,7 @@ To enforce the rules above in day-to-day collaboration, GH will operate as follo
 
 ### 6. Checkpoints
 - After several operations or edits, GH will provide a compact checkpoint: what was done and what’s next.
-- as a rule a below is a table consisting tasks and expected latency, if the expected number exceeds thann it should be broken to smaller steps.
+- below is a table consisting tasks and expected latency, if the expected number exceeds than it should be broken to smaller steps.
 
 | Type | Max latency | checkpoint threashold |
 |---|---|---|
