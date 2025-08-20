@@ -4,8 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
 
 // Components
-import { DeviceConnectionComponent } from './components/device-connection/device-connection.component';
-import { SharedPerformersGridComponent, SharedVideosGridComponent, SharedScenesGridComponent } from '@shared/components';
+import { DeviceConnectionComponent, SharedPerformersGridComponent, SharedVideosGridComponent, SharedScenesGridComponent } from '@shared/components';
 import { VideoControlsComponent } from './components/video-controls/video-controls.component';
 
 // Services and Models
