@@ -136,7 +136,7 @@ Goal 3: Establish a working solution an create a process to lead to "always aliv
 Planned Tasks
 - [ ] Task 1.5.1 — Review architecture, User stories, UI/UX in ARCHITECTURE.md and VALIDATION.md `(YYYY-MM-DD)`
 - [ ] Task 1.5.1.1 — Move development principles and practices into README.md `(YYYY-MM-DD)`
-- [ ] Task 1.5.1.2 — Move validation principles into VALIDATION.md `(YYYY-MM-DD)`
+- [ ] Task 1.5.1.3 — Move validation principles into VALIDATION.md `(YYYY-MM-DD)`
 - [ ] Task 1.5.1.2 — Seperate ARCHITECTURE.md into comprehensive sections `(YYYY-MM-DD)`
 - [ ] Task 1.5.2 — Establish a working development process and document in README.md `(YYYY-MM-DD)`
 - [ ] Task 1.5.2.1 — Move task management from IMPLEMENTATION.md VALIDATION.md and MILESTONE.md into GitHub `(YYYY-MM-DD)`

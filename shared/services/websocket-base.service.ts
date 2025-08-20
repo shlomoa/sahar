@@ -11,7 +11,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
   protected reconnectAttempts = 0;
   protected maxReconnectAttempts = 5;
   protected heartbeatInterval = 30000; // 30 seconds
-  protected heartbeatTimer: any;
+  protected heartbeatTimer: number | null = null;
 
   // Common observables
   protected connectionState$ = new BehaviorSubject<ConnectionState>('disconnected');
@@ -22,9 +22,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
   protected deviceId = '';
   protected deviceName = '';
   protected deviceType: 'tv' | 'remote' = 'tv';
-
-  constructor() {}
-
+  
   // Public getters for observables
   get connected$() {
     return this.connectionState$.asObservable();
@@ -153,7 +151,11 @@ export abstract class WebSocketBaseService implements OnDestroy {
     
     setTimeout(() => {
       if (this.reconnectAttempts <= this.maxReconnectAttempts) {
-        url ? this.connect(url) : this.onReconnect();
+        if (url) {
+          this.connect(url);
+        } else {
+          this.onReconnect();
+        }
       }
     }, delay);
   }
@@ -172,11 +174,11 @@ export abstract class WebSocketBaseService implements OnDestroy {
 
   protected sendHeartbeat(): void {
     this.sendMessage({
-      type: 'status',
+      type: 'heartbeat',
       timestamp: Date.now(),
+      source: 'tv',
       payload: {
-        heartbeat: true,
-        deviceId: this.deviceId
+        type: 'any'
       }
     });
   }

@@ -14,7 +14,7 @@ export class WebSocketUtils {
     return `${deviceType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  static createMessage(type: WebSocketMessage['type'], payload: any, source: 'tv' | 'remote' | 'server'): WebSocketMessage {
+  static createMessage(type: WebSocketMessage['type'], payload: undefined, source: 'tv' | 'remote' | 'server'): WebSocketMessage {
     return {
       type,
       timestamp: Date.now(),

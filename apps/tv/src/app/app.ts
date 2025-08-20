@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -14,6 +14,7 @@ import { NavigationState, VideoItem, Video, LikedScene, Performer } from '@share
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
 import { SharedPerformersGridComponent, SharedVideosGridComponent, SharedScenesGridComponent } from '@shared/components';
 import { Observable, Subscription } from 'rxjs';
+import { getYoutubeVideoId } from '@shared/utils/youtube-helpers';
 
 @Component({
   selector: 'app-root',
@@ -26,7 +27,7 @@ import { Observable, Subscription } from 'rxjs';
     MatButtonModule,
     MatIconModule,
     MatSnackBarModule,
-  QRCodeComponent,
+    QRCodeComponent,
     VideoPlayerComponent,
     SharedPerformersGridComponent,
     SharedVideosGridComponent,
@@ -41,9 +42,24 @@ export class App implements OnInit, OnDestroy {
   navigation$: Observable<NavigationState>;
   private subscriptions: Subscription[] = [];
 
+  private readonly navigationService = inject(VideoNavigationService);
+  private readonly webSocketService = inject(WebSocketService);
+  private readonly snackBar = inject(MatSnackBar);
+
   // Video playback state
   currentVideo: Video | null = null;
   currentScene: LikedScene | null = null;
+
+  // Derived playback bindings for the video-player component
+  get playbackVideoId(): string | null {
+    return this.currentVideo?.url ? getYoutubeVideoId(this.currentVideo.url) : null;
+  }
+  get playbackPositionSec(): number | null {
+    return this.currentScene?.startTime ?? null;
+  }
+  get playbackIsPlaying(): boolean { // basic POC default
+    return this.videoPlayer?.isPlaying ?? false;
+  }
 
   // QR: Remote entry URL to encode
   remoteUrl = '';
@@ -84,9 +100,9 @@ export class App implements OnInit, OnDestroy {
   }
 
   constructor(
-    private navigationService: VideoNavigationService,
-    private webSocketService: WebSocketService,
-    private snackBar: MatSnackBar
+    //private navigationService: VideoNavigationService,
+    //private webSocketService: WebSocketService,
+    //private snackBar: MatSnackBar
   ) {
     this.navigation$ = this.navigationService.navigation$;
   }
@@ -129,7 +145,7 @@ export class App implements OnInit, OnDestroy {
     this.initializeWebSocket();
 
     // Task 2.23: Wire control commands to YouTube player
-    const controlSub = this.webSocketService.tvMessages$.subscribe((msg: any) => {
+    const controlSub = this.webSocketService.tvMessages$.subscribe((msg) => {
       if (!msg || msg.type !== 'control') return;
       const action = msg.payload?.action;
       const payload = msg.payload || {};
@@ -178,7 +194,7 @@ export class App implements OnInit, OnDestroy {
     if (this.webSocketService.disconnect) {
       try {
         this.webSocketService.disconnect();
-      } catch (e) {
+      } catch {
         console.log('WebSocket already disconnected');
       }
     }
@@ -272,6 +288,7 @@ export class App implements OnInit, OnDestroy {
 
   onItemClick(item: VideoItem): void {
     console.log('Clicked item:', item); // Debug log
+    let nav: NavigationState;
     switch (item.type) {
       case 'performer':
         this.navigationService.navigateToPerformer(item.id);
@@ -281,7 +298,7 @@ export class App implements OnInit, OnDestroy {
         break;
       case 'segment':
         // When a scene is clicked, find the current video and scene data
-        const nav = this.navigationService.getCurrentState();
+        nav = this.navigationService.getCurrentState();
         if (nav.currentVideo) {
           this.currentVideo = nav.currentVideo;
           // Find the specific scene in the current video

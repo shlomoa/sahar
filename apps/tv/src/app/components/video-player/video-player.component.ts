@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, ViewChild, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, ViewChild, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { YouTubePlayerModule, YouTubePlayer } from '@angular/youtube-player';
@@ -6,7 +6,8 @@ import { Video, LikedScene } from '@shared/models/video-navigation';
 import { getYoutubeVideoId, getYoutubeThumbnailUrl } from '@shared/utils/youtube-helpers';
 
 @Component({
-  selector: 'app-video-player',
+  // eslint-disable-next-line @angular-eslint/component-selector
+  selector: 'video-player',
   standalone: true,
   imports: [
     CommonModule,
@@ -16,15 +17,21 @@ import { getYoutubeVideoId, getYoutubeThumbnailUrl } from '@shared/utils/youtube
   templateUrl: './video-player.component.html',
   styleUrls: ['./video-player.component.scss']
 })
-export class VideoPlayerComponent implements OnInit, OnDestroy, OnChanges {
+export class VideoPlayerComponent implements OnInit, OnChanges {
   @ViewChild('youtubePlayer') youtubePlayer!: YouTubePlayer;
   
+  // New protocol-oriented inputs (optional): prefer these when provided
+  @Input() videoId?: string;             // YouTube video id (11 chars)
+  @Input() isPlaying?: boolean | null;   // desired play/pause state
+  @Input() positionSec?: number | null;  // desired seek position (seconds)
+  @Input() volume?: number | null;       // 0..1 (preferred) or 0..100
+
   @Input() currentVideo?: Video;
   @Input() currentScene?: LikedScene;
   @Input() autoplay = true;
   @Input() showControls = true;
   
-  @Output() playerReady = new EventEmitter<void>();
+  @Output() playerReady = new EventEmitter<YT.Player>();
   @Output() videoStarted = new EventEmitter<void>();
   @Output() videoPaused = new EventEmitter<void>();
   @Output() videoEnded = new EventEmitter<void>();
@@ -36,31 +43,52 @@ export class VideoPlayerComponent implements OnInit, OnDestroy, OnChanges {
   currentTime = 0;
   duration = 0;
 
-  ngOnInit() {
+  ngOnInit(): void {
     // Angular YouTubePlayerModule handles API loading automatically
     console.log('📺 Video player component initialized');
   }
 
-  ngOnDestroy() {
-    // Cleanup if needed
-  }
-
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['currentVideo'] && this.currentVideo?.url) {
+    // Handle video source change via either explicit videoId or currentVideo.url
+    if ((changes['videoId'] || changes['currentVideo']) && (this.videoId || this.currentVideo?.url)) {
       this.loadVideo();
     }
     
     if (changes['currentScene'] && this.currentScene && this.isPlayerReady) {
       this.seekToScene();
     }
-  }
 
+    // Map protocol-oriented playback inputs into player API when ready
+    if (this.isPlayerReady) {
+      if ('isPlaying' in changes && this.isPlaying !== undefined && this.isPlaying !== null) {
+        if (this.isPlaying) 
+           this.play();
+        else
+          this.pause();
+      }
+
+      if ('positionSec' in changes && typeof this.positionSec === 'number' && !Number.isNaN(this.positionSec)) {
+        this.seekTo(this.positionSec);
+      }
+
+      if ('volume' in changes && typeof this.volume === 'number' && !Number.isNaN(this.volume)) {
+        // YouTube API expects 0..100; our schema uses 0..1. Support both.
+        const v = this.volume <= 1 ? Math.round(this.volume * 100) : Math.round(this.volume);
+        this.setVolume(v);
+      }
+    }
+  }
   private extractYouTubeId(url: string): string | null {
     // Use shared utility function
     return getYoutubeVideoId(url);
   }
 
+
   getYouTubeId(): string | null {
+    // Prefer explicit input when provided, otherwise derive from currentVideo.url
+    if (this.videoId) {
+      return this.videoId;
+    }
     return this.currentVideo?.url ? this.extractYouTubeId(this.currentVideo.url) : null;
   }
 
@@ -70,10 +98,10 @@ export class VideoPlayerComponent implements OnInit, OnDestroy, OnChanges {
     return videoId ? getYoutubeThumbnailUrl(videoId, quality) : null;
   }
 
-  onPlayerReady() {
+  onPlayerReady(event: YT.PlayerEvent): void {
     console.log('📺 YouTube player ready');
     this.isPlayerReady = true;
-    this.playerReady.emit();
+    this.playerReady.emit(event.target);
     
     // If we have a current scene, seek to it after the player is ready
     if (this.currentScene) {
@@ -83,7 +111,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy, OnChanges {
     }
   }
 
-  onStateChange(event: any) {
+  onStateChange(event: YT.OnStateChangeEvent) {
     const playerState = event.data;
     
     // Use YouTube API constants for player states
@@ -131,13 +159,15 @@ export class VideoPlayerComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private loadVideo() {
-    if (!this.currentVideo?.url) {
-      return;
+    const providedId = this.getYouTubeId();
+    if (!providedId) {
+      // Fall back to currentVideo.url if present, otherwise bail
+      if (!this.currentVideo?.url) return;
     }
 
-    const youtubeId = this.extractYouTubeId(this.currentVideo.url);
+    const youtubeId = providedId ?? this.extractYouTubeId(this.currentVideo!.url);
     if (!youtubeId) {
-      console.error('❌ Invalid YouTube URL:', this.currentVideo.url);
+      console.error('❌ Invalid YouTube ID/URL:', this.currentVideo?.url ?? '(none)');
       return;
     }
 

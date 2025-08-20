@@ -1,21 +1,13 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Subject, takeUntil } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import {
   WebSocketMessage,
-  NavigationMessage,
-  ControlMessage,
-  ControlCommand,
-  DiscoveryMessage,
-  DiscoveryResponseMessage,
-  StatusMessage,
   DataMessage,
-  DataConfirmationMessage,
   ErrorMessage,
-  HeartbeatMessage
+  WEBSOCKET_CONFIG
 } from '@shared/websocket/websocket-protocol';
 import { VideoNavigationService } from '@shared/services/video-navigation.service';
 import { WebSocketBaseService } from '@shared/services/websocket-base.service';
-import { RemoteMessage, WEBSOCKET_CONFIG, WebSocketError, NetworkDevice } from '@shared/websocket/websocket-protocol';
 import { WebSocketUtils } from '@shared/utils/websocket-utils';
 import { NavigationState } from '@shared/models/video-navigation';
 
@@ -57,7 +49,7 @@ export class WebSocketService extends WebSocketBaseService {
   };
 
   // Phase 3 Step 2: Status update interval for real-time reporting
-  private statusUpdateInterval: any;
+  private statusUpdateInterval: undefined;
   private readonly STATUS_UPDATE_INTERVAL = 1000; // 1 second for real-time updates
 
   // TV-specific errors

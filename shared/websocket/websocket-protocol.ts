@@ -4,18 +4,22 @@
 // CORE FSM STATE
 // Imported single-source ApplicationState / ClientInfo from shared models to avoid duplication.
 // =================================================================================================
-import { ApplicationState, ClientInfo } from '@shared/models/application-state.js';
+import { ApplicationState } from '@shared/models/application-state.js';
 
 // =================================================================================================
 // MESSAGE STRUCTURE
 // Base interface for all messages exchanged between server and clients.
 // =================================================================================================
 
+export interface BasePayload {
+  type: 'any' | 'Register' | 'NavigationCommand' | 'ControlCommand' | 'ActionConfirmation' | 'Data' | 'Ack' | 'StateSync' | 'Error';
+}
+
 export interface WebSocketMessage {
   type: MessageType;
   timestamp: number;
   source: 'tv' | 'remote' | 'server';
-  payload: any;
+  payload: BasePayload;
 }
 
 export type MessageType =
@@ -28,14 +32,18 @@ export type MessageType =
   // Server -> Client
   | 'ack'                 // Server acknowledges command
   | 'state_sync'          // Server sends full FSM state
-  | 'error';
+  | 'error'
+  // General message types
+  | 'any' // Used for generic messages that don't fit other types
+  | 'heartbeat'; // For heartbeat messages to keep connection alive
+  
 
 // =================================================================================================
 // CLIENT -> SERVER MESSAGES
 // =================================================================================================
 
 // For clients to identify themselves upon connection
-export interface RegisterPayload {
+export interface RegisterPayload extends BasePayload {
   clientType: 'tv' | 'remote';
   deviceId: string;
   deviceName: string;
@@ -48,7 +56,7 @@ export interface RegisterMessage extends WebSocketMessage {
 }
 
 // For the Remote to request a navigation change
-export interface NavigationCommandPayload {
+export interface NavigationCommandPayload extends BasePayload {
   action: 'navigate_to_performer' | 'navigate_to_video' | 'navigate_to_scene' | 'navigate_back' | 'navigate_home';
   targetId?: string;
 }
@@ -58,7 +66,7 @@ export interface NavigationCommandMessage extends WebSocketMessage {
 }
 
 // For the Remote to request a player or system state change
-export interface ControlCommandPayload {
+export interface ControlCommandPayload extends BasePayload {
   action: 'play' | 'pause' | 'seek' | 'set_volume' | 'mute' | 'unmute';
   // For 'play'
   youtubeId?: string;
@@ -74,7 +82,7 @@ export interface ControlCommandMessage extends WebSocketMessage {
 }
 
 // For the TV to confirm it has completed a requested action
-export interface ActionConfirmationPayload {
+export interface ActionConfirmationPayload extends BasePayload {
   status: 'success' | 'failure';
   errorMessage?: string;
 }
@@ -84,7 +92,7 @@ export interface ActionConfirmationMessage extends WebSocketMessage {
 }
 
 // Remote -> Server one-shot (best effort) domain data seeding
-export interface DataPayload { [key: string]: any; }
+export interface DataPayload extends BasePayload { type: 'Data', [key: string]: string; }
 export interface DataMessage extends WebSocketMessage {
   type: 'data';
   payload: DataPayload; // Accept any JSON object for Milestone 1
@@ -99,17 +107,18 @@ export interface DataMessage extends WebSocketMessage {
 // This is a simple acknowledgement and does not carry a payload.
 export interface AckMessage extends WebSocketMessage {
   type: 'ack';
-  payload: {}; // Explicitly empty
+  payload:  {type: 'any'}; // Explicitly empty
 }
 
+export interface ApplicationStatePayload extends BasePayload, ApplicationState { }
 // For the server to broadcast the FSM state to all clients
 export interface StateSyncMessage extends WebSocketMessage {
   type: 'state_sync';
-  payload: ApplicationState;
+  payload: ApplicationStatePayload; // Include full ApplicationState
 }
 
 // For the server to report errors
-export interface ErrorPayload {
+export interface ErrorPayload extends BasePayload{
   code: string;
   message: string;
 }

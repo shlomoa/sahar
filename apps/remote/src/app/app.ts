@@ -4,13 +4,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
 
 // Components
-import { DeviceConnectionComponent } from './components/device-connection/device-connection.component';
+import { DeviceConnectionComponent } from '@shared/components/device-connection/device-connection.component';
 import { SharedPerformersGridComponent, SharedVideosGridComponent, SharedScenesGridComponent } from '@shared/components';
 import { VideoControlsComponent } from './components/video-controls/video-controls.component';
 
 // Services and Models
 import { WebSocketService } from './services/websocket.service';
-import { NetworkDevice } from '@shared/websocket/websocket-protocol';
 import { VideoNavigationService } from '@shared/services/video-navigation.service';
 import { Performer, Video, LikedScene } from '@shared/models/video-navigation';
 import { RemoteNavigationState, ConnectionStatus } from './models/remote-navigation';
@@ -323,3 +322,6 @@ export class App implements OnInit, OnDestroy {
     return currentIndex < video.likedScenes.length - 1;
   }
 }
+
+// Local helper type for discovered devices (protocol-agnostic)
+interface NetworkDevice { deviceId: string; deviceName: string; deviceType: 'tv' | 'remote'; ip: string; port: number; lastSeen: number; capabilities?: string[] }
