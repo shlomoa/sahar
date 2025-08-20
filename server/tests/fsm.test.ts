@@ -168,7 +168,7 @@ test('SaharFsm: controlCommand play/pause/seek/volume/mute toggles with no-op su
     assert.equal(s6.player.muted, false);
 });
 
-// Action confirmation: failure drives error state; repeated same failure is no-op; success clears error and returns to ready
+// action_confirmation: failure drives error state; repeated same failure is no-op; success clears error and returns to ready
 test('SaharFsm: actionConfirmation toggles error/ready state and only bumps on change', () => {
     const fsm = new SaharFsm();
     fsm.registerClient('tv', 'tv-1', 'TV');

@@ -2,20 +2,24 @@
 
 *This is the definitive source of truth for system architecture and protocol.*
 
-## 1. Overview & Core Principles
+## Overview & Core Principles
 
-The SAHAR TV Remote Control System is a real-time synchronized application suite built around a unified Node.js server that serves as both a static file server and a WebSocket gateway. All communications and state management are centralized, and all protocol details are fully integrated into this document.
+### [🎯 Overview](/README.md#-overview)
 
 **Core Principles:**
 - Unified server architecture (Node.js + Express + ws)
 - Centralized state management (server-side FSM)
 - Strict protocol adherence for all communications
 - Robust recovery from disconnections
-- Real-time synchronization between TV and Remote
-
+- Real-time synchronization between TV and Remote - Navigation state and video playback synchronized via server with WebSocket
+- **Single Source of Truth** - everything is done in one place and then referenced: coding, documentation, etc
+- Remote app owns all content data
+- **TV as Display**: TV app receives and displays data from Remote
+- **Direct Connection**: No external servers or dependencies
+- **Real-time Sync**: 
 > SSR Note: Angular can render initial HTML on the server; the client then hydrates for interactivity.
 
-## 2. System Components & Architecture Diagram
+## 🏗️ System Components (Apps) & App communication diagram
 
 ### Architecture Diagram
 ```
@@ -28,9 +32,9 @@ The SAHAR TV Remote Control System is a real-time synchronized application suite
 └──────────────┘      └────────────────────────────┘      └──────────────┘
 ```
 
-Note: 4202/4203 are development SSR ports. In production, a single server port (for example, 8080) serves both TV (`/`) and Remote (`/remote`).
+Note: 4202/4203 are development SSR ports. In production, a single server port serves both TV (`/`) and Remote (`/remote`).
 
-## 3. Application Details
+## Application Details
 
 ### Server App (Unified Node.js Server)
 - **Role:** Unified static file server and WebSocket gateway
@@ -115,7 +119,7 @@ Target Architecture Note (clarification): The server will own content and naviga
     - After the first server-rendered response, Angular hydrates on the client to enable full interactivity.
     - SSR execution model: Each app's SSR server bundle runs in a child process with its own port; the Unified Server proxies `/` (TV) and `/remote` to these children and serves browser assets directly on the main origin.
 
-## 4. Unified Communication Protocol
+## Unified Communication Protocol
 
 > Note: The Angular SSR delivery model does not alter the WebSocket protocol. The server-owned FSM and synchronous, ack-based communication remain unchanged.
 
@@ -131,10 +135,12 @@ The entire system operates on a strictly synchronous, server-centric communicati
 
 These defaults guide implementations and tests; they can be overridden via configuration at runtime (see IMPLEMENTATION Task 1.5).
 
-- ACK_TIMEOUT_MS: 3000
-- RECONNECT_BACKOFF_MS: base=500, max=5000, jitter=±100
+- ACK_TIMEOUT: 5000
 - WS_PATH: "/ws"
-- HEALTH_STATUS: "ok" | "degraded" | "error"
+- TV_DEV_PORT: 4203
+- REMOTE_DEV_PORT: 4202
+- SERVER_PORT: 8080
+- HEALTH_STATUS: "ok" | "degraded" | "error" (not currently implemented in code; future work)
 
 Notes
 - Stop-and-wait allows only one in-flight message per peer; on timeout, the sender treats the connection as lost and reconnects.
@@ -150,7 +156,7 @@ Configuration Note (2025-08-12)
 1.  **Server Startup:** The Unified Server starts, serving the client applications and listening for WebSocket connections on its designated port (e.g., 8080).
 2.  **Client Connection:** The TV and Remote apps connect to the server's WebSocket endpoint.
 3.  **Client Registration:** Upon connecting, each client **must** send a `register` message to identify itself (e.g., as 'tv' or 'remote'). The server will not accept any other messages from an unregistered client.
-4.  **Initial State Sync:** After a client successfully registers, the server sends a `state_sync` message containing the complete, current `ApplicationState`. The client then renders its UI based on this state.
+4.  **Initial `state_sync`:** After a client successfully registers, the server sends a `state_sync` message containing the complete, current `ApplicationState`. The client then renders its UI based on this state.
 
 #### Synchronous "Stop-and-Wait" Acknowledgement Model
 This protocol enforces a strict, lock-step communication flow to guarantee message delivery and order.
@@ -174,6 +180,10 @@ interface WebSocketMessage {
 ```
 
 #### Key Message Types & Flow Example (`play` command)
+
+**Supported Message Types:**
+- `register`, `data`, `navigation_command`, `control_command`, `action_confirmation`, `ack`, `state_sync`, `error`, `heartbeat`
+
 1.  **`control_command` (Remote → Server):** The Remote sends a command to play a video.
     - The Remote is now blocked, awaiting an `ack`.
 2.  **`ack` (Server → Remote):** The Server acknowledges receipt of the command.
@@ -237,22 +247,14 @@ State rules
 - Clients render based on the latest `state_sync` and treat their local UI state as derived.
 - The Remote issues commands that trigger state transitions; only the server commits them.
 
-### Structured logging fields (server and stubs)
+### Structured logging (pointer)
+- For the authoritative logging schema and event taxonomy, see IMPLEMENTATION.md → "Structured Logging (Server + Stubs)". The canonical format uses ISO timestamps and levels including "critical".
 
-To aid troubleshooting, logs are structured with consistent fields.
+**Note:** All constant names (e.g., `INVALID_REGISTRATION`, `ACK_TIMEOUT`, `TV_DEV_PORT`) in documentation match those in code.
 
-- ts: ISO timestamp
-- level: debug | info | warn | error
-- event: short code (e.g., "ws.register", "ws.ack", "fsm.transition", "state.broadcast", "child.spawn")
-- source: server | proxy | child | ws
-- client_type: tv | remote (when applicable)
-- client_id: string (when applicable)
-- message_type: MessageType (when applicable)
-- latency_ms: number (when applicable; e.g., send→ack)
-- state_version: number (when broadcasting/processing state changes)
-- detail: object (free-form; include error stack if level=error)
+## Video Integration
 
-## 5. Video Integration
+Authoritative types and data structures are defined in [IMPLEMENTATION.md — Video Integration](./IMPLEMENTATION.md#video-integration).
 
 ### YouTube Player Architecture
 - Scene-based playback (automatic seeking)
@@ -260,28 +262,15 @@ To aid troubleshooting, logs are structured with consistent fields.
 - Responsive design for TV
 - Error handling for unavailable videos
 
-### Video Data Structure
-```typescript
-interface Video {
-  id: string;
-  title: string;
-  youtubeId: string;
-  scenes: Scene[];
-}
+## Network Architecture & Discovery
 
-interface Scene {
-  id: string;
-  title: string;
-  startTime: number;  // Seconds for YouTube seeking
-  endTime?: number;
-}
-```
-
-## 6. Network Architecture & Discovery
-
+### Development Network Solution
+- **Discovery (development):** The 5544–5547 range may be used by clients for discovery/scanning.
 - **TV App Development:** 4203 (ng serve)
 - **Remote App Development:** 4202 (ng serve)
-- **Discovery (development):** The 5544–5547 range may be used by clients for discovery/scanning.
+
+### Production Ports
+- **Unified Server:** Single port (configurable, e.g., 8080) serves `/` (TV), `/remote`, static assets, and the WebSocket endpoint on the same origin.
 - **Discovery:** Primary onboarding is QR-based; the TV displays a QR that encodes the absolute Remote URL. Optional fallbacks include mDNS hints or manual URL entry; port scanning is not used in the normal flow.
 
 ### Discovery Flow (QR-based)
@@ -299,20 +288,7 @@ Ports (clarification):
 - Production: a single server port (configurable via environment, e.g., 8080) serves `/` (TV), `/remote`, static assets, and the WebSocket endpoint on the same origin.
 - Development: TV uses 4203 and Remote uses 4202 with `ng serve --ssr`; the Unified Server may proxy to these while keeping the WebSocket and `/health` on its own port.
 
-## 7. Technical Implementation
-
-- **Frontend:** Angular 20+ with Standalone Components
-- **UI Framework:** Angular Material 20.1.3
-- **Implementation Directive: Standalone Material Components**: All Angular Material components **must** be imported as standalone components directly into the components that use them. Do not use `NgModule` for Material components. This approach improves tree-shaking and aligns with modern Angular practices.
-- **Communication:** Native WebSocket API
-- **Video:** YouTube Player API (@angular/youtube-player)
-- **Reactive Programming:** RxJS
-- **Styling:** SCSS
-- **State Management:** Server-side FSM, stateless clients
-- **Persistence:** In-memory (no local storage); Remote must repopulate state on server restart
-- **Performance:** ~500KB bundles, <100MB memory, <50ms latency
-
-## 8. Data Flow Architecture
+## Data Flow Architecture
 
 ### Content Data Flow
 ```
@@ -328,16 +304,16 @@ Ports (clarification):
    ↓
 6. TV Receives Data from Server
    ↓
-7. Navigation Commands (Remote → Server)
+7. `navigation_command` (Remote → Server)
    ↓
-8. Real-time State Sync (Bidirectional)
+8. Real-time `state_sync` (Bidirectional)
 ```
 
 ### Navigation State Flow
 ```
 User Interaction (Remote)
     ↓
-Navigation Command Created
+`navigation_command` created
     ↓
 WebSocket Message Sent (Remote → Server)
     ↓
@@ -350,7 +326,7 @@ Status Confirmation (Server → Remote)
 Remote Updates UI State
 ```
 
-## 9. System Requirements
+## System Requirements
 
 - **Network:** Local WiFi (same subnet)
 - **Browser:** Modern WebSocket support (Chrome 88+, Firefox 85+, Safari 14+)
@@ -358,58 +334,12 @@ Remote Updates UI State
 - **Remote Device:** Tablet or smartphone with touch interface
 - **Recommended:** TV 32"+, Remote 10"+, 5GHz WiFi
 
-## 10. HTTPS, WSS, and PWA Requirements
+## HTTPS, WSS, and PWA Requirements
 
 - Production HTTPS: Remote PWA install and service worker require HTTPS in production. The Unified Server should support HTTPS for deployment.
 - WebSocket over HTTPS: When HTTPS is enabled, use WSS for the WebSocket endpoint. Prefer same-origin for simplicity and security.
 - Certificates on LAN: Self-signed or locally-issued certificates are acceptable for LAN deployments. iPad devices must trust the certificate (install the profile, then enable full trust in Settings → General → About → Certificate Trust Settings).
 - Configuration: Certificate and key are deployment-provided. Exact configuration (for example, environment variables for cert/key paths) is defined in implementation details.
-
-## 11. Admin & Observability (Optional)
-
-- Minimal Admin UI: An optional backend-only surface may be exposed under `/admin` for validation and troubleshooting.
-    - `/admin/logs`: Live log viewer (SSE or WebSocket), with level filter and tail.
-    - Access Control: Protect with basic auth, IP allowlist, or bind to localhost only in production.
-    - Toggleable Sinks: Console, file, and SSE/WebSocket broadcast can be enabled via configuration.
-- Metrics/Health: Extend `/health`, `/ready`, `/live` with structured JSON for monitoring systems.
-- Non-invasive: The admin UI is not required for normal operation and can be disabled entirely for production deployments.
-
-## 12. Operational Schemas: Health/Readiness
-
-The Unified Server exposes three HTTP endpoints with JSON payloads for preflight and monitoring. Status values: "ok" | "degraded" | "error".
-
-### 12.1 `/live`
-```json
-{
-    "status": "live",
-    "ts": "2025-08-11T12:34:56.000Z",
-    "uptimeSec": 1234
-}
-```
-
-### 12.2 `/ready`
-```json
-{
-    "status": "ready",
-    "ts": "2025-08-11T12:34:56.000Z",
-    "wsInitialized": true,
-    "proxiesReady": true
-}
-```
-
-### 12.3 `/health`
-```json
-{
-    "status": "ok",
-    "ts": "2025-08-11T12:34:56.000Z",
-    "stateVersion": 42,
-    "clients": { "tv": true, "remote": false },
-    "children": {
-        "tvSsr": { "status": "ok", "port": 5101, "pid": 12345, "restarts": 0 },
-        "remoteSsr": { "status": "ok", "port": 5102, "pid": 12346, "restarts": 0 }
-    }
-}
-```
 
 ---
 

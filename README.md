@@ -10,7 +10,7 @@ For complete architecture and protocol details, see the single source of truth: 
 
 ### Key Features
 - **Unified Server**: Server-side FSM owns state; clients are stateless
-- **Auto Discovery**: Remote automatically finds and connects to TV devices
+- **QR code based Discovery**: Remote connects using a QR code provided by the TV application
 - **Real-time Sync**: Navigation and playback state synchronized between devices
 - **YouTube Integration**: Scene-based video playbook with automatic seeking and dynamic thumbnail calculation
 - **Material Design**: Modern, responsive interfaces optimized for each device
@@ -31,15 +31,15 @@ cd ../../server && npm install
 cd ../validation && npm install
 ```
 
-### Run Modes (Validation Orchestrator)
+### Integration Run Modes
 The validation workspace provides four explicit modes (no extra scripts files required):
 
-Mode | Description | Angular Builds | Processes
------|-------------|----------------|----------
-prod | Both TV & Remote as production builds | tv + remote | server
-tv-stub | Remote prod UI, TV simulated | remote only | server + tv stub
-remote-stub | TV prod UI, Remote simulated | tv only | server + remote stub
-stubs | Both simulated stubs (fast loop) | none | server + tv stub + remote stub
+Mode | Description | Angular Builds | Processes | Integration Type
+-----|-------------|----------------|-----------| ----------
+prod | Both TV & Remote as production builds | tv + remote | server | full
+tv-stub | Remote prod UI, TV simulated | remote only | server + tv stub | partial
+remote-stub | TV prod UI, Remote simulated | tv only | server + remote stub | partial
+stubs | Both simulated stubs (fast loop) | none | server + tv stub + remote stub | Stub only
 
 Run examples (from repo root with workspace flag or inside validation folder):
 ```powershell
@@ -49,6 +49,7 @@ npm run remote-stub -w validation
 npm run stubs     -w validation
 ```
 
+
 Classic direct Angular dev (hot reload) remains available:
 ```bash
 cd apps/tv && ng serve
@@ -57,29 +58,6 @@ cd apps/remote && ng serve
 ```
 
 Integrated validation flows: see [VALIDATION.md](./VALIDATION.md).
-
-## 🏗️ Architecture
-
-### System Components
-
-Canonical architecture references (single source of truth):
-- [System Components & Architecture Diagram](./ARCHITECTURE.md#2-system-components--architecture-diagram)
-- [Unified Communication Protocol](./ARCHITECTURE.md#4-unified-communication-protocol)
-- [Network Architecture & Discovery](./ARCHITECTURE.md#6-network-architecture--discovery)
-
-Roles at a glance (details in ARCHITECTURE.md → Application Details):
-- [Unified Server](./ARCHITECTURE.md#server-app-unified-nodejs-server): Serves apps, owns the FSM, manages protocol, relays messages.
-- [TV Application](./ARCHITECTURE.md#tv-application-appstv): Stateless display/player; renders based on `state_sync` from the server.
-- [Remote Application](./ARCHITECTURE.md#remote-application-appsremote): Control and data owner; connects to server and sends commands/data.
-
-Dev ports and discovery are defined here:
-- [Network Architecture & Discovery](./ARCHITECTURE.md#6-network-architecture--discovery)
-
-### Core Principles
-1. **Single Source of Truth**: Remote app owns all content data
-2. **TV as Display**: TV app receives and displays data from Remote
-3. **Direct Connection**: No external servers or dependencies
-4. **Real-time Sync**: Navigation state synchronized via WebSocket
 
 ## 📱 Applications
 
@@ -104,6 +82,16 @@ Dev ports and discovery are defined here:
   - Enhanced video controls during playback and dynamic thumbnail integration
   - See details: [ARCHITECTURE.md — Remote Application](./ARCHITECTURE.md#remote-application-appsremote)
 
+### Unified Server (`server/`)
+**Role**: Centralized Node.js Server
+- **Technology**: Node.js 18+ with Express and ws
+- **Summary**:
+  - Serves static assets for both TV and Remote applications
+  - Manages WebSocket connections and owns the server-side FSM
+  - Implements the Stop-and-Wait protocol for reliable message delivery
+  - Handles all state synchronization and message routing between clients
+- **See details**: [ARCHITECTURE.md — Unified Server](./ARCHITECTURE.md#server-app-unified-nodejs-server)
+
 ## 🎬 Content Structure
 
 ### Hierarchical Data Model
@@ -113,38 +101,18 @@ Dev ports and discovery are defined here:
 - **Enhanced Controls**: Additional navigation during video playback
 
 ### Video Integration
-```typescript
-interface Video {
-  id: string;
-  title: string;
-  url: string;              // Full YouTube URL
-  youtubeId: string;        // Extracted YouTube video ID
-  likedScenes: Scene[];     // Renamed from scenes
-}
+Authoritative types and details live in IMPLEMENTATION.md. See:
+- Video interfaces and shape: IMPLEMENTATION.md → "Video Integration"
+- YouTube helpers used for thumbnails: `shared/utils/youtube-helpers.ts`
 
-interface Scene {
-  id: string;
-  title: string;
-  startTime: number;        // Seconds for YouTube seeking
-  endTime?: number;
-  // thumbnail removed - calculated dynamically from YouTube
-}
-
-// Dynamic thumbnail calculation
-function getVideoThumbnail(videoUrl: string): string {
-  const videoId = extractYouTubeId(videoUrl);
-  return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-}
-```
-
-## 🔌 Communication Protocol & Configuration
+## 🛠 Communication Protocol & Configuration
 
 Protocol v3.0 (Stop-and-Wait), centralized server-owned FSM; clients are stateless and render from `state_sync`.
 
 Authoritative definitions: [shared/websocket/websocket-protocol.ts](./shared/websocket/websocket-protocol.ts)
 
-Message Types (high-level):
-`register`, `navigation_command`, `control_command`, `action_confirmation`, `ack`, `state_sync`, `error`.
+**Message Types (high-level):**
+`register`, `data`, `navigation_command`, `control_command`, `action_confirmation`, `ack`, `state_sync`, `error`, `heartbeat`.
 
 Configuration Separation:
 - `WEBSOCKET_CONFIG` (shared, runtime essentials): port, ack timeout, websocket path.
@@ -165,28 +133,9 @@ For the authoritative implementation tasks and current progress, see [IMPLEMENTA
 ## 🌐 Network Architecture
 See the authoritative flow and details in: [ARCHITECTURE.md — Network Architecture & Discovery](./ARCHITECTURE.md#6-network-architecture--discovery).
 
-Summary: both clients connect to the unified server; the server owns the FSM, pushes `state_sync` updates, and clients send navigation/control commands using the Stop-and-Wait protocol.
-
 ## 🧪 Testing & Validation
 
-See [VALIDATION.md](./VALIDATION.md) for environment checks, integration scenarios, and stub usage.
-
-Quick checks:
-```powershell
-# Full prod mode
-npm run mode:prod -w validation
-curl http://localhost:8080/live
-curl http://localhost:8080/health
-
-# Fast protocol loop (both stubs)
-npm run stubs -w validation
-```
-
-Quick validation (one command):
-```powershell
-# Runs the consolidated quick flow (preflight + hooks) with debug logs
-npm run quick:dev -w validation # hooks A, B, I, C, D, E, J (all passing as of 2025-08-14)
-```
+Canonical flows, commands, and hook references live in [VALIDATION.md](./VALIDATION.md). Refer there for environment checks, modes, and end-to-end scenarios.
 
 Manual Angular build verification:
 ```bash

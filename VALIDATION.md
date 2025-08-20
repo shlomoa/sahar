@@ -2,66 +2,87 @@
 
 This document outlines the comprehensive testing and validation strategy for the SAHAR Unified Appliance Model. It defines a series of manual and automated tests to ensure the system is "Always Alive, Always Correct."
 
+
+## Guiding Principles for Validation
+
+- **Keep the system “Always Alive, Always Correct”** by coupling each implementation task with validation and documentation updates.
+
+
 ---
 
-## 1. Validation Structure
 
-Validation is divided into three primary phases, executed sequentially after any implementation task. A lightweight multi‑mode runner (npm scripts under `validation/`) lets you spin up only the pieces needed per phase (see Section 1.1).
+## Validation Structure
+
+Validation is divided into three primary phases, executed sequentially after any implementation task. A lightweight multi‑mode runner (npm scripts under `validation/`) lets you spin up only the pieces needed per phase.
 
 1.  **Unit Testing**: Focused, automated tests for individual components.
-2.  **Per-App Testing**: Manual, flow-based tests for each application against a mock server.
-3.  **Full Integration Testing**: Automated, end-to-end tests of the complete system.
+2.  **Functional Testing**: Above unit, below app-level — focuses on services and protocols.
+3.  **Per-App Testing**: Manual, flow-based tests for each application against a mock server.
+4.  **Full Integration Testing**: Automated, end-to-end tests of the complete system.
 
-### 1.1 Runtime Modes (Rapid Iteration)
 
-The validation workspace provides four orchestrated modes (no extra JS launcher files — pure npm scripting). Choose the lightest mode that still exercises the layer you are changing:
+---
 
-Mode | Purpose | Angular Builds | Processes Started
------|---------|----------------|------------------
-`mode:prod` | Full stack (both real UIs) | tv + remote | server
-`tv-stub` | Real Remote UI, simulated TV | remote | server + tv stub
-`remote-stub` | Real TV UI, simulated Remote | tv | server + remote stub
-`stubs` | Protocol / server only (fast loop) | none | server + both stubs
+## Validation folder content
 
-Invocation examples (from repo root):
-```powershell
-npm run mode:prod -w validation
-npm run tv-stub -w validation
-npm run remote-stub -w validation
-npm run stubs -w validation
+The `validation/` folder contains scripts and configurations for running the validation phases. It includes:
+- **npm scripts**: For quick setup and execution of validation flows.
+- **Stubs**: Lightweight, controllable stand-ins for the TV and Remote apps to validate server functionality independently.
+- **Hooks**: Scripts to automate the setup and teardown of validation environments.
+
+### Validation folder Structure
+- `validation/validate.js`: Main validation orchestrator.
+- `validation/config/validation-config.ts`: Central configuration for validation, including stub ports and server URLs.
+- `validation/stubs/`: Contains stub implementations for the TV and Remote applications.
+- `validation/README.md`: Documentation for running validation flows and modes.
+
+### validation directory structure
+```plaintext
+validation/
+├── validate.js
+├── shared/
+│   ├── models/
+│   │   ├── application-state.ts
+|   ├── services/
+│   │   ├── websocket-base.service.ts
+│   ├── websocket/
+│   │   └── websocket-protocol.ts
+│   └── utils/│       
+│       └── logging.ts
+├── config/
+│   └── validation-config.ts
+├── stubs/
+│   ├── tv-stub.ts
+│   └── remote-stub.ts
+└── README.md
 ```
 
-Section 7 flows map naturally:
-- Flows 8–10 are best exercised via `stubs`, `tv-stub`, or `remote-stub` respectively.
-- Full integration (Section 4) typically uses `mode:prod` (or targeted mixed modes while iterating).
+### Validation Modes
+
+These are the supported integrated run modes driven by the validation workspace.
+
+Mode | Description | Angular Builds | Processes | Integration Type
+-----|-------------|----------------|-----------| ----------
+prod | Both TV & Remote as production builds | tv + remote | server | full
+tv-stub | Remote prod UI, TV simulated | remote only | server + tv stub | partial
+remote-stub | TV prod UI, Remote simulated | tv only | server + remote stub | partial
+stubs | Both simulated stubs (fast loop) | none | server + tv stub + remote stub | Stub only
+
+Run examples (from repo root or inside the `validation/` folder):
+```powershell
+npm run mode:prod -w validation
+npm run tv-stub   -w validation
+npm run remote-stub -w validation
+npm run stubs     -w validation
+```
 
 ---
 
-## 2. Unit Testing
-
-### 2.1. Server-Side FSM (`server/websocket-server.ts`)
-
--   **Method**: Automated unit tests.
--   **Validation Tasks**:
-    -   [x] **Validation Task 2.1.1**: State Transitions `(2025-08-18)` – Register/deregister transitions, ready/initializing, error preservation; no-op suppression verified.
-    -   [x] **Validation Task 2.1.2**: Message Handling `(2025-08-18)` – FSM handlers exercised: register/deregister, navigation, control, seedData; duplicate register rejected without version bump.
-    -   [x] **Validation Task 2.1.3**: State Sync Generation `(2025-08-18)` – Version monotonicity and no-op suppression asserted in unit tests.
-    -   [ ] **Validation Task 2.1.4**: ACK Logic `(YYYY-MM-DD)` – Verify `ack` processing, outstanding ack tracking. Timeout/heartbeat checks will be addressed in Milestone 2 (Task 1.19).
-
-### 2.2. Client-Side Services (`shared/services/websocket-base.service.ts`)
-
--   **Method**: Automated unit tests (Jasmine/Karma).
--   **Validation Tasks**:
-    -   [ ] **Validation Task 2.2.1**: Connection Management `(YYYY-MM-DD)` – Test WebSocket connect, register, ack receipt, reconnection backoff, and state replay on reconnect.
-    -   [ ] **Validation Task 2.2.2**: Message Serialization `(YYYY-MM-DD)` – Verify correct outbound payload shapes and ack correlation; reject malformed sends.
-
----
-
-## 3. Per-App Testing (Manual Flows)
+## Per-App Testing (Manual Flows)
 
 These tests are performed manually by running the server and one client application at a time.
 
-### 3.1. TV Application (`apps/tv`)
+### TV Application (`apps/tv`)
 
 -   **Objective**: Ensure the TV app is a pure, stateless renderer of the server's FSM.
 
@@ -79,7 +100,7 @@ These tests are performed manually by running the server and one client applicat
     4.  **Expected**: TV app receives a `state_sync` message with the new navigation state.
     5.  **Expected**: TV app UI updates to display the corresponding view (e.g., a grid of videos).
 
-### 3.2. Remote Application (`apps/remote`)
+### Remote Application (`apps/remote`)
 
 -   **Objective**: Ensure the Remote app correctly sends commands and reflects server state.
 
@@ -90,7 +111,7 @@ These tests are performed manually by running the server and one client applicat
     4.  **Expected**: App receives an `ack` for the registration.
     5.  **Expected**: App receives an initial `state_sync` and renders its default UI.
 
--   **Flow 2: Sending Navigation Commands**
+-   **Flow 2: Sending `navigation_command`**
     1.  (Continuing from Flow 1)
     2.  User clicks a navigation button in the Remote app (e.g., "Scenes").
     3.  **Expected**: Remote app sends a `navigation_command` to the server.
@@ -99,13 +120,13 @@ These tests are performed manually by running the server and one client applicat
 
 ---
 
-## 4. Full Integration Testing (`/validation`)
+## Full Integration Testing (`/validation`)
 
 -   **Objective**: Automate end-to-end user stories involving the real server and both client applications.
 -   **Method**: Prefer the npm mode scripts (`mode:prod`) for standing up the environment. The legacy `sahar-validation.ps1` tasks remain available (VS Code tasks: Environment Check / Start Applications / Integration Tests) but are being phased out in favor of pure package scripts.
 
 Canonical driver (Milestone 1, Path B)
-- Use `npm run quick -w validation` (or `npm run quick:dev -w validation`) as the canonical automation entrypoint. This executes Hooks A, B, I, C, D, E, J end-to-end using the existing `validation/validate.js` orchestrator. Optional artifact capture and schema checks are planned for Milestone 2.
+- Use `npm run quick -w validation` as the canonical automation entrypoint. For verbose debug logs, use `npm run quick:dev -w validation`. This executes Hooks A, B, I, C, D, E, J end-to-end using the existing `validation/validate.js` orchestrator. Optional artifact capture and schema checks are planned for Milestone 2.
 
 -   **Flow 1: Full System Startup & Navigation**
     1.  `sahar-validation.ps1 start`: Starts the server, TV app, and Remote app.
@@ -184,7 +205,7 @@ Canonical driver (Milestone 1, Path B)
 
 ---
 
-## 5. Server & SSR Validation (References)
+## Server & SSR Validation (References)
 
 To avoid duplication, Section 4 contains the canonical flow definitions. Use the mappings below:
 
@@ -195,11 +216,11 @@ To avoid duplication, Section 4 contains the canonical flow definitions. Use the
 
 ---
 
-## 6. App Stubs for Separate Validation (in `/validation`)
+## App Stubs for Separate Validation (in `/validation`)
 
 Purpose: Provide lightweight, controllable stand-ins for the TV and Remote apps so each real app and the server can be validated independently.
 
-### 6.1. Common Stub Contract
+### Common Stub Contract
 
 - Transport: Single-origin WebSocket to `/ws` using the shared protocol (`register`, `ack`, `state_sync`, commands).
 - Identity: Deterministic `client_id` (e.g., `tv-stub-1`, `remote-stub-1`) included in `register`.
@@ -216,7 +237,7 @@ Locations
 - `validation/stubs/tv-stub.ts` — TV renderer stub
 - `validation/stubs/remote-stub.ts` — Remote controller stub
 
-### 6.2. TV Stub Specification (`validation/stubs/tv-stub.ts`)
+### TV Stub Specification (`validation/stubs/tv-stub.ts`)
 
 - Registration
     - Sends `register` with `{ client_type: "tv", client_id }` on connect; awaits `ack`.
@@ -229,7 +250,7 @@ Locations
 - Configuration
     - Sourced from `validation/config/validation-config.ts` (central stub ports, reconnect/backoff) plus optional CLI overrides: `--server-url` (default built via `buildLocalServerUrl()`), `--http-port` (default TV stub port), `--client-id`.
 
-### 6.3. Remote Stub Specification (`validation/stubs/remote-stub.ts`)
+### Remote Stub Specification (`validation/stubs/remote-stub.ts`)
 
 - Registration
     - Sends `register` with `{ client_type: "remote", client_id }`; awaits `ack`.
@@ -244,7 +265,7 @@ Locations
 
 ---
 
-## 7. Stub-Based Validation Flows (Canonical)
+## Stub-Based Validation Flows (Canonical)
 
 These flows validate components independently using the stubs above. They are canonical; other sections should reference them.
 
@@ -285,117 +306,25 @@ These flows validate components independently using the stubs above. They are ca
 
 ---
 
-## 8. Validation Constants and Configuration Separation (reference)
+## Validation Constants and Configuration Separation (reference)
 
 Use these values unless overridden by test config; they align with ARCHITECTURE.md.
 
 - Shared runtime config (`shared/websocket/websocket-protocol.ts` / `WEBSOCKET_CONFIG`):
-    - `SERVER_PORT`, `ACK_TIMEOUT_MS`, `WS_PATH`
+    - `SERVER_PORT`, `ACK_TIMEOUT`, `WS_PATH`, `TV_DEV_PORT`, `REMOTE_DEV_PORT`
 - Validation-only config (`validation/config/validation-config.ts` / `VALIDATION_CONFIG`):
     - Stub HTTP ports, reconnect backoff (`RECONNECT_BASE_MS`, `RECONNECT_MAX_MS`, `RECONNECT_JITTER_MS`), helper `buildLocalServerUrl()`
-- Timing defaults: ACK_TIMEOUT_MS=3000; reconnect backoff base/max/jitter = 500/5000/100 ms
+- Timing defaults: ACK_TIMEOUT=5000; reconnect backoff base/max/jitter = 500/5000/100 ms
 - WebSocket path: /ws (same-origin)
-- Health statuses: ok | degraded | error
+- Health statuses: ok | degraded | error (not currently implemented in code)
 - ApplicationState schema: see ARCHITECTURE.md “Server-owned ApplicationState”
 - Health payloads: see ARCHITECTURE.md Section 12 (Operational Schemas)
 
-Configuration Separation Rationale:
-- Prevent validation-only tuning values from leaking into production bundles.
-- Ensure a single source of truth for protocol-critical timing (ACK) while allowing experimental reconnect tuning.
+**Note:** All constant names in documentation match those in code. Health status is referenced for future work.
 
 ---
 
-## 9. Structured Logging (Server + Stubs)
-
-All runtime components (Unified Server, TV Stub, Remote Stub) emit single-line JSON logs to stdout for deterministic parsing during validation.
-
-### 9.1 Schema
-
-```
-{
-  ts: string (ISO 8601 UTC),
-  level: "info" | "warn" | "error",
-  event: string (canonical snake_case or dot.notation identifier),
-  msg?: string (short human-friendly message),
-  meta?: object (arbitrary structured payload; MUST be JSON-serializable)
-}
-```
-
-Additional fixed fields may appear inside `meta` when provided via base context:
-
-- component: "server" | "tv_stub" | "remote_stub"
-- client_id: (stub only)
-
-### 9.2 Canonical Events (Initial Set)
-
-Server:
-- server_start
-- server_status
-- server_ready
-- client_connected
-- client_registered
-- message_received
-- navigation_command_handled
-- control_command_handled
-- action_confirmation_received
-- invalid_message (warn)
-- websocket_error (error)
-- shutdown_signal (warn)
-- server_shutdown
-
-Stubs (prefix `ws.` and `http.` retained):
-- ws.connect.start
-- ws.open
-- ws.ack
-- ws.state_sync
-- ws.close (warn)
-- ws.error (error)
-- ws.reconnect.schedule
-- ws.message / ws.message.parse_error (error)
-- http.listen
-- http.reset
-- http.command.sent / http.command.seed / http.command.error (error)
-
-### 9.3 Validation Expectations
-
-Automated and manual validation may assert:
-1. Each log line parses as valid JSON and contains required fields (ts, level, event).
-2. No raw `console.log` usage for runtime events outside the shared logger (future static check may enforce this).
-3. `invalid_message` events include error `code` and `message` inside `meta`.
-4. For a successful startup sequence, expected ordered events (subset):
-    - server_start → server_status → server_ready
-5. For a full registration flow (server + both stubs):
-    - client_connected (twice) → client_registered (tv) → client_registered (remote) → state sync events (implicit) → navigation/ control handling events when commands issued.
-6. Absence of `websocket_error` and `invalid_message` during happy-path scenarios.
-
-### 9.4 Sampling & Buffering
-
-Stubs retain an in-memory rolling buffer (size 500) of emitted log records surfaced via `GET /logs` for black-box test drivers. The server does not buffer (logs are stream-only) to preserve simplicity—tests should tail stdout or capture process logs.
-
-### 9.5 Extensibility Rules
-
-When adding new events:
-- Prefer a stable, machine-oriented event key (snake_case or dotted groups) over free-form text.
-- Include only structured data in `meta`; avoid embedding large blobs (>5KB) or circular references.
-- Avoid changing semantics of existing event names; introduce a new event instead.
-
-### 9.6 Failure Modes
-
-If JSON serialization of `meta` fails (e.g., circular reference), the logger emits a fallback record:
-```
-{ "ts": <iso>, "level": <level>, "event": <original_event>, "msg": "logging_failure", "error": <error_message> }
-```
-Tests treat any `logging_failure` occurrence as a validation warning.
-
-### 9.7 Future Enhancements (Not Yet Implemented)
-
-- Static validation script to scan for disallowed raw console usage.
-- Log schema contract test ensuring required fields and allowed level values.
-- Correlation IDs (e.g., for multi-step command lifecycles) if/when needed.
-
----
-
-## 10. Validation Hooks Quick Reference (Task 1.14)
+## Validation Hooks Quick Reference (Task 1.14)
 
 Purpose: Provide a concise, script-friendly map of the smallest actionable checks ("hooks") that higher‑level validation drivers or ad‑hoc manual smoke tests can invoke independently. Each hook is idempotent and has a clearly defined PASS condition. Where a more detailed flow already exists in earlier sections, the hook references it instead of duplicating steps. These hooks are the canonical targets for the future quick‑run workflow (Task 4.2) and integration drivers (Task 4.4).
 
@@ -404,85 +333,6 @@ Legend
 - Expected: Minimal success criteria. (Any deviation → FAIL.)
 - Ref: Link to the fuller flow/spec section in this document.
 
- - [x] **Hook A – Server Startup & Health** `(2025-08-14)`
-1. Start server (dev static or prod_static mode).
-2. GET /live → 200 { status: "live" }
-3. GET /ready → 200 { status: "ready" } (after initialization)
-4. GET /health → 200 object containing at least { status: "ok" | "degraded" | "error" }
-Expected: All three endpoints reachable; no error logs (invalid_message / websocket_error) during startup.
-Ref: Section 4, Flow 4.
-
- - [x] **Hook B – Stub Pair Registration Round Trip** `(2025-08-14)`
-Prereq: Server running.
-1. Start TV Stub (`npm run stubs -w validation` OR individually `npm run tv-stub -w validation` plus Remote Stub) – both stubs connect.
-2. Observe server logs: two client_connected + two client_registered events.
-3. GET TV Stub /state → object with version >= 1.
-4. GET Remote Stub /state → object with version >= 1.
-Expected: Both stubs have received at least one state_sync and acknowledged it (implicit in internal ack logic).
-Ref: Section 7, Flow 8 (steps 1–3 plus state assertions).
-
- - [x] **Hook C – Navigation Command Propagation** `(2025-08-14)`
-Prereq: Hook B.
-1. POST Remote Stub /command { type: "navigation_command", payload: { view: "videos" } }.
-2. Server log sequence: navigation_command_handled (info) → state_broadcast_* events → state_broadcast_complete.
-3. GET TV Stub /state shows navigation.view == "videos".
-Expected: Single version increment for this command; no duplicate broadcasts (broadcast queue collapsed events allowed but only if other mutations occurred concurrently).
-Ref: Section 7, Flow 8 (steps 4–7).
-
- - [x] **Hook D – Control Command Propagation** `(2025-08-14)`
-Prereq: Hook C.
-1. POST Remote Stub /command { type: "control_command", payload: { action: "play", id: "vid-123" } }.
-2. Server logs control_command_handled + state_broadcast_* then completion.
-3. GET TV Stub /state playback.id == "vid-123" AND playback.status == "playing" (naming per ApplicationState schema; adjust if updated).
-Expected: Exactly one additional version increment vs previous hook snapshot.
-Ref: Section 7, Flow 8 (steps 8–11).
-
- - [x] **Hook E – Stop-and-Wait (Ack-Gated Broadcast Discipline)** `(2025-08-14)`
-Prereq: Hook B.
-1. Issue two rapid POST /command navigation_command requests (different views) to Remote Stub without waiting.
-2. Inspect server logs: Only one broadcast in-flight (no overlapping state_broadcast* with same version); potential state_broadcast_deferred/state_broadcast_collapsed events appear.
-3. Final TV Stub /state reflects the second command's view.
-Expected: Intermediate broadcast either skipped or collapsed; final state version advanced by at most 2 (register baseline + collapsed result) since Hook B snapshot.
-Ref: Task 1.16 description (IMPLEMENTATION.md) + Section 7 adaptation.
-
- - [ ] **Hook F – Dev SSR Proxy Smoke** `(YYYY-MM-DD)`
-1. Start Angular dev SSR servers (TV 4203, Remote 4202).
-2. Start unified server with DEV_SSR=1 (`npm run dev:proxy -w server`).
-3. GET / (or /tv) returns HTML containing a root app marker (e.g., `<app-root`).
-4. GET /remote returns HTML containing remote root marker.
-Expected: 200 responses; no unexpected proxy error logs.
-Ref: Section 4, Flow 5.
-
- - [ ] **Hook G – Prod Bundle Presence (Static Mode)** `(YYYY-MM-DD)`
-1. Build Angular apps (browser + server bundles) if present.
-2. Start server in prod_static (`npm run start:prod -w server`).
-3. Observe startup log SSR_STATUS lines for each app indicating serverDirExists boolean and an entry pick (or absence gracefully noted).
-Expected: Log lines present; absence of bundle does not crash; assets served at /assets and /remote/assets.
-Ref: Section 4, Flow 6 (initial steps) & Task 1.8 notes.
-
- - [ ] **Hook H – (Future) SSR Child Process Health** `(YYYY-MM-DD)`
-Status: Placeholder until Tasks 1.9 & 1.10 implemented.
-Expected (future): /health includes children[].status == "healthy"; server logs child_start + child_ready events.
-Ref: Will map to updated Section 4 flows when SSR process manager lands.
-
- - [x] **Hook I – Data Seeding (Initial Data Handler)** `(2025-08-14)`
-1. After Hook B, POST Remote Stub /command { type: "seed", payload: { /* data subset */ } } (stub translates to `data` WS message once).
-2. Server logs data_message_handled (or generic message_received + state_broadcast events).
-3. TV Stub /state includes data field merged.
-Expected: Version increments by 1; subsequent identical seed attempt produces no version change (FSM no-op suppression).
-Ref: Task 1.17 acceptance (IMPLEMENTATION.md) + Section 7 adaptation.
-
- - [x] **Hook J – Reconnection Behavior** `(2025-08-14)`
-Prereq: Hook B.
-1. Terminate TV Stub process.
-2. Server logs client_disconnected + (optionally) state_broadcast reflecting loss of TV client.
-3. Restart TV Stub.
-4. Server logs client_connected/client_registered for TV again and issues latest state_sync.
-5. TV Stub /state version matches current server version (monotonic, >= prior to disconnect).
-Expected: No server crash; Remote Stub continuity preserved; version does NOT reset. Note: Heartbeat/ack-timeout enforcement will be implemented in Milestone 2; this hook validates reconnect without timeout simulation.
-Ref: Section 4, Flow 3 (subset) + Section 7 conceptual extension.
-
----
 
 Automation Notes
 - Hooks A–E & I–J are the minimal set targeted for early integration drivers (Tasks 4.2 & 4.4).
@@ -494,3 +344,5 @@ Failure Classification
 - WARNING (non-blocking for Milestone 1): Extraneous log noise (to be tightened under future logging tasks) or absence of optional SSR artifacts in prod_static.
 
 This section (10) fulfills Task 1.14 by providing a durable, referenceable contract for validation automation without duplicating full flow narratives.
+
+---
