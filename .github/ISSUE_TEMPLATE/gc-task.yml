@@ -1,0 +1,71 @@
+name: GC Task (Milestone 1.5)
+description: Track a task for Milestone 1.5 — GitHub Copilot garbage collection
+title: "[M1.5] "
+labels: ["gc"]
+body:
+  - type: input
+    id: stepid
+    attributes:
+      label: StepId
+      description: Milestone step identifier (e.g., 1.5.3.2)
+      placeholder: 1.5.x
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      placeholder: What is the change and why now?
+    validations:
+      required: true
+  - type: textarea
+    id: goals
+    attributes:
+      label: Goals
+      placeholder: Link to MILESTONES.md section and list concrete goals
+  - type: checkboxes
+    id: acceptance
+    attributes:
+      label: Acceptance criteria (check when complete)
+      options:
+        - label: Project builds and tests pass locally
+        - label: Always-alive procedure unaffected or updated
+        - label: Code paths covered at high level
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints
+      placeholder: Folder structure, docs, configs, packages… must not change unless SA does it
+  - type: textarea
+    id: links
+    attributes:
+      label: Links
+      placeholder: MILESTONES.md anchor, ARCHITECTURE.md, VALIDATION.md
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - server
+        - tv
+        - remote
+        - shared
+        - validation
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type
+      options:
+        - refactor
+        - docs
+        - cleanup
+        - validation
+        - architecture
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - P0
+        - P1
+        - P2

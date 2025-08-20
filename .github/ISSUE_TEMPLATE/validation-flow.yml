@@ -1,0 +1,44 @@
+name: Validation Flow
+description: Define and track a validation flow (strawman/high-level coverage)
+title: "[Validation] "
+labels: ["gc", "type:validation", "area:validation"]
+body:
+  - type: input
+    id: flow
+    attributes:
+      label: Flow name
+      placeholder: QR Onboarding / Video Playback Control
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      placeholder: Link to MILESTONES.md and VALIDATION.md sections
+  - type: textarea
+    id: prerequisites
+    attributes:
+      label: Pre-requisites
+      placeholder: Setup, env, data
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps
+      placeholder: Step-by-step
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected outcome
+      placeholder: What proves this flow passes
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      placeholder: Logs, screenshots, links
+  - type: dropdown
+    id: result
+    attributes:
+      label: Result
+      options:
+        - pass
+        - fail
