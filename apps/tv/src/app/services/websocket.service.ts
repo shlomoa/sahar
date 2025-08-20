@@ -15,8 +15,8 @@ import { NavigationState } from '@shared/models/video-navigation';
   providedIn: 'root'
 })
 export class WebSocketService extends WebSocketBaseService {
-  private discoverySocket: any = null; // UDP socket for discovery
-  private discoveryTimer: any = null;
+  //private discoverySocket: any = null; // UDP socket for discovery
+  private discoveryTimer: unknown = null;
 
   // Discovered devices
   private devicesSubject = new BehaviorSubject<NetworkDevice[]>([]);
@@ -102,7 +102,7 @@ export class WebSocketService extends WebSocketBaseService {
   private async pingDevice(ip: string): Promise<void> {
     try {
       // Try to establish a quick WebSocket connection to detect devices
-      const testWs = new WebSocket(`ws://${ip}:${WEBSOCKET_CONFIG.DEFAULT_PORT}`);
+      const testWs = new WebSocket(`ws://${ip}:${WEBSOCKET_CONFIG.SERVER_PORT}`);
 
       const timeout = setTimeout(() => {
         testWs.close();
@@ -121,7 +121,7 @@ export class WebSocketService extends WebSocketBaseService {
             capabilities: ['navigation', 'playback', 'status'],
             networkInfo: {
               ip: window.location.hostname,
-              port: WEBSOCKET_CONFIG.DEFAULT_PORT
+              port: WEBSOCKET_CONFIG.SERVER_PORT
             },
             protocolVersion: '2.0'
           }
@@ -146,7 +146,7 @@ export class WebSocketService extends WebSocketBaseService {
   }
 
   // Connect to WebSocket server (for testing with localhost:8000)
-  public override connect(url: string = `ws://localhost:${WEBSOCKET_CONFIG.DEFAULT_PORT}`): boolean {
+  public override connect(url: string = `ws://localhost:${WEBSOCKET_CONFIG.SERVER_PORT}`): boolean {
     console.log(`📺 TV connecting to WebSocket at ${url}`);
     return super.connect(url);
   }  
@@ -557,7 +557,7 @@ export class WebSocketService extends WebSocketBaseService {
           capabilities: ['display', 'video', 'audio', 'navigation'],
           networkInfo: {
             ip: window.location.hostname,
-            port: WEBSOCKET_CONFIG.DEFAULT_PORT
+            port: WEBSOCKET_CONFIG.SERVER_PORT
           },
           protocolVersion: '2.0'
         }

@@ -1,21 +1,11 @@
-import { Injectable, OnDestroy } from '@angular/core';
-import { BehaviorSubject, Observable, Subject, interval, of } from 'rxjs';
-import { takeUntil, retry, delay, startWith, switchMap, catchError, filter, map } from 'rxjs/operators';
+import { Injectable } from '@angular/core';
+import { BehaviorSubject, Observable, Subject } from 'rxjs';
+import { switchMap, filter, map } from 'rxjs/operators';
 import {
-  RemoteMessage,
-  NavigationMessage,
-  ControlMessage,
-  DiscoveryMessage,
-  DiscoveryResponseMessage,
-  StatusMessage,
-  DataMessage,
-  DataConfirmationMessage,
-  ErrorMessage,
-  HeartbeatMessage,
+  DataMessage,  
+  ErrorMessage,  
   DataPayload,
   WebSocketMessage,
-  WebSocketError,
-  NetworkDevice,
   WEBSOCKET_CONFIG
 } from '@shared/websocket/websocket-protocol';
 import {  
@@ -45,7 +35,7 @@ export class WebSocketService extends WebSocketBaseService {
   /**
    * Add a debug log entry to the buffer and console
    */
-  private debugLog(entry: string, ...args: any[]): void {
+  private debugLog(entry: string, ...args: unknown[]): void {
     const timestamp = new Date().toISOString();
     const formatted = `[${timestamp}] ${entry}`;
     this.debugLogBuffer.push(formatted + (args.length ? ' ' + JSON.stringify(args) : ''));
