@@ -16,6 +16,7 @@ import { SharedPerformersGridComponent, SharedVideosGridComponent, SharedScenesG
 import { Observable, Subscription } from 'rxjs';
 import { ControlCommandMessage } from '@shared/websocket/websocket-protocol';
 import { getYoutubeVideoId } from '@shared/utils/youtube-helpers';
+import { WEBSOCKET_CONFIG } from '@shared/websocket/websocket-protocol';
 
 @Component({
   selector: 'app-root',
@@ -109,8 +110,14 @@ export class App implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-  // Compute QR target URL (per spec: encode `${location.origin}/remote`)
-  this.remoteUrl = `${window.location.origin}/remote`;
+  // Build Remote URL as protocol://FQDN:REMOTE_PORT (avoid localhost in QR)
+  const protocol = window.location.protocol;
+  const host = window.location.hostname; // If the TV is accessed via FQDN, this will be the FQDN
+  const remotePort = WEBSOCKET_CONFIG.REMOTE_DEV_PORT;
+  this.remoteUrl = `${protocol}//${host}:${remotePort}`;
+  if (host === 'localhost' || host === '127.0.0.1') {
+    console.warn('QR is using localhost. Access the TV via its FQDN or IP so the QR encodes a scannable host.');
+  }
     // Navigation service automatically initializes to home
     this.navigation$.subscribe(nav => {
       console.log('Navigation state updated:', nav);
