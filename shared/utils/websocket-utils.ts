@@ -1,4 +1,4 @@
-import { WEBSOCKET_CONFIG, WebSocketMessage } from '../websocket/websocket-protocol';
+import { WEBSOCKET_CONFIG, WebSocketMessage, BasePayload } from '../websocket/websocket-protocol';
 
 // Local lightweight error shape used by legacy helpers (not part of protocol types)
 export interface WebSocketClientError {
@@ -14,7 +14,7 @@ export class WebSocketUtils {
     return `${deviceType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  static createMessage(type: WebSocketMessage['type'], payload: undefined, source: 'tv' | 'remote' | 'server'): WebSocketMessage {
+  static createMessage(type: WebSocketMessage['type'], payload: BasePayload = {}, source: 'tv' | 'remote' | 'server'): WebSocketMessage {
     return {
       type,
       timestamp: Date.now(),
@@ -54,16 +54,23 @@ export class WebSocketUtils {
 
   static async testWebSocketConnection(url: string, timeout = 5000): Promise<boolean> {
     return new Promise((resolve) => {
+      let ws: WebSocket | null = null;
       const timer = setTimeout(() => {
-        ws.close();
+        try { ws?.close(); } catch { /* ignore */ }
         resolve(false);
       }, timeout);
 
-      const ws = new WebSocket(url);
+      try {
+        ws = new WebSocket(url);
+      } catch {
+        clearTimeout(timer);
+        resolve(false);
+        return;
+      }
       
       ws.onopen = () => {
         clearTimeout(timer);
-        ws.close();
+        try { ws?.close(); } catch { /* ignore */ }
         resolve(true);
       };
 
@@ -89,13 +96,14 @@ export class WebSocketUtils {
     return Math.min(baseMs * Math.pow(2, attempt - 1), maxMs);
   }
 
-  static isValidWebSocketMessage(data: any): data is WebSocketMessage {
+  static isValidWebSocketMessage(data: unknown): data is WebSocketMessage {
+    const obj = data as Partial<WebSocketMessage> | null;
     return (
-      data &&
-      typeof data === 'object' &&
-      typeof data.type === 'string' &&
-      typeof data.timestamp === 'number' &&
-      data.payload !== undefined
+      !!obj &&
+      typeof obj === 'object' &&
+      typeof obj.type === 'string' &&
+      typeof obj.timestamp === 'number' &&
+      (obj as any).payload !== undefined
     );
   }
 

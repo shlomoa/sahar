@@ -1,6 +1,11 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { WebSocketMessage } from '../websocket/websocket-protocol';
+import {
+  WebSocketMessage,
+  MessageType,
+  BasePayload,
+  SaharMessage,
+} from '../websocket/websocket-protocol';
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -12,6 +17,16 @@ export abstract class WebSocketBaseService implements OnDestroy {
   protected maxReconnectAttempts = 5;
   protected heartbeatInterval = 30000; // 30 seconds
   protected heartbeatTimer: number | null = null;
+
+  // Protocol-driven extensibility maps
+  private generators = new Map<
+    MessageType,
+    (payload?: BasePayload) => SaharMessage
+  >();
+  private handlers = new Map<
+    MessageType,
+    (message: SaharMessage) => void
+  >();
 
   // Common observables
   protected connectionState$ = new BehaviorSubject<ConnectionState>('disconnected');
@@ -38,6 +53,41 @@ export abstract class WebSocketBaseService implements OnDestroy {
 
   get isConnected(): boolean {
     return this.connectionState$.value === 'connected';
+  }
+
+  // Registration APIs for apps
+  registerGenerator<T extends MessageType>(
+    type: T,
+    generator: (payload?: BasePayload) => Extract<SaharMessage, { type: T }>
+  ): void {
+    this.generators.set(type, generator as unknown as (payload?: BasePayload) => SaharMessage);
+  }
+
+  registerGenerators(entries: Partial<Record<MessageType, (payload?: BasePayload) => SaharMessage>>): void {
+    Object.entries(entries).forEach(([type, gen]) => {
+      if (gen) this.registerGenerator(type as MessageType, gen as any);
+    });
+  }
+
+  unregisterGenerator(type: MessageType): void {
+    this.generators.delete(type);
+  }
+
+  registerHandler<T extends MessageType>(
+    type: T,
+    handler: (message: Extract<SaharMessage, { type: T }>) => void
+  ): void {
+    this.handlers.set(type, handler as unknown as (message: SaharMessage) => void);
+  }
+
+  registerHandlers(entries: Partial<Record<MessageType, (message: SaharMessage) => void>>): void {
+    Object.entries(entries).forEach(([type, handler]) => {
+      if (handler) this.registerHandler(type as MessageType, handler as any);
+    });
+  }
+
+  unregisterHandler(type: MessageType): void {
+    this.handlers.delete(type);
   }
 
   // Common WebSocket connection logic
@@ -83,10 +133,12 @@ export abstract class WebSocketBaseService implements OnDestroy {
     }
 
     try {
-      const messageWithTimestamp = {
+      const messageWithTimestamp: WebSocketMessage = {
         ...message,
-        timestamp: Date.now()
-      };
+        // Ensure timestamp/source are always present
+        timestamp: (message as any).timestamp ?? Date.now(),
+        source: (message as any).source ?? this.deviceType,
+      } as WebSocketMessage;
       
       this.ws.send(JSON.stringify(messageWithTimestamp));
       console.log(`📤 ${this.deviceType.toUpperCase()}: Sent ${message.type} message:`, messageWithTimestamp);
@@ -94,6 +146,15 @@ export abstract class WebSocketBaseService implements OnDestroy {
       console.error(`❌ ${this.deviceType.toUpperCase()}: Failed to send message:`, error);
       this.errors$.next(`Failed to send message: ${error}`);
     }
+  }
+
+  // High-level send using a registered generator; falls back to a minimal wrapper
+  public sendByType(type: MessageType, payload?: BasePayload): void {
+    const gen = this.generators.get(type);
+    const built = gen
+      ? gen(payload)
+      : ({ type, payload: payload ?? {}, timestamp: Date.now(), source: this.deviceType } as WebSocketMessage);
+    this.sendMessage(built as WebSocketMessage);
   }
 
   private setupWebSocketHandlers(): void {
@@ -109,10 +170,15 @@ export abstract class WebSocketBaseService implements OnDestroy {
 
     this.ws.onmessage = (event) => {
       try {
-        const message: WebSocketMessage = JSON.parse(event.data);
+        const message: SaharMessage = JSON.parse(event.data);
         console.log(`📥 ${this.deviceType.toUpperCase()}: Received ${message.type} message:`, message);
-        this.messages$.next(message);
-        this.handleMessage(message);
+        this.messages$.next(message as WebSocketMessage);
+        const handler = this.handlers.get(message.type);
+        if (handler) {
+          handler(message);
+        } else {
+          this.handleMessage(message as WebSocketMessage);
+        }
       } catch (error) {
         console.error(`❌ ${this.deviceType.toUpperCase()}: Failed to parse message:`, error);
         this.errors$.next(`Invalid message received: ${error}`);
@@ -173,14 +239,12 @@ export abstract class WebSocketBaseService implements OnDestroy {
   }
 
   protected sendHeartbeat(): void {
-    this.sendMessage({
-      type: 'heartbeat',
-      timestamp: Date.now(),
-      source: 'tv',
-      payload: {
-        type: 'any'
-      }
-    });
+    // Use generator if registered; else send minimal payload
+    if (this.generators.get('heartbeat')) {
+      this.sendByType('heartbeat');
+      return;
+    }
+    this.sendByType('heartbeat', { deviceId: this.deviceId, status: 'alive' });
   }
 
   // Abstract methods for subclasses to implement

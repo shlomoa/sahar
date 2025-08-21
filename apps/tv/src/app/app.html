@@ -31,12 +31,12 @@
   <div class="main-content">
     <!-- Video Player (when playing) -->
   <div class="video-player-area" *ngIf="currentLevel === 'playing' && currentVideo && currentScene">
-      <app-video-player
-    [currentVideo]="currentVideo"
-    [currentScene]="currentScene"
-    [videoId]="playbackVideoId || undefined"
-    [isPlaying]="playbackIsPlaying"
-    [positionSec]="playbackPositionSec"
+      <video-player
+        [currentVideo]="currentVideo"
+        [currentScene]="currentScene"
+        [videoId]="playbackVideoId || undefined"
+        [isPlaying]="playbackIsPlaying"
+        [positionSec]="playbackPositionSec"
         [autoplay]="true"
         [showControls]="true"
         (playerReady)="onPlayerReady()"
@@ -44,7 +44,7 @@
         (videoPaused)="onVideoPaused()"
         (videoEnded)="onVideoEnded()"
         (timeUpdate)="onTimeUpdate($event)">
-      </app-video-player>
+      </video-player>
     </div>
 
     <!-- Data View using shared components -->

@@ -4,16 +4,15 @@
 // CORE FSM STATE
 // Imported single-source ApplicationState / ClientInfo from shared models to avoid duplication.
 // =================================================================================================
-import { ApplicationState } from '@shared/models/application-state.js';
+import { ApplicationState } from '../models/application-state';
 
 // =================================================================================================
 // MESSAGE STRUCTURE
 // Base interface for all messages exchanged between server and clients.
 // =================================================================================================
 
-export interface BasePayload {
-  type: 'any' | 'Register' | 'NavigationCommand' | 'ControlCommand' | 'ActionConfirmation' | 'Data' | 'Ack' | 'StateSync' | 'Error';
-}
+// Flexible payload base: allow arbitrary JSON content; specific payloads narrow this when needed
+export type BasePayload = Record<string, unknown>;
 
 export interface WebSocketMessage {
   type: MessageType;
@@ -92,7 +91,8 @@ export interface ActionConfirmationMessage extends WebSocketMessage {
 }
 
 // Remote -> Server one-shot (best effort) domain data seeding
-export interface DataPayload extends BasePayload { type: 'Data', [key: string]: string; }
+// Accept any JSON object for Milestone 1
+export type DataPayload = BasePayload;
 export interface DataMessage extends WebSocketMessage {
   type: 'data';
   payload: DataPayload; // Accept any JSON object for Milestone 1
@@ -127,6 +127,12 @@ export interface ErrorMessage extends WebSocketMessage {
   payload: ErrorPayload;
 }
 
+// Heartbeat (keep-alive); simple lightweight message
+export interface HeartbeatMessage extends WebSocketMessage {
+  type: 'heartbeat';
+  payload: BasePayload;
+}
+
 // =================================================================================================
 // TYPE GUARDS & CONFIG
 // =================================================================================================
@@ -140,7 +146,8 @@ export type SaharMessage =
   | ActionConfirmationMessage
   | AckMessage
   | StateSyncMessage
-  | ErrorMessage;
+  | ErrorMessage
+  | HeartbeatMessage;
 
 // Protocol Configuration
 export const WEBSOCKET_CONFIG = {

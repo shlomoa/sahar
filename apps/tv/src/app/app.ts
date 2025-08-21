@@ -14,6 +14,7 @@ import { NavigationState, VideoItem, Video, LikedScene, Performer } from '@share
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
 import { SharedPerformersGridComponent, SharedVideosGridComponent, SharedScenesGridComponent } from '@shared/components';
 import { Observable, Subscription } from 'rxjs';
+import { ControlCommandMessage } from '@shared/websocket/websocket-protocol';
 import { getYoutubeVideoId } from '@shared/utils/youtube-helpers';
 
 @Component({
@@ -141,48 +142,35 @@ export class App implements OnInit, OnDestroy {
       }
     });
 
-    // Initialize WebSocket connection
+    // Initialize WebSocket connection and wire control commands to YouTube player
     this.initializeWebSocket();
 
-    // Task 2.23: Wire control commands to YouTube player
-    const controlSub = this.webSocketService.tvMessages$.subscribe((msg) => {
-      if (!msg || msg.type !== 'control') return;
-      const action = msg.payload?.action;
-      const payload = msg.payload || {};
+    const controlSub = this.webSocketService.messages.subscribe((msg) => {
+      if (!msg || msg.type !== 'control_command') return;
+      const { action } = (msg as ControlCommandMessage).payload;
+      const payload = (msg as ControlCommandMessage).payload;
       switch (action) {
         case 'play':
-        case 'resume':
           this.videoPlayer?.play();
           break;
         case 'pause':
           this.videoPlayer?.pause();
           break;
-        case 'stop':
-          this.videoPlayer?.stop();
-          break;
-        case 'seek':
-        case 'seek_video': {
-          const seekType = payload.seekType || 'absolute';
-          const time = payload.time ?? payload.seekTime ?? 0;
-          if (seekType === 'relative') {
-            const current = this.videoPlayer?.getCurrentTime() ?? 0;
-            this.videoPlayer?.seekTo(current + time);
-          } else {
-            this.videoPlayer?.seekTo(time);
-          }
+        case 'seek': {
+          const time = payload.seekTime ?? 0;
+          this.videoPlayer?.seekTo(time);
           break;
         }
-        case 'set_volume':
-        case 'volume_change': {
+        case 'set_volume': {
           if (typeof payload.volume === 'number') this.videoPlayer?.setVolume(payload.volume);
           break;
         }
-        // Optional advanced actions — best‑effort mapping
-        case 'play_video': {
-          // If currentVideo exists, just play; deeper wiring requires domain context
-          this.videoPlayer?.play();
+        case 'mute':
+          this.videoPlayer?.setVolume(0);
           break;
-        }
+        case 'unmute':
+          this.videoPlayer?.setVolume(100);
+          break;
       }
     });
     this.subscriptions.push(controlSub);
@@ -190,19 +178,11 @@ export class App implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
-    // Use public disconnect method if available, or handle cleanup differently
-    if (this.webSocketService.disconnect) {
-      try {
-        this.webSocketService.disconnect();
-      } catch {
-        console.log('WebSocket already disconnected');
-      }
-    }
   }
 
   private initializeWebSocket(): void {
     // Subscribe to WebSocket connection status from base class
-    const connectionSub = this.webSocketService.getConnectionState().subscribe(state => {
+    const connectionSub = this.webSocketService.connected$.subscribe(state => {
       if (state === 'connected') {
         this.snackBar.open('Remote connected', 'Close', { duration: 3000 });
       } else if (state === 'disconnected') {
@@ -215,30 +195,13 @@ export class App implements OnInit, OnDestroy {
       }
     });
 
-    // Subscribe to TV-specific WebSocket errors
-    const errorSub = this.webSocketService.tvErrors$.subscribe(error => {
+    // Subscribe to WebSocket errors
+    const errorSub = this.webSocketService.errors.subscribe(error => {
       console.error('WebSocket error:', error);
-      this.snackBar.open(`Connection error: ${error.message}`, 'Close', { duration: 5000 });
+      this.snackBar.open(`Connection error: ${error}`, 'Close', { duration: 5000 });
     });
 
-    // Subscribe to discovered devices
-    const devicesSub = this.webSocketService.devices$.subscribe(devices => {
-      console.log('Discovered devices:', devices);
-      if (devices.length > 0) {
-        const remoteDevices = devices.filter(d => d.deviceType === 'remote');
-        if (remoteDevices.length > 0) {
-          const snackBarRef = this.snackBar.open(`Found ${remoteDevices.length} remote(s)`, 'Connect', {
-            duration: 10000
-          });
-          snackBarRef.onAction().subscribe(() => {
-            // Connect to the first available remote
-            this.webSocketService.connectToDevice(remoteDevices[0]);
-          });
-        }
-      }
-    });
-
-    this.subscriptions.push(connectionSub, errorSub, devicesSub);
+    this.subscriptions.push(connectionSub, errorSub);
 
     // Start the WebSocket connection
     this.webSocketService.connect();

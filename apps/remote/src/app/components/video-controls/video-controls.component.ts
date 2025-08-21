@@ -1,12 +1,12 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSliderModule } from '@angular/material/slider';
-import { LikedScene, Video } from '../../../../../../shared/models/video-navigation';
+import { LikedScene, Video } from '@shared/models/video-navigation';
 
 @Component({
+  // eslint-disable-next-line @angular-eslint/component-selector
   selector: 'video-controls',
   standalone: true,
   imports: [
