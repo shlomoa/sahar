@@ -110,14 +110,37 @@ export class App implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Build Remote URL as protocol://FQDN:REMOTE_PORT (avoid localhost in QR)
+    // Build Remote URL as protocol://FQDN:REMOTE_PORT (avoid localhost in QR).
+    // Prefer server-provided LAN IP from /host-ip, fall back to the browser hostname.
     const protocol = window.location.protocol;
-    const host = window.location.hostname; // If the TV is accessed via FQDN, this will be the FQDN
+    const defaultHost = window.location.hostname; // If the TV is accessed via FQDN, this will be the FQDN
     const remotePort = WEBSOCKET_CONFIG.REMOTE_DEV_PORT;
-    this.remoteUrl = `${protocol}//${host}:${remotePort}`;
-    if (host === 'localhost' || host === '127.0.0.1') {
-      console.warn('QR is using localhost. Access the TV via its FQDN or IP so the QR encodes a scannable host.');
-    }
+    const buildRemoteUrl = (host: string) => `${protocol}//${host}:${remotePort}`;
+
+    // Start with a provisional URL based on the browser hostname.
+    this.remoteUrl = buildRemoteUrl(defaultHost);
+
+    // Try to fetch authoritative host IP from the server and prefer it if available.
+    (async () => {
+      try {
+        const resp = await fetch('/host-ip', { cache: 'no-cache' });
+        if (resp.ok) {
+          const data = await resp.json();
+          const ip = data?.ip;
+          if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
+            this.remoteUrl = buildRemoteUrl(ip);
+          }
+        }
+      } catch (err) {
+        // Fail silently and keep using the browser hostname as a fallback.
+        console.warn('Failed to fetch /host-ip, falling back to browser hostname for QR.', err);
+      }
+
+      // Warn if the QR still encodes localhost so developers notice the issue.
+      if (this.remoteUrl.includes('localhost') || this.remoteUrl.includes('127.0.0.1')) {
+        console.warn('QR is using localhost. Access the TV via its FQDN or IP so the QR encodes a scannable host.');
+      }
+    })();
     // Navigation service automatically initializes to home
     this.navigation$.subscribe(nav => {
       console.log('Navigation state updated:', nav);

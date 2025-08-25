@@ -23,7 +23,8 @@
     "config/validation-config.ts",
     "shared/websocket/websocket-protocol.ts",
     "shared/models/application-state.ts",
-    "shared/utils/logging.ts"
+    "shared/utils/logging.ts",
+    "shared/utils/websocket-utils.ts",
   ],
   "exclude": ["node_modules", "dist"]
 }

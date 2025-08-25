@@ -9,7 +9,7 @@ export interface WebSocketClientError {
 }
 
 // Utility functions for WebSocket operations
-export class WebSocketUtils {
+export class WebSocketUtils {  
   static generateDeviceId(deviceType: 'tv' | 'remote'): string {
     return `${deviceType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }

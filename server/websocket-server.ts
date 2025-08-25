@@ -339,26 +339,26 @@ wss.on('connection', (ws: WebSocket) => {
         break;
       }
       case 'navigation_command': {
-  const nav = msg as NavigationCommandMessage;
-  fsm.navigationCommand(nav.payload.action, nav.payload.targetId);
-  ws.send(JSON.stringify(makeAck('server'))); // Ack before broadcast
-  broadcastStateIfChanged();
+        const nav = msg as NavigationCommandMessage;
+        fsm.navigationCommand(nav.payload.action, nav.payload.targetId);
+        ws.send(JSON.stringify(makeAck('server'))); // Ack before broadcast
+        broadcastStateIfChanged();
         logInfo('navigation_command_handled', { action: nav.payload.action });
         break;
       }
       case 'control_command': {
-  const ctl = msg as ControlCommandMessage;
-  fsm.controlCommand(ctl.payload);
-  ws.send(JSON.stringify(makeAck('server')));
-  broadcastStateIfChanged();
+        const ctl = msg as ControlCommandMessage;
+        fsm.controlCommand(ctl.payload);
+        ws.send(JSON.stringify(makeAck('server')));
+        broadcastStateIfChanged();
         logInfo('control_command_handled', { action: ctl.payload.action });
         break;
       }
       case 'action_confirmation': {
-  const confirm = msg as ActionConfirmationMessage;
-  fsm.actionConfirmation(confirm.payload.status, confirm.payload.errorMessage);
-  ws.send(JSON.stringify(makeAck('server')));
-  broadcastStateIfChanged();
+        const confirm = msg as ActionConfirmationMessage;
+        fsm.actionConfirmation(confirm.payload.status, confirm.payload.errorMessage);
+        ws.send(JSON.stringify(makeAck('server')));
+        broadcastStateIfChanged();
         logInfo('action_confirmation_received', { status: confirm.payload.status });
         break;
       }
@@ -465,8 +465,23 @@ app.use('/.well-known', express.static('public/.well-known', { dotfiles: 'allow'
 app.use(express.static('public'));
 
 // Define path to the TV and Remote app builds (relative to output directory)
-const tvAppPath = path.join(__dirname, '../../apps/tv/dist/sahar-tv');
-const remoteAppPath = path.join(__dirname, '../../apps/remote/dist/sahar-remote');
+// NOTE: Angular build output directory names are the project name (tv, remote)
+// not 'sahar-tv' / 'sahar-remote'. Adjusted to match actual dist structure.
+const tvAppPath = path.join(__dirname, '../../apps/tv/dist/tv');
+const remoteAppPath = path.join(__dirname, '../../apps/remote/dist/remote');
+const tvIndexPath = path.join(tvAppPath, 'browser/index.html');
+const remoteIndexPath = path.join(remoteAppPath, 'browser/index.html');
+// Pre-flight existence checks (helpful diagnostics when static serving fails)
+if (!existsSync(tvIndexPath)) {
+  logWarn('tv_index_missing', { expected: path.relative(__dirname, tvIndexPath) });
+} else {
+  logInfo('tv_index_found', { path: path.relative(__dirname, tvIndexPath) });
+}
+if (!existsSync(remoteIndexPath)) {
+  logWarn('remote_index_missing', { expected: path.relative(__dirname, remoteIndexPath) });
+} else {
+  logInfo('remote_index_found', { path: path.relative(__dirname, remoteIndexPath) });
+}
 
 // Inline SSR status object (Milestone 1 minimal gating – log only, no fail-fast)
 export let SSR_STATUS: { tv: boolean; remote: boolean; tvPath: string; remotePath: string } = {
@@ -484,14 +499,14 @@ app.use('/remote/assets', express.static(path.join(remoteAppPath, 'browser/asset
 // Task 1.6: Dev reverse proxies for SSR HTML (when DEV_SSR=1) else fall back to built assets
 // TV base route: '/' (root) and '/tv'
 app.get(['/','/tv'], (req: Request, res: Response, next: NextFunction) => {
-  if (DEV_SSR) return devProxy(`http://localhost:${WEBSOCKET_CONFIG.TV_DEV_PORT}`)(req, res, next);
+  if (DEV_SSR) return devProxy(`http://${getBestHostIP()}:${WEBSOCKET_CONFIG.TV_DEV_PORT}`)(req, res, next);
   // Fallback to built index.html (prod-like)
   res.sendFile(path.join(tvAppPath, 'browser/index.html'));
 });
 
 // Remote base route '/remote'
 app.get('/remote', (req: Request, res: Response, next: NextFunction) => {
-  if (DEV_SSR) return devProxy(`http://localhost:${WEBSOCKET_CONFIG.REMOTE_DEV_PORT}`)(req, res, next);
+  if (DEV_SSR) return devProxy(`http://${getBestHostIP()}:${WEBSOCKET_CONFIG.REMOTE_DEV_PORT}`)(req, res, next);
   res.sendFile(path.join(remoteAppPath, 'browser/index.html'));
 });
 
@@ -499,7 +514,7 @@ app.get('/remote', (req: Request, res: Response, next: NextFunction) => {
 app.get(['/tv/*splat','/*splat'], (req: Request, res: Response, next: NextFunction) => {
   // Ignore if request looks like a file (has an extension) to avoid hijacking static/health
   if (/\.[a-zA-Z0-9]+$/.test(req.path)) return next();
-  if (DEV_SSR) return devProxy(`http://localhost:${WEBSOCKET_CONFIG.TV_DEV_PORT}`)(req, res, next);
+  if (DEV_SSR) return devProxy(`http://${getBestHostIP()}:${WEBSOCKET_CONFIG.TV_DEV_PORT}`)(req, res, next);
   res.sendFile(path.join(tvAppPath, 'browser/index.html'));
 });
 
@@ -542,9 +557,9 @@ server.listen(WEBSOCKET_CONFIG.SERVER_PORT, () => {
     };
     const tvEntry = tvDirExists ? pickEntry(tvServerDir) : '';
     const remoteEntry = remoteDirExists ? pickEntry(remoteServerDir) : '';
-    SSR_STATUS = { tv: tvDirExists, remote: remoteDirExists, tvPath: tvEntry, remotePath: remoteEntry };
-    logInfo('ssr_dir_status', { app: 'tv', dir: tvServerDir, exists: tvDirExists, pickedEntry: tvEntry || null });
-    logInfo('ssr_dir_status', { app: 'remote', dir: remoteServerDir, exists: remoteDirExists, pickedEntry: remoteEntry || null });
+  SSR_STATUS = { tv: tvDirExists, remote: remoteDirExists, tvPath: tvEntry, remotePath: remoteEntry };
+  logInfo('ssr_dir_status', { app: 'tv', dir: path.relative(__dirname, tvServerDir), exists: tvDirExists, pickedEntry: tvEntry ? path.relative(__dirname, tvEntry) : null });
+  logInfo('ssr_dir_status', { app: 'remote', dir: path.relative(__dirname, remoteServerDir), exists: remoteDirExists, pickedEntry: remoteEntry ? path.relative(__dirname, remoteEntry) : null });
   }
 });
 
