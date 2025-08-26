@@ -34,12 +34,18 @@ const NPX = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 function log(msg){ if(DEBUG) console.log(`[validate] ${msg}`); }
 
 function spawnProc(key, command, args, opts={}) {
-	log(`spawn ${key}: ${command} ${args.join(' ')}`);
-	const useShell = process.platform === 'win32' && /\.(cmd|bat)$/i.test(command);
-	const proc = spawn(command, args, { cwd: opts.cwd||process.cwd(), env: { ...process.env, ...opts.env }, stdio: DEBUG? 'inherit' : 'pipe', shell: useShell });
-	state.processes[key] = proc;
-	proc.on('exit', code => { if(!state.exiting) log(`${key} exited with code ${code}`); });
-	return proc;
+	try {
+		log(`spawn ${key}: ${command} ${args.join(' ')}`);
+		const useShell = process.platform === 'win32' && /\.(cmd|bat)$/i.test(command);
+		const proc = spawn(command, args, { cwd: opts.cwd||process.cwd(), env: { ...process.env, ...opts.env }, stdio: DEBUG? 'inherit' : 'pipe', shell: useShell });
+		state.processes[key] = proc;
+		log(`spawned ${key} pid=${proc.pid || 'unknown'}`);
+		proc.on('exit', code => { if(!state.exiting) log(`${key} exited with code ${code}`); });
+		return proc;
+	} catch(e) {
+		console.error(`Failed to spawn process ${key}: ${command} ${args.join(' ')} Exception: ${e.message}`);
+		process.exit(1);
+	}
 }
 
 async function httpOk(path, timeoutMs) {
@@ -58,7 +64,13 @@ async function httpOk(path, timeoutMs) {
 async function fetchJson(port, path) {
 	return new Promise(resolve => {
 		const req = http.get({ hostname:'localhost', port, path }, res => {
-			let data=''; res.on('data', c=> data+=c); res.on('end', ()=> { try{ resolve(JSON.parse(data)); } catch { resolve(null); } });
+			let data=''; res.on('data', c=> data+=c); res.on('end', ()=> { 
+				try{ 
+					resolve(JSON.parse(data)); 
+				} catch(e) {
+					log(`fetchJson parse error: ${data}, Exception: ${e.message}`);
+					resolve(null);
+				} });
 		});
 		req.on('error', ()=> resolve(null));
 	});
@@ -68,7 +80,13 @@ async function postJson(port, path, body) {
 	return new Promise(resolve => {
 		const data = Buffer.from(JSON.stringify(body));
 		const req = http.request({ hostname:'localhost', port, path, method:'POST', headers: { 'Content-Type':'application/json', 'Content-Length': data.length } }, res => {
-			let out=''; res.on('data', c=> out+=c); res.on('end', ()=> { let json=null; try{ json = out? JSON.parse(out): null; } catch{} resolve({ status: res.statusCode||0, json }); });
+			let out=''; res.on('data', c=> out+=c); res.on('end', ()=> { 
+				let json=null;
+				try { 
+					json = out? JSON.parse(out): null; 
+				} catch(e) {
+					log(`postJson parse error: ${out} Exception: ${e.message}`);
+				} resolve({ status: res.statusCode||0, json }); });
 		});
 		req.on('error', () => resolve({ status: 0, json: null }));
 		req.write(data); req.end();
@@ -86,7 +104,9 @@ async function waitFor(predicate, timeoutMs, intervalMs){
 		try{
 			const ok = await predicate();
 			if(ok) return true;
-		} catch{}
+		} catch(e) {
+			log(`waitFor predicate Exception: ${e.message}`);
+		}
 		await delay(intervalMs);
 	}
 	return false;
@@ -217,7 +237,11 @@ async function hookJ(){
 	const before = await getTvState();
 	const v0 = getVersion(before) || 0;
 	const tv = state.processes['tvStub'];
-	try{ tv?.kill(); } catch{}
+	try { 
+		tv?.kill(); 
+	} catch(e) {
+		log(`Failed to kill tvStub process: Exception ${e.message}`);
+	}
 	await delay(Math.max(250, POLL_INTERVAL_MS));
 	// Restart TV stub
 	state.processes['tvStub'] = spawnProc('tvStub', 'node', ['./dist/stubs/tv-stub.js']);
@@ -250,68 +274,81 @@ async function runHook(name){
 async function startEnvironment() {
 	// Build server (incremental)
 	await new Promise(resolve => {
-		const build = spawnProc('buildServer', NPM, ['--prefix','../server','run','build']);
+		const build = spawnProc('buildServer', NPM, ['run','build:server']);
 		build.on('exit', ()=> resolve());
 	});
 	// Build validation stubs (ensure dist is fresh for stubs/config)
 	await new Promise(resolve => {
-		const buildStubs = spawnProc('buildStubs', NPM, ['run','build:stubs'], { cwd: process.cwd() });
+		const buildStubs = spawnProc('buildStubs', NPM, ['run', 'build:stubs']);
 		buildStubs.on('exit', ()=> resolve());
 	});
 	// Resolve ports from compiled configs (single sources of truth)
 	try {
-		const proto = await import('../server/dist/shared/websocket/websocket-protocol.js');
-			if (proto?.WEBSOCKET_CONFIG?.SERVER_PORT) SERVER_PORT = Number(proto.WEBSOCKET_CONFIG.SERVER_PORT);
-			if (proto?.WEBSOCKET_CONFIG?.ACK_TIMEOUT) {
-				const ack = Number(proto.WEBSOCKET_CONFIG.ACK_TIMEOUT);
-				if (Number.isFinite(ack)) {
-					HEALTH_TIMEOUT_MS = ack;
-					HOOK_B_TIMEOUT_MS = ack;
-				}
+		const proto = await import('./dist/shared/websocket/websocket-protocol.js');
+		if (proto?.WEBSOCKET_CONFIG?.SERVER_PORT) SERVER_PORT = Number(proto.WEBSOCKET_CONFIG.SERVER_PORT);
+		if (proto?.WEBSOCKET_CONFIG?.ACK_TIMEOUT) {
+			const ack = Number(proto.WEBSOCKET_CONFIG.ACK_TIMEOUT);
+			if (Number.isFinite(ack)) {
+				HEALTH_TIMEOUT_MS = ack;
+				HOOK_B_TIMEOUT_MS = ack;
 			}
-	} catch {}
+		}
+	} catch(e) {
+		log(`Filed to import server config; ensure server is built (npm run build:server) Exception: ${e.message}`);
+	}
 	try {
 		const vcfg = await import('./dist/config/validation-config.js');
-			if (vcfg?.VALIDATION_CONFIG?.STUB_PORTS?.tv) TV_STUB_PORT = Number(vcfg.VALIDATION_CONFIG.STUB_PORTS.tv);
-			if (vcfg?.VALIDATION_CONFIG?.STUB_PORTS?.remote) REMOTE_STUB_PORT = Number(vcfg.VALIDATION_CONFIG.STUB_PORTS.remote);
-			const base = Number(vcfg?.VALIDATION_CONFIG?.RECONNECT?.BASE_MS);
-			const max = Number(vcfg?.VALIDATION_CONFIG?.RECONNECT?.MAX_MS);
-			if (Number.isFinite(base)) {
-				POLL_INTERVAL_MS = base;
-				// Use reconnect base as a conservative start wait; cap stubs wait by MAX
-				START_SERVER_WAIT_MS = base;
-				if (Number.isFinite(max)) START_STUBS_WAIT_MS = Math.min(max, base * 3);
-				else START_STUBS_WAIT_MS = base * 3;
-			}
-	} catch {}
+		if (vcfg?.VALIDATION_CONFIG?.STUB_PORTS?.tv) TV_STUB_PORT = Number(vcfg.VALIDATION_CONFIG.STUB_PORTS.tv);
+		if (vcfg?.VALIDATION_CONFIG?.STUB_PORTS?.remote) REMOTE_STUB_PORT = Number(vcfg.VALIDATION_CONFIG.STUB_PORTS.remote);
+		const base = Number(vcfg?.VALIDATION_CONFIG?.RECONNECT?.BASE_MS);
+		const max = Number(vcfg?.VALIDATION_CONFIG?.RECONNECT?.MAX_MS);
+		if (Number.isFinite(base)) {
+			POLL_INTERVAL_MS = base;
+			// Use reconnect base as a conservative start wait; cap stubs wait by MAX
+			START_SERVER_WAIT_MS = base;
+			if (Number.isFinite(max)) START_STUBS_WAIT_MS = Math.min(max, base * 3);
+			else START_STUBS_WAIT_MS = base * 3;
+		}
+	} catch(e) {
+		log(`Failed to import validation config; ensure stubs are built (npm run build:stubs) Exception: ${e.message}`);
+	}
 	// Fail fast if any port unresolved
-		if (!Number.isFinite(SERVER_PORT) || !Number.isFinite(TV_STUB_PORT) || !Number.isFinite(REMOTE_STUB_PORT)) {
-			throw new Error('Ports unresolved. Build server (npm -w server run build) and stubs (npm -w validation run build:stubs) to produce compiled JS configs.');
-		}
-		// Fail fast if any timing unresolved
-		if (!Number.isFinite(HEALTH_TIMEOUT_MS) || !Number.isFinite(HOOK_B_TIMEOUT_MS) || !Number.isFinite(POLL_INTERVAL_MS) || !Number.isFinite(START_SERVER_WAIT_MS) || !Number.isFinite(START_STUBS_WAIT_MS)) {
-			throw new Error('Timing unresolved. Ensure compiled configs expose ACK_TIMEOUT and RECONNECT.{BASE_MS,MAX_MS} by building server and stubs.');
-		}
+	if (!Number.isFinite(SERVER_PORT) || !Number.isFinite(TV_STUB_PORT) || !Number.isFinite(REMOTE_STUB_PORT)) {
+		throw new Error('Ports unresolved. Build server (npm run build:server) and stubs (npm -w validation run build:stubs) to produce compiled JS configs.');
+	}
+	// Fail fast if any timing unresolved
+	if (!Number.isFinite(HEALTH_TIMEOUT_MS) || !Number.isFinite(HOOK_B_TIMEOUT_MS) || !Number.isFinite(POLL_INTERVAL_MS) || !Number.isFinite(START_SERVER_WAIT_MS) || !Number.isFinite(START_STUBS_WAIT_MS)) {
+		throw new Error('Timing unresolved. Ensure compiled configs expose ACK_TIMEOUT and RECONNECT.{BASE_MS,MAX_MS} by building server and stubs.');
+	}
 	// Start server
-	spawnProc('server','node', ['../server/dist/websocket-server.js']);
-		await delay(START_SERVER_WAIT_MS);
+	spawnProc('server','node', ['../server/dist/main.js']);
+	await delay(START_SERVER_WAIT_MS);
 	// Start stubs using Node's ESM loader for ts-node so TS ESM imports resolve without precompiling
 	spawnProc('tvStub', 'node', ['./dist/stubs/tv-stub.js']);
 	spawnProc('remoteStub', 'node', ['./dist/stubs/remote-stub.js']);
-		await delay(START_STUBS_WAIT_MS);
+	await delay(START_STUBS_WAIT_MS);
 }
 
 async function shutdown(){
 	state.exiting = true;
 	for(const [k,p] of Object.entries(state.processes)){
-		try { p.kill(); } catch {}
+		try { 
+			p.kill(); 
+		} 
+		catch(e) {
+			log(`Failed to kill process ${k} Exception: ${e.message}`);
+		}
 	}
 }
 
 async function runSequence(list){
 	for(const h of list){
 		let result;
-		try { result = await runHook(h); } catch(e){ result = { hook:h, pass:false, detail:`Exception: ${e.message}`}; }
+		try { 
+			result = await runHook(h); 
+		} catch(e) { 
+			result = { hook:h, pass:false, detail:`Exception: ${e.message}`}; 
+		}
 		state.results.push(result);
 		console.log(`HOOK ${result.hook}: ${result.pass? 'PASS':'FAIL'} - ${result.detail}`);
 		if(!result.pass) break; // fail fast
@@ -338,4 +375,7 @@ async function main(){
 	}
 }
 
-main().catch(err => { console.error('Runner error', err); shutdown().then(()=> process.exit(1)); });
+main().catch(err => { 
+	console.error('Runner error', err);
+	shutdown().then(()=> process.exit(1)); 
+});

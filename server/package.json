@@ -2,11 +2,10 @@
   "name": "sahar-server",
   "version": "1.0.0",
   "description": "Standalone Unified Server for SAHAR TV Remote",
-  
   "main": "dist/main.js",
   "scripts": {
     "build": "ng build",
-    "start": "node dist/websocket-server.js",
+    "start": "node dist/main.js",
     "typecheck": "tsc -p tsconfig.server.json --noEmit",
     "test": "npm run build && node --test dist/tests/**/*.test.js"
   },
