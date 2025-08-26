@@ -1,9 +1,7 @@
-import { Injectable, Inject, Optional, InjectionToken } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { Performer, Video, LikedScene, VideoItem, NavigationState } from '../models/video-navigation';
+import { Performer, LikedScene, NavigationState } from '../models/video-navigation';
 import { getYoutubeThumbnailUrl } from '../utils/youtube-helpers';
-
-export const INITIAL_PERFORMERS = new InjectionToken<Performer[]>('Initial performers data');
 
 @Injectable({
   providedIn: 'root'
@@ -18,21 +16,11 @@ export class VideoNavigationService {
   private performersData: Performer[] = [];
   private navigationSubject = new BehaviorSubject<NavigationState>(this.navigationState);
   public navigation$ = this.navigationSubject.asObservable();
-
-  constructor(@Optional() @Inject(INITIAL_PERFORMERS) initialData: Performer[] | null) {
+  constructor() {
     console.log('� Shared Navigation Service initialized');
-    
-    // Check if data was injected
-    if (initialData && initialData.length > 0) {
-      // This path is for the Remote app
-      console.log('� Service configured with initial data for Remote.');
-      this.performersData = initialData;
-      this.goHome(); // Show performers immediately
-    } else {
-      // This path is for the TV app
-      console.log('📺 Service configured with no data. Waiting for Remote.');
-      this.showWaitingState(); // Start in the waiting state
-    }
+    // This path is for the TV app
+    console.log('📺 Service configured with no data. Waiting for Remote.');
+    this.showWaitingState(); // Start in the waiting state
   }
 
   // Called by WebSocket service when Remote sends data

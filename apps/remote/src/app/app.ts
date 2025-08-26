@@ -4,16 +4,16 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
 
 // Components
-import { DeviceConnectionComponent } from '@shared/components/device-connection/device-connection.component';
-import { SharedPerformersGridComponent, SharedVideosGridComponent, SharedScenesGridComponent } from '@shared/components';
+import { DeviceConnectionComponent } from '../shared/components/device-connection/device-connection.component';
+import { SharedPerformersGridComponent, SharedVideosGridComponent, SharedScenesGridComponent } from '../shared/components';
 import { VideoControlsComponent } from './components/video-controls/video-controls.component';
 
 // Services and Models
 import { WebSocketService } from './services/websocket.service';
-import { VideoNavigationService } from '@shared/services/video-navigation.service';
-import { Performer, Video, LikedScene } from '@shared/models/video-navigation';
+import { VideoNavigationService } from '../shared/services/video-navigation.service';
+import { Performer, Video, LikedScene } from '../shared/models/video-navigation';
 import { RemoteNavigationState, ConnectionStatus } from './models/remote-navigation';
-import { ApplicationState } from '@shared/models/application-state';
+import { ApplicationState } from '../shared/models/application-state';
 
 @Component({
   selector: 'app-root',

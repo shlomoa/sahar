@@ -8,15 +8,15 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { QRCodeComponent } from 'angularx-qrcode';
-import { VideoNavigationService } from '@shared/services/video-navigation.service';
+import { VideoNavigationService } from '../shared/services/video-navigation.service';
 import { WebSocketService } from './services/websocket.service';
-import { NavigationState, VideoItem, Video, LikedScene, Performer } from '@shared/models/video-navigation';
+import { NavigationState, VideoItem, Video, LikedScene, Performer } from '../shared/models/video-navigation';
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
-import { SharedPerformersGridComponent, SharedVideosGridComponent, SharedScenesGridComponent } from '@shared/components';
+import { SharedPerformersGridComponent, SharedVideosGridComponent, SharedScenesGridComponent } from '../shared/components';
 import { Observable, Subscription } from 'rxjs';
-import { ControlCommandMessage } from '@shared/websocket/websocket-protocol';
-import { getYoutubeVideoId } from '@shared/utils/youtube-helpers';
-import { WEBSOCKET_CONFIG } from '@shared/websocket/websocket-protocol';
+import { ControlCommandMessage } from '../shared/websocket/websocket-protocol';
+import { getYoutubeVideoId } from '../shared/utils/youtube-helpers';
+import { WEBSOCKET_CONFIG } from '../shared/websocket/websocket-protocol';
 
 @Component({
   selector: 'app-root',

@@ -2,8 +2,8 @@ import { Component, Input, Output, EventEmitter, OnInit, ViewChild, OnChanges, S
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { YouTubePlayerModule, YouTubePlayer } from '@angular/youtube-player';
-import { Video, LikedScene } from '@shared/models/video-navigation';
-import { getYoutubeVideoId, getYoutubeThumbnailUrl } from '@shared/utils/youtube-helpers';
+import { Video, LikedScene } from '../../../shared/models/video-navigation';
+import { getYoutubeVideoId, getYoutubeThumbnailUrl } from '../../../shared/utils/youtube-helpers';
 
 @Component({
   // eslint-disable-next-line @angular-eslint/component-selector

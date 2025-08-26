@@ -19,10 +19,10 @@ import {
   NAVIGATION_ACTION_SET,
   CONTROL_ACTION_SET,
   ClientType
-} from '@shared/websocket/websocket-protocol.js';
-import { SaharFsm } from './fsm.js';
+} from '../shared/websocket/websocket-protocol';
+import { SaharFsm } from '../fsm';
 import { networkInterfaces } from 'os';
-import { createLogger } from '@shared/utils/logging.js';
+import { createLogger } from '../shared/utils/logging';
 
 // --- Structured Logger (shared) ---------------------------------------------------------------
 const logger = createLogger({ component: 'server' });

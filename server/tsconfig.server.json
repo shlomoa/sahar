@@ -15,19 +15,11 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "baseUrl": "./",
-    "paths": {
-      "@shared/*": ["shared/*"]
-    },
     "preserveSymlinks": true,
     "types": ["node"]
   },
   "include": [
-    "fsm.ts",
-    "websocket-server.ts",
-    "shared/utils/logging.ts",
-    "shared/utils/websocket-utils.ts",
-    "shared/websocket/websocket-protocol.ts",
-    "shared/models/application-state.ts",
+    "**/*.ts",
     "tests/**/*.ts"
   ],
   "exclude": ["dist", "node_modules"]

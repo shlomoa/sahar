@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import { VideoNavigationService } from '@shared/services/video-navigation.service';
-import { WebSocketBaseService } from '@shared/services/websocket-base.service';
-import { WebSocketUtils } from '@shared/utils/websocket-utils';
+import { VideoNavigationService } from '../../shared/services/video-navigation.service';
+import { WebSocketBaseService } from '../../shared/services/websocket-base.service';
+import { WebSocketUtils } from '../../shared/utils/websocket-utils';
 import {
   WebSocketMessage,
   WEBSOCKET_CONFIG,
@@ -12,7 +12,7 @@ import {
   HeartbeatMessage,
   ActionConfirmationMessage,
   ActionConfirmationPayload,
-} from '@shared/websocket/websocket-protocol';
+} from '../../shared/websocket/websocket-protocol';
 
 @Injectable({
   providedIn: 'root'

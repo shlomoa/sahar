@@ -2,19 +2,35 @@
   "name": "sahar-server",
   "version": "1.0.0",
   "description": "Standalone Unified Server for SAHAR TV Remote",
-  "type": "module",
-  "main": "dist/websocket-server.js",
+  
+  "main": "dist/main.js",
   "scripts": {
-    "build": "tsc -p tsconfig.server.json && tsc-alias -p tsconfig.server.json",
+    "build": "ng build",
     "start": "node dist/websocket-server.js",
     "typecheck": "tsc -p tsconfig.server.json --noEmit",
     "test": "npm run build && node --test dist/tests/**/*.test.js"
   },
   "dependencies": {
+    "@angular/animations": "^20.1.3",
+    "@angular/cdk": "^20.1.3",
+    "@angular/common": "^20.0.0",
+    "@angular/compiler": "^20.0.0",
+    "@angular/core": "^20.0.0",
+    "@angular/forms": "^20.0.0",
+    "@angular/material": "^20.1.3",
+    "@angular/platform-browser": "^20.0.0",
+    "@angular/router": "^20.0.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0",
+    "zone.js": "~0.15.0",
     "http-proxy": "^1.18.1",
     "ws": "^8.14.2"
   },
   "devDependencies": {
+    "@angular/build": "^20.0.5",
+    "@angular-devkit/build-angular": "^20.0.5",
+    "@angular/cli": "^20.0.5",
+    "@angular/compiler-cli": "^20.0.0",
     "@types/express": "^5.0.3",
     "@types/http-proxy": "^1.17.14",
     "@types/node": "^24.3.0",

@@ -16,7 +16,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
   protected reconnectAttempts = 0;
   protected maxReconnectAttempts = 5;
   protected heartbeatInterval = 30000; // 30 seconds
-  protected heartbeatTimer: number | null = null;
+  protected heartbeatTimer: number | undefined = undefined;
 
   // Protocol-driven extensibility maps
   private generators = new Map<
@@ -114,7 +114,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
   protected disconnect(): void {
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer);
-      this.heartbeatTimer = null;
+      this.heartbeatTimer = undefined;
     }
 
     if (this.ws) {
@@ -191,7 +191,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
       
       if (this.heartbeatTimer) {
         clearInterval(this.heartbeatTimer);
-        this.heartbeatTimer = null;
+        this.heartbeatTimer = undefined;
       }
 
       this.onDisconnected();
@@ -235,7 +235,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
       if (this.isConnected) {
         this.sendHeartbeat();
       }
-    }, this.heartbeatInterval);
+    }, this.heartbeatInterval) as unknown as number;
   }
 
   protected sendHeartbeat(): void {

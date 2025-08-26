@@ -35,8 +35,16 @@ shared/
 Both TV and Remote applications access shared code via symbolic links:
 
 ```bash
-apps/tv/shared -> ../../shared/      # TV app symlink
-apps/remote/shared -> ../../shared/  # Remote app symlink
+apps/tv/src/shared -> ../../../shared/      # TV app symlink
+apps/remote/src/shared -> ../../../shared/  # Remote app symlink
+```
+
+```powershell
+# Create symlinks (from repo root)
+cd apps\tv\src\
+New-Item -ItemType SymbolicLink -Path shared -Target ..\..\..\shared
+cd ..\..\remote\src\
+New-Item -ItemType SymbolicLink -Path shared -Target ..\..\..\shared
 ```
 
 ### Import Examples

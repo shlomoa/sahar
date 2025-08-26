@@ -1,7 +1,7 @@
 // Canonical WebSocket message types for Sahar protocol
 // This file is auto-generated to ensure all protocol messages are covered and up-to-date
 
-import { ApplicationState } from '@shared/models/application-state';
+import { ApplicationState } from '../models/application-state';
 
 export type MessageSource = 'tv' | 'remote' | 'server';
 export type MessageType =
@@ -73,9 +73,7 @@ export interface ActionConfirmationMessage {
 }
 
 // Data
-export interface DataPayload extends BasePayload {
-  [key: string]: string;
-}
+export type DataPayload = BasePayload & Record<string, string>;
 export interface DataMessage {
   type: 'data';
   timestamp: number;

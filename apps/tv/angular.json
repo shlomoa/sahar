@@ -22,6 +22,7 @@
             "polyfills": [
               "zone.js"
             ],
+            "outputPath": "../../server/dist/tv",
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [

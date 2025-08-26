@@ -1,4 +1,4 @@
-import { Performer } from '@shared/models/video-navigation';
+import { Performer } from '../shared/models/video-navigation';
 
 // Example performer data structure
 export const performersData: Performer[] = [

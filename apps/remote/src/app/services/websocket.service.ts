@@ -8,11 +8,11 @@ import {
   StateSyncMessage,
   ControlCommandPayload,
   BasePayload,
-} from '@shared/websocket/websocket-protocol';
-import { Performer, Video, LikedScene } from '@shared/models/video-navigation';
-import { WebSocketUtils } from '@shared/utils/websocket-utils';
-import { WebSocketBaseService } from '@shared/services/websocket-base.service';
-import { getYoutubeVideoId, getYoutubeThumbnailUrl } from '@shared/utils/youtube-helpers';
+} from '../../shared/websocket/websocket-protocol';
+import { Performer, Video, LikedScene } from '../../shared/models/video-navigation';
+import { WebSocketUtils } from '../../shared/utils/websocket-utils';
+import { WebSocketBaseService } from '../../shared/services/websocket-base.service';
+import { getYoutubeVideoId, getYoutubeThumbnailUrl } from '../../shared/utils/youtube-helpers';
 
 // Local helper type for discovered devices (protocol-agnostic)
 interface NetworkDevice { deviceId: string; deviceName: string; deviceType: 'tv' | 'remote'; ip: string; port: number; lastSeen: number; capabilities?: string[] }
@@ -179,7 +179,7 @@ export class WebSocketService extends WebSocketBaseService {
   // Send data to TV when connection is established
   sendDataToTV(): void {
     // Import the actual performers data
-    import('../models/mock-data').then(({ performersData }) => {
+    import('../../../../../server/src/mock-data').then(({ performersData }) => {
       // Convert the Remote app data format to the shared protocol format
       const dataPayload: DataPayload = {
         performers: performersData.map((performer: Performer) => ({
