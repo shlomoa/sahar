@@ -4,16 +4,14 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
 
 // Components
-import { DeviceConnectionComponent } from 'shared';
-import { SharedPerformersGridComponent, SharedVideosGridComponent, SharedScenesGridComponent } from 'shared';
+import { VideoNavigationService, DeviceConnectionComponent, SharedPerformersGridComponent, SharedScenesGridComponent, SharedVideosGridComponent } from 'shared';
+import { Performer, Video, LikedScene } from 'shared';
+import { ApplicationState } from 'shared';
 import { VideoControlsComponent } from './components/video-controls/video-controls.component';
 
 // Services and Models
 import { WebSocketService } from './services/websocket.service';
-import { VideoNavigationService } from 'shared';
-import { Performer, Video, LikedScene } from 'shared';
 import { RemoteNavigationState, ConnectionStatus } from './models/remote-navigation';
-import { ApplicationState } from 'shared';
 
 @Component({
   selector: 'app-root',
@@ -22,11 +20,11 @@ import { ApplicationState } from 'shared';
     CommonModule,
     MatToolbarModule,
     MatButtonModule,
+    VideoControlsComponent,
     DeviceConnectionComponent,
     SharedPerformersGridComponent,
-    SharedVideosGridComponent,
     SharedScenesGridComponent,
-    VideoControlsComponent
+    SharedVideosGridComponent
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss'

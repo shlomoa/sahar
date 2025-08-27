@@ -1,4 +1,51 @@
-import { Performer } from 'shared';
+// Performer data structure for YouTube-like content
+import { getYoutubeVideoId, getYoutubeThumbnailUrl } from '../utils/youtube-helpers';
+
+export interface Performer {
+  id: string;
+  name: string;
+  thumbnail: string;
+  description?: string;
+  videos: Video[];
+}
+
+export interface Video {
+  id: string;
+  title: string;
+  url: string; // YouTube video URL
+  duration: number; // Video duration in seconds
+  description?: string;
+  likedScenes: LikedScene[];
+}
+
+export interface LikedScene {
+  id: string;
+  title: string;
+  startTime: number; // Offset time from video start in seconds
+  endTime?: number; // Optional end time for scene duration
+  thumbnail?: string; // Optional custom thumbnail for the scene
+  description?: string;
+}
+
+// Legacy interface for backward compatibility
+export interface VideoItem {
+  id: string;
+  title: string;
+  thumbnail: string;
+  type: 'video' | 'category' | 'segment' | 'performer';
+  url?: string;
+  children?: VideoItem[];
+  startTime?: number; // For scenes with time offset
+  endTime?: number;
+}
+
+export interface NavigationState {
+  currentLevel: VideoItem[];
+  breadcrumb: string[];
+  canGoBack: boolean;
+  currentPerformer?: Performer;
+  currentVideo?: Video;
+}
 
 // Example performer data structure
 export const performersData: Performer[] = [
@@ -442,3 +489,32 @@ export const performersData: Performer[] = [
     ]
   }
 ];
+
+// Convert performers to legacy VideoItem format for backward compatibility
+export const inputVideoData: VideoItem[] = performersData.map(performer => ({
+  id: performer.id,
+  title: performer.name,
+  thumbnail: performer.thumbnail,
+  type: 'performer' as const,
+  children: performer.videos.map(video => {
+    const videoId = getYoutubeVideoId(video.url);
+    const videoThumbnail = videoId ? getYoutubeThumbnailUrl(videoId, 'hqdefault') : 'https://via.placeholder.com/320x180?text=No+Thumbnail';
+    
+    return {
+      id: video.id,
+      title: video.title,
+      thumbnail: videoThumbnail,
+      type: 'video' as const,
+      url: video.url,
+      children: video.likedScenes.map(scene => ({
+        id: scene.id,
+        title: scene.title,
+        thumbnail: videoThumbnail, // Use calculated video thumbnail for scenes
+        type: 'segment' as const,
+        url: `${video.url}&t=${scene.startTime}`, // YouTube URL with time parameter
+        startTime: scene.startTime,
+        endTime: scene.endTime
+      }))
+    };
+  })
+}));

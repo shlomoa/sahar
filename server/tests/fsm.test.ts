@@ -11,8 +11,8 @@
 import test from 'node:test';
 import { strict as assert } from 'node:assert';
 import { SaharFsm } from '../fsm';
-import { ApplicationState } from '../shared/models/application-state';
-import { ControlCommandPayload } from '../shared/models/websocket-protocol';
+import { ApplicationState } from 'shared';
+import { ControlCommandPayload } from 'shared';
 
 type Snapshot = ApplicationState;
 

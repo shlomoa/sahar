@@ -95,7 +95,7 @@ export interface ActionConfirmationMessage {
 
 // Data
 export interface DataPayload extends BasePayload {
-  data: Record<string, string> | null;
+  data: Record<string, any> | null;
 }
 export interface DataMessage {
   msgType: 'data';

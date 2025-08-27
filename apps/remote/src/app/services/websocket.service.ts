@@ -8,11 +8,16 @@ import {
   StateSyncMessage,
   ControlCommandPayload,
   BasePayload,
-} from '../../shared/models/websocket-protocol';
-import { Performer, Video, LikedScene } from '../../shared/models/video-navigation';
-import { WebSocketUtils } from '../../shared/utils/websocket-utils';
-import { WebSocketBaseService } from '../../shared/services/websocket-base.service';
-import { getYoutubeVideoId, getYoutubeThumbnailUrl } from '../../shared/utils/youtube-helpers';
+  RegisterPayload,
+  NavigationAction,
+  NavigationCommandPayload,
+  ControlAction,
+  SaharMessage,
+} from 'shared';
+import { Performer, Video, LikedScene } from 'shared';
+import { WebSocketUtils } from 'shared';
+import { WebSocketBaseService } from 'shared';
+import { getYoutubeVideoId, getYoutubeThumbnailUrl } from 'shared';
 
 // Local helper type for discovered devices (protocol-agnostic)
 interface NetworkDevice { deviceId: string; deviceName: string; deviceType: 'tv' | 'remote'; ip: string; port: number; lastSeen: number; capabilities?: string[] }
@@ -104,7 +109,7 @@ export class WebSocketService extends WebSocketBaseService {
       if (this.messageTimings.length > 100) this.messageTimings.shift();
     }
     this.lastMessageTimestamp = now;
-    this.debugLog(`Received message (unhandled): ${message.type}`);
+    this.debugLog(`Received message (unhandled): ${message.msgType}`);
   }
 
   protected override onConnected(): void {
@@ -114,7 +119,7 @@ export class WebSocketService extends WebSocketBaseService {
       clientType: 'remote',
       deviceId: this.deviceId,
       deviceName: this.deviceName,
-    });
+    } as RegisterPayload);
     
     // Optionally seed data on first connect
     console.log('📤 Seeding initial data to server/TV');
@@ -153,13 +158,13 @@ export class WebSocketService extends WebSocketBaseService {
   }
   // Public methods for sending commands (protocol-aligned)
   sendNavigationCommand(
-    action: 'navigate_to_performer' | 'navigate_to_video' | 'navigate_to_scene' | 'navigate_back' | 'navigate_home',
+    action: NavigationAction,
     targetId?: string,
     _targetType?: 'performer' | 'video' | 'scene' // backward-compat param
   ): void {
     // no-op usage to satisfy lint for legacy param
     void _targetType;
-    this.sendByType('navigation_command', { action, targetId });
+    this.sendByType('navigation_command', { action, targetId } as NavigationCommandPayload);
   }
 
   // Accept either canonical payload or a simple action (shim some legacy actions)
@@ -168,8 +173,8 @@ export class WebSocketService extends WebSocketBaseService {
       const action = payload === 'resume' ? 'play'
                    : payload === 'stop' ? 'pause'
                    : payload === 'back' ? 'seek'
-                   : (payload as ControlCommandPayload['action']);
-      const control: ControlCommandPayload = action === 'seek' ? { action: 'seek', seekTime: -5 } : { action };
+                   : (payload as ControlAction);
+      const control: ControlCommandPayload = action === 'seek' ? { action: 'seek', seekTime: -5 }  as ControlCommandPayload: { action }  as ControlCommandPayload;
       this.sendByType('control_command', control);
       return;
     }
@@ -182,29 +187,32 @@ export class WebSocketService extends WebSocketBaseService {
     import('../../../../../server/src/mock-data').then(({ performersData }) => {
       // Convert the Remote app data format to the shared protocol format
       const dataPayload: DataPayload = {
-        performers: performersData.map((performer: Performer) => ({
-          id: performer.id.toString(),
-          name: performer.name,
-          thumbnail: performer.thumbnail,
-          videos: performer.videos.map((video: Video) => ({
-            id: video.id.toString(),
-            title: video.title,
-            youtubeId: getYoutubeVideoId(video.url) ?? 'unknown',
-            thumbnail: (() => {
-              const vid = getYoutubeVideoId(video.url);
-              return vid ? getYoutubeThumbnailUrl(vid, 'hqdefault') : 'https://via.placeholder.com/320x180?text=No+Thumbnail';
-            })(),
-            scenes: video.likedScenes.map((scene: LikedScene) => ({
-              id: scene.id.toString(),
-              title: scene.title,
-              startTime: scene.startTime,
-              endTime: scene.endTime || (scene.startTime + 60)
+        msgType: 'data',
+        data: {
+          performers: performersData.map((performer: Performer) => ({
+            id: performer.id.toString(),
+            name: performer.name,
+            thumbnail: performer.thumbnail,
+            videos: performer.videos.map((video: Video) => ({
+              id: video.id.toString(),
+              title: video.title,
+              youtubeId: getYoutubeVideoId(video.url) ?? 'unknown',
+              thumbnail: (() => {
+                const vid = getYoutubeVideoId(video.url);
+                return vid ? getYoutubeThumbnailUrl(vid, 'hqdefault') : 'https://via.placeholder.com/320x180?text=No+Thumbnail';
+              })(),
+              scenes: video.likedScenes.map((scene: LikedScene) => ({
+                id: scene.id.toString(),
+                title: scene.title,
+                startTime: scene.startTime,
+                endTime: scene.endTime || (scene.startTime + 60)
+              }))
             }))
-          }))
-        })),
-        dataVersion: '1.0',
-        checksum: 'abc123def456', // Simple checksum for now
-        totalSize: performersData.length
+          })),
+          dataVersion: '1.0',
+          checksum: 'abc123def456',
+          totalSize: performersData.length
+        }
       };
 
   console.log('📤 Remote sending ACTUAL data to TV');
@@ -217,7 +225,7 @@ export class WebSocketService extends WebSocketBaseService {
   protected override sendMessage(message: WebSocketMessage): void {
     if (this.isConnected) {
       this.sentMessageCount++;
-      this.debugLog(`Sending message: ${message.type}`);
+      this.debugLog(`Sending message: ${message.msgType}`);
       super.sendMessage(message);
     } else {
       this.debugLog('Remote WebSocket not connected, message not sent:', message);
@@ -233,12 +241,12 @@ export class WebSocketService extends WebSocketBaseService {
   private registerCallbacks(): void {
     // Inbound handlers
     this.registerHandlers({
-      state_sync: (msg) => {
+      state_sync: (msg: SaharMessage) => {
         const state = msg as StateSyncMessage;
         this.tvState$.next(state);
         this.debugLog('State sync received');
       },
-      error: (msg) => {
+      error: (msg: SaharMessage) => {
         const err = msg as ErrorMessage;
         this.errorCount++;
         this.lastErrorTimestamp = Date.now();
@@ -246,7 +254,7 @@ export class WebSocketService extends WebSocketBaseService {
       },
       heartbeat: () => {
         // Respond with our own heartbeat
-        this.sendByType('heartbeat', { deviceId: this.deviceId, status: 'alive' });
+        this.sendByType('heartbeat', { msgType: 'heartbeat' });
       },
       ack: () => {
         this.debugLog('Ack received');
@@ -256,26 +264,27 @@ export class WebSocketService extends WebSocketBaseService {
     // Outbound generators
     this.registerGenerators({
       register: () => ({
-        type: 'register',
+        msgType: 'register',
         timestamp: Date.now(),
         source: 'remote',
         payload: {
           clientType: 'remote',
           deviceId: this.deviceId,
           deviceName: this.deviceName,
-        },
+        } as RegisterPayload,
       }),
-      data: (payload?: DataPayload) => ({
-        type: 'data',
+      data: (payload?: BasePayload | null) => ({
+        msgType: 'data',
         timestamp: Date.now(),
         source: 'remote',
-        payload: (payload ?? {}) as DataPayload,
-      }),
+        payload: payload ?? { msgType: 'data',
+                              data: {performerId: 'invalid'}} as DataPayload,
+      } as SaharMessage),
       heartbeat: (payload?: BasePayload) => ({
-        type: 'heartbeat',
+        msgType: 'heartbeat',
         timestamp: Date.now(),
         source: 'remote',
-        payload: payload ?? { deviceId: this.deviceId, status: 'alive' },
+        payload: payload ?? { msgType: 'heartbeat' },
       }),
     });
   }

@@ -1,5 +1,5 @@
-import { ApplicationState } from './shared/models/application-state';
-import { ClientType, NavigationCommandPayload, ControlCommandPayload } from './shared/models/websocket-protocol';
+import { ApplicationState } from 'shared';
+import { ClientType, NavigationCommandPayload, ControlCommandPayload } from 'shared';
 
 /**
  * Authoritative Finite State Machine (Task 1.15)

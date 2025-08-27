@@ -1,0 +1,31 @@
+{
+  "name": "shared",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "ng",
+    "build": "ng build shared",
+    "watch": "ng build shared --watch",
+    "pack": "cd dist/shared && npm pack"
+  },
+  "prettier": {
+    "printWidth": 100,
+    "singleQuote": true,
+    "overrides": [
+      {
+        "files": "*.html",
+        "options": {
+          "parser": "angular"
+        }
+      }
+    ]
+  },
+  "private": true,
+  "devDependencies": {
+    "@angular/build": "^20.1.6",
+    "@angular/cli": "^20.1.6",
+    "@angular/compiler": "^20.1.0",
+    "@angular/compiler-cli": "^20.1.0",
+    "ng-packagr": "^20.2.0",
+    "typescript": "~5.8.2"
+  }
+}
