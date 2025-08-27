@@ -10,7 +10,7 @@
 
 import test from 'node:test';
 import { strict as assert } from 'node:assert';
-import { SaharFsm } from '../fsm';
+import { SaharFsm } from '../src/fsm';
 import { ApplicationState } from 'shared';
 import { ControlCommandPayload } from 'shared';
 

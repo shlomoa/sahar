@@ -20,7 +20,7 @@ import {
   CONTROL_ACTION_SET,
   ClientType
 } from 'shared';
-import { SaharFsm } from '../fsm';
+import { SaharFsm } from './fsm';
 import { networkInterfaces } from 'os';
 import { createLogger } from 'shared';
 
