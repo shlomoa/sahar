@@ -12,7 +12,7 @@ import test from 'node:test';
 import { strict as assert } from 'node:assert';
 import { SaharFsm } from '../fsm';
 import { ApplicationState } from '../shared/models/application-state';
-import { ControlCommandPayload } from '../shared/websocket/websocket-protocol';
+import { ControlCommandPayload } from '../shared/models/websocket-protocol';
 
 type Snapshot = ApplicationState;
 

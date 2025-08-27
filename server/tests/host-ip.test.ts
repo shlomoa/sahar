@@ -2,7 +2,7 @@ import test, { before, after } from 'node:test';
 import { strict as assert } from 'node:assert';
 import http from 'http';
 import { getBestHostIP, server } from '../src/main';
-import { WEBSOCKET_CONFIG } from '../shared/websocket/websocket-protocol';
+import { WEBSOCKET_CONFIG } from '../shared/models/websocket-protocol';
 
 let selectedIp: string;
 

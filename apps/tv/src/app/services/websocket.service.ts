@@ -12,7 +12,7 @@ import {
   HeartbeatMessage,
   ActionConfirmationMessage,
   ActionConfirmationPayload,
-} from '../../shared/websocket/websocket-protocol';
+} from '../../shared/models/websocket-protocol';
 
 @Injectable({
   providedIn: 'root'

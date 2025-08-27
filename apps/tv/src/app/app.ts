@@ -14,9 +14,9 @@ import { NavigationState, VideoItem, Video, LikedScene, Performer } from '../sha
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
 import { SharedPerformersGridComponent, SharedVideosGridComponent, SharedScenesGridComponent } from '../shared/components';
 import { Observable, Subscription } from 'rxjs';
-import { ControlCommandMessage } from '../shared/websocket/websocket-protocol';
+import { ControlCommandMessage } from '../shared/models/websocket-protocol';
 import { getYoutubeVideoId } from '../shared/utils/youtube-helpers';
-import { WEBSOCKET_CONFIG } from '../shared/websocket/websocket-protocol';
+import { WEBSOCKET_CONFIG } from '../shared/models/websocket-protocol';
 
 @Component({
   selector: 'app-root',

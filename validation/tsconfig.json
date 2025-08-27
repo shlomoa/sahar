@@ -21,7 +21,7 @@
     "stubs/remote-stub.ts",
     "stubs/tv-stub.ts",
     "config/validation-config.ts",
-    "shared/websocket/websocket-protocol.ts",
+    "shared/models/websocket-protocol.ts",
     "shared/models/application-state.ts",
     "shared/utils/logging.ts",
     "shared/utils/websocket-utils.ts",

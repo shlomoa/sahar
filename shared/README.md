@@ -52,12 +52,12 @@ New-Item -ItemType SymbolicLink -Path shared -Target ..\..\..\shared
 // In TV or Remote app (using symlinks)
 import { PerformersGridComponent } from './shared/components';
 import { VideoNavigation, Scene } from './shared/models/video-navigation';
-import { WebSocketProtocol } from './shared/websocket/websocket-protocol';
+import { WebSocketProtocol } from './shared/models/websocket-protocol';
 
 // Alternative: Direct path (without symlinks)
 import { PerformersGridComponent } from '../../shared/components';
 import { VideoNavigation, Scene } from '../../shared/models/video-navigation';
-import { WebSocketProtocol } from '../../shared/websocket/websocket-protocol';
+import { WebSocketProtocol } from '../../shared/models/websocket-protocol';
 ```
 
 ---

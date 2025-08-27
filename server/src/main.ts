@@ -19,7 +19,7 @@ import {
   NAVIGATION_ACTION_SET,
   CONTROL_ACTION_SET,
   ClientType
-} from '../shared/websocket/websocket-protocol';
+} from '../shared/models/websocket-protocol';
 import { SaharFsm } from '../fsm';
 import { networkInterfaces } from 'os';
 import { createLogger } from '../shared/utils/logging';

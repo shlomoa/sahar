@@ -8,7 +8,7 @@ import {
   StateSyncMessage,
   ControlCommandPayload,
   BasePayload,
-} from '../../shared/websocket/websocket-protocol';
+} from '../../shared/models/websocket-protocol';
 import { Performer, Video, LikedScene } from '../../shared/models/video-navigation';
 import { WebSocketUtils } from '../../shared/utils/websocket-utils';
 import { WebSocketBaseService } from '../../shared/services/websocket-base.service';
