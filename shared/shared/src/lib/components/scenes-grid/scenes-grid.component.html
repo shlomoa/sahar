@@ -1,0 +1,28 @@
+<div class="scenes-section">
+  <div class="breadcrumb">
+    <button mat-button (click)="onBackToVideos()">
+      <mat-icon>arrow_back</mat-icon>
+      Back to Videos
+    </button>
+  </div>
+  
+  <div class="scenes-grid">
+    <mat-card 
+      *ngFor="let scene of scenes; trackBy: trackBySceneId"
+      class="scene-card"
+      [class.selected]="scene.id === selectedSceneId"
+      (click)="onSceneSelected(scene.id)">
+      
+      <img 
+        mat-card-image 
+        [src]="scene.thumbnail" 
+        [alt]="scene.title"
+        loading="lazy">
+        
+      <mat-card-content>
+        <h3>{{ scene.title }}</h3>
+        <p>{{ scene.startTime }}s • {{ (scene.endTime || 0) - scene.startTime }}s duration</p>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>
