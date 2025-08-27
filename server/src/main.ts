@@ -19,10 +19,10 @@ import {
   NAVIGATION_ACTION_SET,
   CONTROL_ACTION_SET,
   ClientType
-} from '../shared/models/websocket-protocol';
+} from 'shared';
 import { SaharFsm } from '../fsm';
 import { networkInterfaces } from 'os';
-import { createLogger } from '../shared/utils/logging';
+import { createLogger } from 'shared';
 
 // --- Structured Logger (shared) ---------------------------------------------------------------
 const logger = createLogger({ component: 'server' });
@@ -148,9 +148,9 @@ let isReady = false;
 const markReady = () => { isReady = true; };
 
 // --- Message helpers ---
-const makeAck = (source: 'server'): AckMessage => ({ type: 'ack', timestamp: Date.now(), source, payload: {type: 'any'} });
-const makeStateSync = (source: 'server'): StateSyncMessage => ({ type: 'state_sync', timestamp: Date.now(), source, payload: {type: 'any', ...fsm.getSnapshot() }});
-const makeError = (source: 'server', code: string, message: string): ErrorMessage => ({ type: 'error', timestamp: Date.now(), source, payload: {type: 'Error', code, message }});
+const makeAck = (source: 'server'): AckMessage => ({ msgType: 'ack', timestamp: Date.now(), source, payload: {msgType: 'any'} });
+const makeStateSync = (source: 'server'): StateSyncMessage => ({ msgType: 'state_sync', timestamp: Date.now(), source, payload: {msgType: 'any', ...fsm.getSnapshot() }});
+const makeError = (source: 'server', code: string, message: string): ErrorMessage => ({ msgType: 'error', timestamp: Date.now(), source, payload: {msgType: 'error', code, message }});
 
 // --- Error sending helper ---
 function sendError(ws: WebSocket, code: string, message: string, opts: { close?: boolean; meta?: any } = {}) {
@@ -303,8 +303,8 @@ wss.on('connection', (ws: WebSocket) => {
       return;
     }
     const msg = v.msg;
-    logInfo('message_received', { type: msg.type });
-    if (!isRegistered && msg.type === 'register') {
+    logInfo('message_received', { msgType: msg.msgType });
+    if (!isRegistered && msg.msgType === 'register') {
       const reg = msg as RegisterMessage;
       const { clientType, deviceId, deviceName } = reg.payload;
       // Enforce single TV / Remote uniqueness
@@ -325,7 +325,7 @@ wss.on('connection', (ws: WebSocket) => {
       return;
     }
     // Already registered normal messages
-    switch (msg.type) {
+    switch (msg.msgType) {
       case 'data': {
         // Only Remote should seed data (ignore if TV attempts)
         const meta = clients.get(ws);

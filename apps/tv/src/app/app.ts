@@ -8,15 +8,15 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { QRCodeComponent } from 'angularx-qrcode';
-import { VideoNavigationService } from '../shared/services/video-navigation.service';
-import { WebSocketService } from './services/websocket.service';
-import { NavigationState, VideoItem, Video, LikedScene, Performer } from '../shared/models/video-navigation';
-import { VideoPlayerComponent } from './components/video-player/video-player.component';
-import { SharedPerformersGridComponent, SharedVideosGridComponent, SharedScenesGridComponent } from '../shared/components';
 import { Observable, Subscription } from 'rxjs';
-import { ControlCommandMessage } from '../shared/models/websocket-protocol';
-import { getYoutubeVideoId } from '../shared/utils/youtube-helpers';
-import { WEBSOCKET_CONFIG } from '../shared/models/websocket-protocol';
+import { VideoNavigationService, ControlCommandMessage, getYoutubeVideoId } from 'shared';
+import { WEBSOCKET_CONFIG } from 'shared';
+import { SharedPerformersGridComponent, SharedVideosGridComponent, SharedScenesGridComponent } from 'shared';
+import { NavigationState, VideoItem, Video, LikedScene, Performer } from 'shared';
+import { WebSocketService } from './services/websocket.service';
+import { VideoPlayerComponent } from './components/video-player/video-player.component';
+
+
 
 @Component({
   selector: 'app-root',
@@ -176,7 +176,7 @@ export class App implements OnInit, OnDestroy {
     this.initializeWebSocket();
 
     const controlSub = this.webSocketService.messages.subscribe((msg) => {
-      if (!msg || msg.type !== 'control_command') return;
+      if (!msg || msg.msgType !== 'control_command') return;
       const { action } = (msg as ControlCommandMessage).payload;
       const payload = (msg as ControlCommandMessage).payload;
       switch (action) {

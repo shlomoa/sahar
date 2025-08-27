@@ -4,57 +4,78 @@
 import { ApplicationState } from '../models/application-state';
 
 export type MessageSource = 'tv' | 'remote' | 'server';
+export type ClientType = 'tv' | 'remote';
+
 export type MessageType =
+  // Client -> Server
   | 'register'
   | 'data'
   | 'navigation_command'
   | 'control_command'
   | 'action_confirmation'
+  // Server -> Client
   | 'ack'
   | 'state_sync'
   | 'error'
+  // General message types
   | 'any'
   | 'heartbeat';
 
 export interface BasePayload {
-  type: MessageType;
+  msgType: MessageType;
 }
 
 // Register
 export interface RegisterPayload extends BasePayload {
-  clientType: 'tv' | 'remote';
+  clientType: ClientType;
   deviceId: string;
   deviceName: string;
 }
+
+export interface WebSocketMessage {
+  msgType: MessageType;
+  timestamp: number;
+  source: MessageSource;
+  payload: BasePayload;
+}
+
 export interface RegisterMessage {
-  type: 'register';
+  msgType: 'register';
   timestamp: number;
   source: MessageSource;
   payload: RegisterPayload;
 }
 
 // Navigation Command
+export type NavigationAction =  'navigate_to_performer' 
+                              | 'navigate_to_video'
+                              | 'navigate_to_scene'
+                              | 'navigate_back' 
+                              | 'navigate_home';
+
 export interface NavigationCommandPayload extends BasePayload {
-  action: 'navigate_to_performer' | 'navigate_to_video' | 'navigate_to_scene' | 'navigate_back' | 'navigate_home';
+  action: NavigationAction;
   targetId?: string;
 }
+
 export interface NavigationCommandMessage {
-  type: 'navigation_command';
+  msgType: 'navigation_command';
   timestamp: number;
   source: MessageSource;
   payload: NavigationCommandPayload;
 }
 
 // Control Command
+export type ControlAction = 'play' | 'pause' | 'seek' | 'set_volume' | 'mute' | 'unmute'; 
 export interface ControlCommandPayload extends BasePayload {
-  action: 'play' | 'pause' | 'seek' | 'set_volume' | 'mute' | 'unmute';
+  action: ControlAction;
   youtubeId?: string;
   startTime?: number;
   seekTime?: number;
   volume?: number;
 }
 export interface ControlCommandMessage {
-  type: 'control_command';
+  msgType: 'control_command';
   timestamp: number;
   source: MessageSource;
   payload: ControlCommandPayload;
@@ -66,16 +87,18 @@ export interface ActionConfirmationPayload extends BasePayload {
   errorMessage?: string;
 }
 export interface ActionConfirmationMessage {
-  type: 'action_confirmation';
+  msgType: 'action_confirmation';
   timestamp: number;
   source: MessageSource;
   payload: ActionConfirmationPayload;
 }
 
 // Data
-export type DataPayload = BasePayload & Record<string, string>;
+export interface DataPayload extends BasePayload {
+  data: Record<string, string> | null;
+}
 export interface DataMessage {
-  type: 'data';
+  msgType: 'data';
   timestamp: number;
   source: MessageSource;
   payload: DataPayload;
@@ -83,16 +106,16 @@ export interface DataMessage {
 
 // Ack
 export interface AckMessage {
-  type: 'ack';
+  msgType: 'ack';
   timestamp: number;
   source: MessageSource;
-  payload: { type: 'any' };
+  payload: { msgType: 'any' };
 }
 
 // State Sync
 export interface ApplicationStatePayload extends BasePayload, ApplicationState {}
 export interface StateSyncMessage {
-  type: 'state_sync';
+  msgType: 'state_sync';
   timestamp: number;
   source: MessageSource;
   payload: ApplicationStatePayload;
@@ -104,7 +127,7 @@ export interface ErrorPayload extends BasePayload {
   message: string;
 }
 export interface ErrorMessage {
-  type: 'error';
+  msgType: 'error';
   timestamp: number;
   source: MessageSource;
   payload: ErrorPayload;
@@ -112,7 +135,7 @@ export interface ErrorMessage {
 
 // Heartbeat
 export interface HeartbeatMessage {
-  type: 'heartbeat';
+  msgType: 'heartbeat';
   timestamp: number;
   source: MessageSource;
   payload: BasePayload;
@@ -129,3 +152,27 @@ export type SaharMessage =
   | StateSyncMessage
   | ErrorMessage
   | HeartbeatMessage;
+
+  // =================================================================================================
+// ACTION SETS (Authoritative Lists)
+// Centralized canonical sets for quick membership validation in the server.
+// These MUST mirror the string literal unions declared in NavigationCommandPayload.action
+// and ControlCommandPayload.action above. Any change here requires updating those unions.
+// =================================================================================================
+
+export const NAVIGATION_ACTION_SET: ReadonlySet<NavigationAction> = new Set([
+  'navigate_to_performer',
+  'navigate_to_video',
+  'navigate_to_scene',
+  'navigate_back',
+  'navigate_home'
+]);
+
+export const CONTROL_ACTION_SET: ReadonlySet<ControlAction> = new Set([
+  'play',
+  'pause',
+  'seek',
+  'set_volume',
+  'mute',
+  'unmute'
+]);

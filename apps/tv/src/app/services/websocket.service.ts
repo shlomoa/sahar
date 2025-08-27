@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import { VideoNavigationService } from '../../shared/services/video-navigation.service';
-import { WebSocketBaseService } from '../../shared/services/websocket-base.service';
-import { WebSocketUtils } from '../../shared/utils/websocket-utils';
+import { RegisterPayload, VideoNavigationService } from 'shared';
+import { WebSocketBaseService } from 'shared';
+import { WebSocketUtils } from 'shared';
 import {
   WebSocketMessage,
   WEBSOCKET_CONFIG,
@@ -12,7 +12,7 @@ import {
   HeartbeatMessage,
   ActionConfirmationMessage,
   ActionConfirmationPayload,
-} from '../../shared/models/websocket-protocol';
+} from 'shared';
 
 @Injectable({
   providedIn: 'root'
@@ -40,7 +40,7 @@ export class WebSocketService extends WebSocketBaseService {
   // Abstract method implementations
   protected override handleMessage(message: WebSocketMessage): void {
     // Fallback when no specific handler is registered
-    console.warn('📺 TV: Unhandled message type (no registered handler):', message.type);
+    console.warn('📺 TV: Unhandled message type (no registered handler):', message.msgType);
   }
 
   protected override onConnected(): void {
@@ -49,7 +49,7 @@ export class WebSocketService extends WebSocketBaseService {
       clientType: 'tv',
       deviceId: this.deviceId,
       deviceName: this.deviceName,
-    });
+    } as RegisterPayload);
   }
 
   protected override onDisconnected(): void {
@@ -81,27 +81,26 @@ export class WebSocketService extends WebSocketBaseService {
     // Generators for outbound messages
     this.registerGenerators({
       register: () => ({
-        type: 'register',
+        msgType: 'register',
         timestamp: Date.now(),
         source: 'tv',
         payload: {
           clientType: 'tv',
           deviceId: this.deviceId,
           deviceName: this.deviceName,
-        },
+        } as RegisterPayload,
       }),
       action_confirmation: (payload) => ({
-        type: 'action_confirmation',
+        msgType: 'action_confirmation',
         timestamp: Date.now(),
         source: 'tv',
         payload: (payload as ActionConfirmationPayload) ?? { status: 'success' },
       } as ActionConfirmationMessage),
       heartbeat: () => ({
-        type: 'heartbeat',
+        msgType: 'heartbeat',
         timestamp: Date.now(),
         source: 'tv',
-        payload: { deviceId: this.deviceId, status: 'alive' },
-      }),
+        payload: { msgType: 'heartbeat' }}),
     });
   }
 
@@ -178,6 +177,6 @@ export class WebSocketService extends WebSocketBaseService {
   }
 
   private sendActionConfirmation(status: 'success' | 'failure', errorMessage?: string): void {
-    this.sendByType('action_confirmation', { status, ...(errorMessage ? { errorMessage } : {}) });
+    this.sendByType('action_confirmation', { status, ...(errorMessage ? { errorMessage } : {}) } as ActionConfirmationPayload);
   }
 }

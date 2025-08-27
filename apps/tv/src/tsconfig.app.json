@@ -11,7 +11,6 @@
   ],
   "include": [
     "app/**/*.ts",
-    "../shared/**/*.ts"
   ],
   "exclude": [
     "**/*.spec.ts"
