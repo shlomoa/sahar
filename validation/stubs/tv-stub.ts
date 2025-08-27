@@ -6,8 +6,8 @@
  */
 import http, { IncomingMessage, ServerResponse } from 'http';
 import WebSocket from 'ws';
-import { createLogger } from '../shared/utils/logging.js';
-import { WEBSOCKET_CONFIG } from '../shared/models/websocket-protocol.js';
+import { createLogger } from '../shared/shared/src/lib/utils/logging.js';
+import { WEBSOCKET_CONFIG } from '../shared/shared/src/lib/models/websocket-protocol.js';
 import { VALIDATION_CONFIG, buildLocalServerUrl } from '../config/validation-config.js';
 
 interface StubState {

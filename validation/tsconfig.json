@@ -21,10 +21,10 @@
     "stubs/remote-stub.ts",
     "stubs/tv-stub.ts",
     "config/validation-config.ts",
-    "shared/models/websocket-protocol.ts",
-    "shared/models/application-state.ts",
-    "shared/utils/logging.ts",
-    "shared/utils/websocket-utils.ts",
+    "shared/shared/src/lib/models/websocket-protocol.ts",
+    "shared/shared/src/lib/models/application-state.ts",
+    "shared/shared/src/lib/utils/logging.ts",
+    "shared/shared/src/lib/utils/websocket-utils.ts",
   ],
   "exclude": ["node_modules", "dist"]
 }

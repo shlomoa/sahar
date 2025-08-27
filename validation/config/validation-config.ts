@@ -1,6 +1,6 @@
 // Validation-only configuration and helpers.
 // Not for production use. Do not import this from runtime application code.
-import { WEBSOCKET_CONFIG } from '../shared/models/websocket-protocol.js';
+import { WEBSOCKET_CONFIG } from '../shared/shared/src/lib/models/websocket-protocol.js';
 
 export const VALIDATION_CONFIG = {
   RECONNECT: {

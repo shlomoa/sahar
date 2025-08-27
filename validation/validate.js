@@ -284,7 +284,8 @@ async function startEnvironment() {
 	});
 	// Resolve ports from compiled configs (single sources of truth)
 	try {
-		const proto = await import('./dist/shared/models/websocket-protocol.js');
+		const proto = await import('./dist/shared/shared/src/lib/models/websocket-protocol.js');
+		log(`current directory ${process.cwd()}`);
 		if (proto?.WEBSOCKET_CONFIG?.SERVER_DEFAULT_PORT) SERVER_PORT = Number(proto.WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT);
 		if (proto?.WEBSOCKET_CONFIG?.ACK_TIMEOUT) {
 			const ack = Number(proto.WEBSOCKET_CONFIG.ACK_TIMEOUT);
@@ -294,7 +295,7 @@ async function startEnvironment() {
 			}
 		}
 	} catch(e) {
-		log(`Filed to import server config; ensure server is built (npm run build:server) Exception: ${e.message}`);
+		log(`Failed to import server config; ensure server is built (npm run build:server) Exception: ${e.message}`);
 	}
 	try {
 		const vcfg = await import('./dist/config/validation-config.js');
