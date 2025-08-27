@@ -5,7 +5,7 @@ import {
   MessageType,
   BasePayload,
   SaharMessage,
-} from '../websocket/websocket-protocol';
+} from '../models/websocket-protocol';
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 

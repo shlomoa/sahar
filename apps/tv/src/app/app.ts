@@ -110,11 +110,11 @@ export class App implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Build Remote URL as protocol://FQDN:REMOTE_PORT (avoid localhost in QR).
+    // Build Remote URL as protocol://FQDN:SERVER_DEFAULT_PORT (avoid localhost in QR).
     // Prefer server-provided LAN IP from /host-ip, fall back to the browser hostname.
     const protocol = window.location.protocol;
     const defaultHost = window.location.hostname; // If the TV is accessed via FQDN, this will be the FQDN
-    const remotePort = WEBSOCKET_CONFIG.REMOTE_DEV_PORT;
+    const remotePort = WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT;
     const buildRemoteUrl = (host: string) => `${protocol}//${host}:${remotePort}`;
 
     // Start with a provisional URL based on the browser hostname.

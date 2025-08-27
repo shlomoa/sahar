@@ -4,7 +4,7 @@
 // CORE FSM STATE
 // Imported single-source ApplicationState / ClientInfo from shared models to avoid duplication.
 // =================================================================================================
-import { ApplicationState } from '../models/application-state';
+import { ApplicationState } from './application-state';
 
 // =================================================================================================
 // MESSAGE STRUCTURE
@@ -151,9 +151,7 @@ export type SaharMessage =
 
 // Protocol Configuration
 export const WEBSOCKET_CONFIG = {
-  TV_DEV_PORT: 4203,
-  REMOTE_DEV_PORT: 4202,
-  SERVER_PORT: 8080,
+  SERVER_DEFAULT_PORT: 8080,
   ACK_TIMEOUT: 5000, // ms
   WS_PATH: '/ws',
 } as const; // Validation config moved to validation/config/validation-config.ts

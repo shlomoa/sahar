@@ -38,6 +38,7 @@ const logError = (event: string, meta?: any, msg?: string) => logger.error(event
 // ESM-safe __dirname/__filename
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+logInfo('startup', { dir: __dirname }, 'Server starting up');
 
 // Create Express application
 const app = express();
@@ -307,19 +308,19 @@ wss.on('connection', (ws: WebSocket) => {
       const reg = msg as RegisterMessage;
       const { clientType, deviceId, deviceName } = reg.payload;
       // Enforce single TV / Remote uniqueness
-  const snapshot = fsm.getSnapshot();
-  if (clientType === 'tv' && snapshot.connectedClients.tv) {
+      const snapshot = fsm.getSnapshot();
+      if (clientType === 'tv' && snapshot.connectedClients.tv) {
         sendError(ws, ERROR_CODES.CLIENT_TYPE_MISMATCH, 'A TV client is already connected.', { close: true, meta: { attempted: 'tv' } });
         return;
       }
-  if (clientType === 'remote' && snapshot.connectedClients.remote) {
+      if (clientType === 'remote' && snapshot.connectedClients.remote) {
         sendError(ws, ERROR_CODES.CLIENT_TYPE_MISMATCH, 'A Remote client is already connected.', { close: true, meta: { attempted: 'remote' } });
         return;
       }
       clients.set(ws, { clientType, deviceId, deviceName });
-  fsm.registerClient(clientType, deviceId, deviceName);
-  ws.send(JSON.stringify(makeAck('server'))); // Ack first, then broadcast new state
-  broadcastStateIfChanged();
+      fsm.registerClient(clientType, deviceId, deviceName);
+      ws.send(JSON.stringify(makeAck('server'))); // Ack first, then broadcast new state
+      broadcastStateIfChanged();
       logInfo('client_registered', { clientType, deviceId });
       return;
     }
@@ -458,7 +459,7 @@ app.get('/health', (_req: Request, res: Response) => {
 // Host IP endpoint for clients needing a resolvable LAN address (e.g., QR generation)
 app.get('/host-ip', (_req: Request, res: Response) => {
   const ip = getBestHostIP();
-  res.json({ ip, port: WEBSOCKET_CONFIG.SERVER_PORT });
+  res.json({ ip, port: WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT });
 });
 
 app.use('/.well-known', express.static('public/.well-known', { dotfiles: 'allow' }))
@@ -467,16 +468,18 @@ app.use(express.static('public'));
 // Define path to the TV and Remote app builds (relative to output directory)
 // NOTE: Angular build output directory names are the project name (tv, remote)
 // not 'sahar-tv' / 'sahar-remote'. Adjusted to match actual dist structure.
-const tvAppPath = path.join(__dirname, '../../apps/tv/dist/tv');
-const remoteAppPath = path.join(__dirname, '../../apps/remote/dist/remote');
+const tvAppPath = path.join(__dirname, '../../server/dist/tv');
+const remoteAppPath = path.join(__dirname, '../../server/dist/remote/');
 const tvIndexPath = path.join(tvAppPath, 'browser/index.html');
 const remoteIndexPath = path.join(remoteAppPath, 'browser/index.html');
+
 // Pre-flight existence checks (helpful diagnostics when static serving fails)
 if (!existsSync(tvIndexPath)) {
   logWarn('tv_index_missing', { expected: path.relative(__dirname, tvIndexPath) });
 } else {
   logInfo('tv_index_found', { path: path.relative(__dirname, tvIndexPath) });
 }
+
 if (!existsSync(remoteIndexPath)) {
   logWarn('remote_index_missing', { expected: path.relative(__dirname, remoteIndexPath) });
 } else {
@@ -491,55 +494,64 @@ export let SSR_STATUS: { tv: boolean; remote: boolean; tvPath: string; remotePat
   remotePath: ''
 };
 
+
+// Quick compatibility fix: serve the TV browser build at the server root so
+// root-relative asset paths emitted by the Angular build (base href '/')
+// resolve correctly during local/dev runs without rebuilding with a base-href.
+// This mirrors the built app's browser folder and is intentionally permissive
+// (fallthrough) so health/static routes still take precedence.
+app.use('/tv', express.static(path.join(tvAppPath, 'browser'), { fallthrough: true }));
+app.use('/remote', express.static(path.join(remoteAppPath, 'browser'), { fallthrough: true }));
+
 // Task 1.7: Static asset passthrough (served regardless of DEV_SSR if they exist)
 // We serve browser asset folders directly so dev/prod share URL shape.
-app.use('/assets', express.static(path.join(tvAppPath, 'browser/assets'), { fallthrough: true }));
 app.use('/remote/assets', express.static(path.join(remoteAppPath, 'browser/assets'), { fallthrough: true }));
+app.use('/tv/assets', express.static(path.join(tvAppPath, 'browser/assets'), { fallthrough: true }));
 
 // Task 1.6: Dev reverse proxies for SSR HTML (when DEV_SSR=1) else fall back to built assets
 // TV base route: '/' (root) and '/tv'
 app.get(['/','/tv'], (req: Request, res: Response, next: NextFunction) => {
-  if (DEV_SSR) return devProxy(`http://${getBestHostIP()}:${WEBSOCKET_CONFIG.TV_DEV_PORT}`)(req, res, next);
+  if (DEV_SSR) return devProxy(`http://${getBestHostIP()}:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}`)(req, res, next);
   // Fallback to built index.html (prod-like)
-  res.sendFile(path.join(tvAppPath, 'browser/index.html'));
+  res.sendFile(tvIndexPath);
 });
 
 // Remote base route '/remote'
 app.get('/remote', (req: Request, res: Response, next: NextFunction) => {
-  if (DEV_SSR) return devProxy(`http://${getBestHostIP()}:${WEBSOCKET_CONFIG.REMOTE_DEV_PORT}`)(req, res, next);
-  res.sendFile(path.join(remoteAppPath, 'browser/index.html'));
+  if (DEV_SSR) return devProxy(`http://${getBestHostIP()}:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}`)(req, res, next);
+  res.sendFile(remoteIndexPath);
 });
 
 // Catch-all deep links for Angular routing (non-asset) for TV
 app.get(['/tv/*splat','/*splat'], (req: Request, res: Response, next: NextFunction) => {
   // Ignore if request looks like a file (has an extension) to avoid hijacking static/health
   if (/\.[a-zA-Z0-9]+$/.test(req.path)) return next();
-  if (DEV_SSR) return devProxy(`http://${getBestHostIP()}:${WEBSOCKET_CONFIG.TV_DEV_PORT}`)(req, res, next);
-  res.sendFile(path.join(tvAppPath, 'browser/index.html'));
+  if (DEV_SSR) return devProxy(`http://${getBestHostIP()}:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}`)(req, res, next);
+  res.sendFile(tvIndexPath);
 });
 
 // Catch-all deep links for Remote
 app.get('/remote/*splat', (req: Request, res: Response, next: NextFunction) => {
   if (/\.[a-zA-Z0-9]+$/.test(req.path)) return next();
-  if (DEV_SSR) return devProxy(`http://localhost:${WEBSOCKET_CONFIG.REMOTE_DEV_PORT}`)(req, res, next);
-  res.sendFile(path.join(remoteAppPath, 'browser/index.html'));
+  if (DEV_SSR) return devProxy(`http://localhost:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}`)(req, res, next);
+  res.sendFile(remoteIndexPath);
 });
 
 // (health routes moved earlier)
 
 // Start the server
-server.listen(WEBSOCKET_CONFIG.SERVER_PORT, () => {
-  logInfo('server_start', { port: WEBSOCKET_CONFIG.SERVER_PORT });
+server.listen(WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT, () => {
+  logInfo('server_start', { port: WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT });
   logInfo('host_ip_selected', { hostIp: getBestHostIP() });
-  logInfo('server_status', { express: true, httpListening: true, tvRoute: '/tv', remoteRoute: '/remote', websocket: true, devSsr: DEV_SSR, tvDevPort: WEBSOCKET_CONFIG.TV_DEV_PORT, remoteDevPort: WEBSOCKET_CONFIG.REMOTE_DEV_PORT });
+  logInfo('server_status', { express: true, httpListening: true, tvRoute: '/tv', remoteRoute: '/remote', websocket: true, devSsr: DEV_SSR, tvDevPort: WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT, remoteDevPort: WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT });
   markReady();
   logInfo('server_ready');
   logInfo('mode_banner', {
     mode: DEV_SSR ? 'dev_proxy' : 'prod_static',
     wsPath: WEBSOCKET_CONFIG.WS_PATH,
-    serverPort: WEBSOCKET_CONFIG.SERVER_PORT,
-    tvDevPort: WEBSOCKET_CONFIG.TV_DEV_PORT,
-    remoteDevPort: WEBSOCKET_CONFIG.REMOTE_DEV_PORT
+    serverPort: WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT,
+    tvDevPort: WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT,
+    remoteDevPort: WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT
   });
   // Minimal inline SSR gating (no discovery abstraction). Only in non-dev-proxy mode.
   if (!DEV_SSR) {
@@ -553,13 +565,16 @@ server.listen(WEBSOCKET_CONFIG.SERVER_PORT, () => {
         const files = readdirSync(dir);
         const cand = files.find(f => /^(main|index).*\.(mjs|js)$/i.test(f)) || files.find(f => /\.(mjs|js)$/i.test(f));
         return cand ? path.join(dir, cand) : '';
-      } catch { return ''; }
+      } catch {        
+        logError('ssr_dir_read_error', { dir: path.relative(__dirname, dir) });
+        return '';
+      }
     };
     const tvEntry = tvDirExists ? pickEntry(tvServerDir) : '';
     const remoteEntry = remoteDirExists ? pickEntry(remoteServerDir) : '';
-  SSR_STATUS = { tv: tvDirExists, remote: remoteDirExists, tvPath: tvEntry, remotePath: remoteEntry };
-  logInfo('ssr_dir_status', { app: 'tv', dir: path.relative(__dirname, tvServerDir), exists: tvDirExists, pickedEntry: tvEntry ? path.relative(__dirname, tvEntry) : null });
-  logInfo('ssr_dir_status', { app: 'remote', dir: path.relative(__dirname, remoteServerDir), exists: remoteDirExists, pickedEntry: remoteEntry ? path.relative(__dirname, remoteEntry) : null });
+    SSR_STATUS = { tv: tvDirExists, remote: remoteDirExists, tvPath: tvEntry, remotePath: remoteEntry };
+    logInfo('ssr_dir_status', { app: 'tv', dir: path.relative(__dirname, tvServerDir), exists: tvDirExists, pickedEntry: tvEntry ? path.relative(__dirname, tvEntry) : null });
+    logInfo('ssr_dir_status', { app: 'remote', dir: path.relative(__dirname, remoteServerDir), exists: remoteDirExists, pickedEntry: remoteEntry ? path.relative(__dirname, remoteEntry) : null });
   }
 });
 

@@ -37,7 +37,7 @@ export class WebSocketService extends WebSocketBaseService {
   private messageTimings: number[] = [];
   
   // Default server URL
-  private readonly defaultUrl = `ws://localhost:${WEBSOCKET_CONFIG.SERVER_PORT}${WEBSOCKET_CONFIG.WS_PATH}`;
+  private readonly defaultUrl = `ws://localhost:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}${WEBSOCKET_CONFIG.WS_PATH}`;
   
   /**
    * Add a debug log entry to the buffer and console
@@ -304,7 +304,7 @@ export class WebSocketService extends WebSocketBaseService {
           deviceName: 'Local Server',
           deviceType: 'tv',
           ip: 'localhost',
-          port: WEBSOCKET_CONFIG.SERVER_PORT,
+          port: WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT,
           lastSeen: Date.now(),
           capabilities: ['navigation', 'control', 'state']
         }

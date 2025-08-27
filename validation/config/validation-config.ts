@@ -15,5 +15,5 @@ export const VALIDATION_CONFIG = {
 } as const;
 
 export function buildLocalServerUrl(host: string = 'localhost'): string {
-  return `ws://${host}:${WEBSOCKET_CONFIG.SERVER_PORT}${WEBSOCKET_CONFIG.WS_PATH}`;
+  return `ws://${host}:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}${WEBSOCKET_CONFIG.WS_PATH}`;
 }

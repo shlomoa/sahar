@@ -285,7 +285,7 @@ async function startEnvironment() {
 	// Resolve ports from compiled configs (single sources of truth)
 	try {
 		const proto = await import('./dist/shared/websocket/websocket-protocol.js');
-		if (proto?.WEBSOCKET_CONFIG?.SERVER_PORT) SERVER_PORT = Number(proto.WEBSOCKET_CONFIG.SERVER_PORT);
+		if (proto?.WEBSOCKET_CONFIG?.SERVER_DEFAULT_PORT) SERVER_PORT = Number(proto.WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT);
 		if (proto?.WEBSOCKET_CONFIG?.ACK_TIMEOUT) {
 			const ack = Number(proto.WEBSOCKET_CONFIG.ACK_TIMEOUT);
 			if (Number.isFinite(ack)) {

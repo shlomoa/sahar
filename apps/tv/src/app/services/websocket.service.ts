@@ -61,7 +61,7 @@ export class WebSocketService extends WebSocketBaseService {
   }
 
   // Connect to WebSocket server (for testing with localhost:8000)
-  public override connect(url = `ws://localhost:${WEBSOCKET_CONFIG.SERVER_PORT}`): boolean {
+  public override connect(url = `ws://localhost:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}`): boolean {
     console.log(`📺 TV connecting to WebSocket at ${url}`);
     return super.connect(url);
   }  

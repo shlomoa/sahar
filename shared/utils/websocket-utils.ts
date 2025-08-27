@@ -1,4 +1,4 @@
-import { WEBSOCKET_CONFIG, WebSocketMessage, BasePayload } from '../websocket/websocket-protocol';
+import { WEBSOCKET_CONFIG, WebSocketMessage, BasePayload } from '../models/websocket-protocol';
 
 // Local lightweight error shape used by legacy helpers (not part of protocol types)
 export interface WebSocketClientError {
@@ -25,7 +25,7 @@ export class WebSocketUtils {
 
   static generateLocalHostUrls(): string[] {
     // Simplified: single configured server port
-    return [`ws://localhost:${WEBSOCKET_CONFIG.SERVER_PORT}${WEBSOCKET_CONFIG.WS_PATH}`];
+    return [`ws://localhost:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}${WEBSOCKET_CONFIG.WS_PATH}`];
   }
 
   static generateLocalNetworkIPs(): string[] {
