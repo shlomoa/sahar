@@ -74,7 +74,7 @@ function connect() {
         log('info', 'ws.ack', { from: msg.source });
         return;
       }
-      if (msg.type === 'state_sync') {
+      if (msg.msgType === 'state_sync') {
         state.lastStateSync = { payload: msg.payload, ts: Date.now() };
         log('info', 'ws.state_sync');
         const ack = { msgType: 'ack', timestamp: Date.now(), source: 'tv', payload: { ack: msg.msgType } };

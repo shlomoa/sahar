@@ -94,7 +94,6 @@ async function postJson(port, path, body) {
 }
 
 function getTvState(){ return fetchJson(TV_STUB_PORT, '/state'); }
-function getRemoteState(){ return fetchJson(REMOTE_STUB_PORT, '/state'); }
 function getTvHealth(){ return fetchJson(TV_STUB_PORT, '/health'); }
 function getVersion(s){ return s?.lastStateSync?.payload?.version; }
 
