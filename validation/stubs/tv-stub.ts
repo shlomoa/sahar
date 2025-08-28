@@ -58,7 +58,7 @@ function connect() {
     reconnectAttempts = 0;
     log('info', 'ws.open');
     const register = {
-      type: 'register' as const,
+      msgType: 'register' as const,
       timestamp: Date.now(),
       source: 'tv' as const,
       payload: { clientType: 'tv', deviceId: DEFAULTS.clientId, deviceName: process.env.DEVICE_NAME || 'TV Stub' },
@@ -69,7 +69,7 @@ function connect() {
   ws.on('message', (data: WebSocket.RawData) => {
     try {
       const msg = JSON.parse(data.toString());
-      if (msg.type === 'ack') {
+      if (msg.msgType === 'ack') {
         state.lastAckAt = Date.now();
         log('info', 'ws.ack', { from: msg.source });
         return;
@@ -77,11 +77,11 @@ function connect() {
       if (msg.type === 'state_sync') {
         state.lastStateSync = { payload: msg.payload, ts: Date.now() };
         log('info', 'ws.state_sync');
-        const ack = { type: 'ack', timestamp: Date.now(), source: 'tv', payload: { ack: msg.type } };
+        const ack = { msgType: 'ack', timestamp: Date.now(), source: 'tv', payload: { ack: msg.msgType } };
         ws?.send(JSON.stringify(ack));
         return;
       }
-      log('info', 'ws.message', { type: msg.type });
+      log('info', 'ws.message', { msgType: msg.msgType });
     } catch (e: any) {
       log('error', 'ws.message.parse_error', { error: e.message });
     }

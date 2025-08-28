@@ -21,6 +21,7 @@ import {
   ClientType
 } from 'shared';
 import { SaharFsm } from './fsm';
+import { performersData } from './mock-data';
 import { networkInterfaces } from 'os';
 import { createLogger } from 'shared';
 
@@ -167,12 +168,12 @@ function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebS
   if (typeof raw !== 'object' || raw === null) {
     return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Non-object message', close: !isRegistered };
   }
-  const { type, payload } = raw as { type?: string; payload?: any };
-  if (typeof type !== 'string') {
+  const { msgType, payload } = raw as { msgType?: string; payload?: any };
+  if (typeof msgType !== 'string') {
     return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Missing type', close: !isRegistered };
   }
   if (!isRegistered) {
-    if (type !== 'register') {
+  if (msgType !== 'register') {
       return { ok: false, code: ERROR_CODES.INVALID_REGISTRATION, reason: 'First message must be register', close: true };
     }
     // register payload checks
@@ -191,7 +192,7 @@ function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebS
     return { ok: true, msg: raw as WebSocketMessage };
   }
   // Already registered client
-  switch (type) {
+  switch (msgType) {
     case 'register':
       return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Duplicate register' }; // no close
     case 'data': {
@@ -439,7 +440,7 @@ app.get('/ready', (_req: Request, res: Response) => {
 // Enriched health snapshot (debug / monitoring)
 app.get('/health', (_req: Request, res: Response) => {
   const wsConnections = [...wss.clients].length;
-  const registered = [...clients.values()].map(c => ({ type: c.clientType, deviceId: c.deviceId }));
+  const registered = [...clients.values()].map(c => ({ clientType: c.clientType, deviceId: c.deviceId }));
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -546,6 +547,15 @@ server.listen(WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT, () => {
   logInfo('server_status', { express: true, httpListening: true, tvRoute: '/tv', remoteRoute: '/remote', websocket: true, devSsr: DEV_SSR, tvDevPort: WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT, remoteDevPort: WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT });
   markReady();
   logInfo('server_ready');
+  // Perform initial server-side seeding using built-in mock data so validation can use POST /seed
+  try {
+    // seed with performersData structure expected by FSM
+    fsm.seedData({ performers: performersData });
+    broadcastStateIfChanged(true);
+    logInfo('initial_seed_applied', { performers: performersData.length });
+  } catch (e: any) {
+    logError('initial_seed_failed', { error: e?.message || String(e) });
+  }
   logInfo('mode_banner', {
     mode: DEV_SSR ? 'dev_proxy' : 'prod_static',
     wsPath: WEBSOCKET_CONFIG.WS_PATH,
@@ -569,6 +579,21 @@ server.listen(WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT, () => {
         logError('ssr_dir_read_error', { dir: path.relative(__dirname, dir) });
         return '';
       }
+
+      // POST /seed - accept JSON payload to seed the server state; used by validation harness
+      app.post('/seed', (req: Request, res: Response) => {
+        const body = req.body;
+        try {
+          fsm.seedData(body);
+          // reply then broadcast
+          res.status(200).json({ ok: true });
+          broadcastStateIfChanged(true);
+          logInfo('seed_endpoint_called', { ok: true });
+        } catch (e: any) {
+          logError('seed_endpoint_error', { error: e?.message || String(e) });
+          res.status(500).json({ ok: false, error: e?.message || String(e) });
+        }
+      });
     };
     const tvEntry = tvDirExists ? pickEntry(tvServerDir) : '';
     const remoteEntry = remoteDirExists ? pickEntry(remoteServerDir) : '';

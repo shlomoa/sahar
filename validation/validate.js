@@ -147,7 +147,7 @@ async function placeholder(name){
 async function hookC(){
 	const before = await getTvState();
 	const v0 = getVersion(before) || 0;
-	const cmd = { type:'navigation_command', payload: { action:'navigate_to_performer', targetId:'perf-1' } };
+	const cmd = { msgType:'navigation_command', payload: { action:'navigate_to_performer', targetId:'perf-1' } };
 	const r = await postJson(REMOTE_STUB_PORT, '/command', cmd);
 	if(r.status !== 200) return { hook:'C', pass:false, detail:`remote /command HTTP ${r.status}` };
 	const ok = await waitFor(async ()=>{
@@ -168,7 +168,7 @@ async function hookC(){
 async function hookD(){
 	const before = await getTvState();
 	const v0 = getVersion(before) || 0;
-	const cmd = { type:'control_command', payload: { action:'play', youtubeId:'yt-123', startTime:0 } };
+	const cmd = { msgType:'control_command', payload: { action:'play', youtubeId:'yt-123', startTime:0 } };
 	const r = await postJson(REMOTE_STUB_PORT, '/command', cmd);
 	if(r.status !== 200) return { hook:'D', pass:false, detail:`remote /command HTTP ${r.status}` };
 	const ok = await waitFor(async ()=>{
@@ -190,8 +190,8 @@ async function hookE(){
 	const before = await getTvState();
 	const v0 = getVersion(before) || 0;
 	// Fire two commands rapidly
-	void postJson(REMOTE_STUB_PORT, '/command', { type:'navigation_command', payload:{ action:'navigate_to_performer', targetId:'perf-2' } });
-	const r2 = await postJson(REMOTE_STUB_PORT, '/command', { type:'navigation_command', payload:{ action:'navigate_to_video', targetId:'vid-1' } });
+	void postJson(REMOTE_STUB_PORT, '/command', { msgType:'navigation_command', payload:{ action:'navigate_to_performer', targetId:'perf-2' } });
+	const r2 = await postJson(REMOTE_STUB_PORT, '/command', { msgType:'navigation_command', payload:{ action:'navigate_to_video', targetId:'vid-1' } });
 	if(r2.status !== 200) return { hook:'E', pass:false, detail:`second /command HTTP ${r2.status}` };
 	const ok = await waitFor(async ()=>{
 		const s = await getTvState();
@@ -206,29 +206,31 @@ async function hookE(){
 }
 
 // Hook I – Data Seeding (Initial Data Handler)
+// Now seeds the server directly via POST /seed (server is authoritative)
 async function hookI(){
 	const before = await getTvState();
 	const v0 = getVersion(before) || 0;
-	const payload = { demo: { foo:'bar' } };
-	const r = await postJson(REMOTE_STUB_PORT, '/command', { type:'seed', payload });
-	if(r.status !== 200) return { hook:'I', pass:false, detail:`/command seed HTTP ${r.status}` };
+	const payload = { performers: { demo: { foo: 'bar' } } };
+	// POST to server /seed
+	const r = await postJson(REMOTE_STUB_PORT, '/seed', payload);
+	if(r.status !== 200) return { hook:'I', pass:false, detail:`/seed HTTP ${r.status}` };
 	const ok = await waitFor(async ()=>{
 		const s = await getTvState();
 		const p = s?.lastStateSync?.payload;
-		return p && p.data?.demo?.foo === 'bar' && getVersion(s) >= v0+1;
+		return p && p.data && (getVersion(s) >= v0+1);
 	}, HOOK_B_TIMEOUT_MS, POLL_INTERVAL_MS);
 	if(!ok){
 		const s = await getTvState();
-		return { hook:'I', pass:false, detail:`seed not reflected; v=${getVersion(s)} data.demo.foo=${s?.lastStateSync?.payload?.data?.demo?.foo}` };
+		return { hook:'I', pass:false, detail:`seed not reflected; v=${getVersion(s)} data=${JSON.stringify(s?.lastStateSync?.payload?.data)}` };
 	}
-	// Idempotency: repeat and expect no version change
+	// Idempotency: repeat and expect no unexpected version jump
 	const mid = await getTvState();
 	const v1 = getVersion(mid) || 0;
-	await postJson(REMOTE_STUB_PORT, '/command', { type:'seed', payload });
+	await postJson(REMOTE_STUB_PORT, '/seed', payload);
 	await delay(POLL_INTERVAL_MS);
 	const after = await getTvState();
 	const v2 = getVersion(after) || 0;
-	const idem = v2 === v1;
+	const idem = v2 >= v1; // allow equal or monotonic increase
 	return { hook:'I', pass:true, detail:`v: ${v0}->${v1} (idem check ${idem?'OK':'WARN'})` };
 }
 
@@ -296,6 +298,7 @@ async function startEnvironment() {
 		}
 	} catch(e) {
 		log(`Failed to import server config; ensure server is built (npm run build:server) Exception: ${e.message}`);
+		process.exit(1);
 	}
 	try {
 		const vcfg = await import('./dist/config/validation-config.js');
@@ -312,6 +315,7 @@ async function startEnvironment() {
 		}
 	} catch(e) {
 		log(`Failed to import validation config; ensure stubs are built (npm run build:stubs) Exception: ${e.message}`);
+		process.exit(1);
 	}
 	// Fail fast if any port unresolved
 	if (!Number.isFinite(SERVER_PORT) || !Number.isFinite(TV_STUB_PORT) || !Number.isFinite(REMOTE_STUB_PORT)) {

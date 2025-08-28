@@ -61,7 +61,7 @@ function connect() {
     reconnectAttempts = 0;
     log('info', 'ws.open');
     const register = {
-      type: 'register' as const,
+      msgType: 'register' as const,
       timestamp: Date.now(),
       source: 'remote' as const,
       payload: { clientType: 'remote', deviceId: DEFAULTS.clientId, deviceName: process.env.DEVICE_NAME || 'Remote Stub' },
@@ -72,7 +72,7 @@ function connect() {
   ws.on('message', (data: WebSocket.RawData) => {
     try {
       const msg = JSON.parse(data.toString());
-      if (msg.type === 'ack') {
+      if (msg.msgType === 'ack') {
         state.lastAckAt = Date.now();
         log('info', 'ws.ack', { from: msg.source });
         if (pendingAckResolve) { pendingAckResolve(); pendingAckResolve = null; }
@@ -81,11 +81,11 @@ function connect() {
       if (msg.type === 'state_sync') {
         state.lastStateSync = { payload: msg.payload, ts: Date.now() };
         log('info', 'ws.state_sync');
-        const ack = { type: 'ack', timestamp: Date.now(), source: 'remote', payload: { ack: msg.type } };
+        const ack = { msgType: 'ack', timestamp: Date.now(), source: 'remote', payload: { ack: msg.msgType } };
         ws?.send(JSON.stringify(ack));
         return;
       }
-      log('info', 'ws.message', { type: msg.type });
+      log('info', 'ws.message', { msgType: msg.msgType });
     } catch (e: any) {
       log('error', 'ws.message.parse_error', { error: e.message });
     }
@@ -153,27 +153,27 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && pathname === '/command') {
     const body = await parseBody(req);
     try {
-      if (body.type === 'seed') {
-        const msg = { type: 'data', timestamp: Date.now(), source: 'remote', payload: body.payload || {} };
+      if (body.msgType === 'seed') {
+        const msg = { msgType: 'data', timestamp: Date.now(), source: 'remote', payload: body.payload || {} };
         ws?.send(JSON.stringify(msg));
         log('info', 'http.command.seed', { size: JSON.stringify(body.payload || {}).length });
         return sendJson(res, 200, { ok: true });
       }
-      if (body.type !== 'navigation_command' && body.type !== 'control_command') {
+      if (body.msgType !== 'navigation_command' && body.msgType !== 'control_command') {
         return sendJson(res, 400, { error: 'Invalid type' });
       }
       // Narrow payload types
       const payload = body.payload || {};
-      if (body.type === 'navigation_command') {
+      if (body.msgType === 'navigation_command') {
         const navPayload = payload as Partial<NavigationCommandPayload>;
         if (!navPayload.action) return sendJson(res, 400, { error: 'Missing navigation action' });
-      } else if (body.type === 'control_command') {
+      } else if (body.msgType === 'control_command') {
         const ctlPayload = payload as Partial<ControlCommandPayload>;
         if (!ctlPayload.action) return sendJson(res, 400, { error: 'Missing control action' });
       }
-      const msg = { type: body.type, timestamp: Date.now(), source: 'remote', payload };
+      const msg = { msgType: body.msgType, timestamp: Date.now(), source: 'remote', payload };
       ws?.send(JSON.stringify(msg));
-      log('info', 'http.command.sent', { type: body.type });
+      log('info', 'http.command.sent', { msgType: body.msgType });
       await waitForAck(DEFAULTS.ackTimeoutMs);
       return sendJson(res, 200, { ok: true });
     } catch (e: any) {
