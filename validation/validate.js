@@ -211,7 +211,7 @@ async function hookI(){
 	const v0 = getVersion(before) || 0;
 	const payload = { performers: { demo: { foo: 'bar' } } };
 	// POST to server /seed
-	const r = await postJson(REMOTE_STUB_PORT, '/seed', payload);
+	const r = await postJson(SERVER_PORT, '/seed', payload);
 	if(r.status !== 200) return { hook:'I', pass:false, detail:`/seed HTTP ${r.status}` };
 	const ok = await waitFor(async ()=>{
 		const s = await getTvState();
@@ -225,7 +225,7 @@ async function hookI(){
 	// Idempotency: repeat and expect no unexpected version jump
 	const mid = await getTvState();
 	const v1 = getVersion(mid) || 0;
-	await postJson(REMOTE_STUB_PORT, '/seed', payload);
+	await postJson(SERVER_PORT, '/seed', payload);
 	await delay(POLL_INTERVAL_MS);
 	const after = await getTvState();
 	const v2 = getVersion(after) || 0;
@@ -263,11 +263,11 @@ async function runHook(name){
 	switch(name){
 		case 'A': return hookA();
 		case 'B': return hookB();
-	case 'C': return hookC();
-	case 'D': return hookD();
-	case 'E': return hookE();
-	case 'I': return hookI();
-	case 'J': return hookJ();
+		case 'C': return hookC();
+		case 'D': return hookD();
+		case 'E': return hookE();
+		case 'I': return hookI();
+		case 'J': return hookJ();
 		default: return { hook:name, pass:false, detail:'Unknown hook'};
 	}
 }

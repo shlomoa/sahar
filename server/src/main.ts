@@ -569,35 +569,36 @@ server.listen(WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT, () => {
     const remoteServerDir = path.join(remoteAppPath, 'server');
     const tvDirExists = existsSync(tvServerDir);
     const remoteDirExists = existsSync(remoteServerDir);
-    // Try to pick a representative entry file (first .mjs or .js) if directory exists
+      // Try to pick a representative entry file (first .mjs or .js) if directory exists
     const pickEntry = (dir: string) => {
       try {
         const files = readdirSync(dir);
-        const cand = files.find(f => /^(main|index).*\.(mjs|js)$/i.test(f)) || files.find(f => /\.(mjs|js)$/i.test(f));
+        const cand = files.find(f => /^(main|index).*.\.(mjs|js)$/i.test(f)) || files.find(f => /\.(mjs|js)$/i.test(f));
         return cand ? path.join(dir, cand) : '';
       } catch {        
         logError('ssr_dir_read_error', { dir: path.relative(__dirname, dir) });
         return '';
       }
-
-      // POST /seed - accept JSON payload to seed the server state; used by validation harness
-      app.post('/seed', (req: Request, res: Response) => {
-        const body = req.body;
-        try {
-          fsm.seedData(body);
-          // reply then broadcast
-          res.status(200).json({ ok: true });
-          broadcastStateIfChanged(true);
-          logInfo('seed_endpoint_called', { ok: true });
-        } catch (e: any) {
-          logError('seed_endpoint_error', { error: e?.message || String(e) });
-          res.status(500).json({ ok: false, error: e?.message || String(e) });
-        }
-      });
     };
     const tvEntry = tvDirExists ? pickEntry(tvServerDir) : '';
     const remoteEntry = remoteDirExists ? pickEntry(remoteServerDir) : '';
     SSR_STATUS = { tv: tvDirExists, remote: remoteDirExists, tvPath: tvEntry, remotePath: remoteEntry };
+
+    // POST /seed - accept JSON payload to seed the server state; used by validation harness
+    app.post('/seed', (req: Request, res: Response) => {
+      const body = req.body;
+      try {
+        fsm.seedData(body);
+        // reply then broadcast
+        res.status(200).json({ ok: true });
+        broadcastStateIfChanged(true);
+        logInfo('seed_endpoint_called', { ok: true });
+      } catch (e: any) {
+        logError('seed_endpoint_error', { error: e?.message || String(e) });
+        res.status(500).json({ ok: false, error: e?.message || String(e) });
+      }
+    });
+
     logInfo('ssr_dir_status', { app: 'tv', dir: path.relative(__dirname, tvServerDir), exists: tvDirExists, pickedEntry: tvEntry ? path.relative(__dirname, tvEntry) : null });
     logInfo('ssr_dir_status', { app: 'remote', dir: path.relative(__dirname, remoteServerDir), exists: remoteDirExists, pickedEntry: remoteEntry ? path.relative(__dirname, remoteEntry) : null });
   }
