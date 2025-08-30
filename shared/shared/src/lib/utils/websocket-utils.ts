@@ -1,5 +1,5 @@
 import { WEBSOCKET_CONFIG } from '../models/websocket-protocol';
-import { WebSocketMessage, BasePayload, MessageSource, MessageType } from '../models/messages';
+import { ClientType, WebSocketMessage, BasePayload, MessageSource, MessageType } from '../models/messages';
 // Local lightweight error shape used by legacy helpers (not part of protocol types)
 export interface WebSocketClientError {
   code: string;
@@ -8,10 +8,11 @@ export interface WebSocketClientError {
   deviceId?: string;
 }
 
+
 // Utility functions for WebSocket operations
 export class WebSocketUtils {  
-  static generateDeviceId(deviceType: 'tv' | 'remote'): string {
-    return `${deviceType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  static generateDeviceId(clientType: ClientType): string {
+    return `${clientType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
   static createMessage(msgType: MessageType, payload: BasePayload = {msgType: msgType}, source: MessageSource): WebSocketMessage {
@@ -111,9 +112,9 @@ export class WebSocketUtils {
     return { code, message, timestamp: Date.now() };
   }
 
-  static logMessage(deviceType: 'tv' | 'remote', direction: 'sent' | 'received', message: WebSocketMessage): void {
+  static logMessage(clientType: ClientType, direction: 'sent' | 'received', message: WebSocketMessage): void {
     const icon = direction === 'sent' ? '📤' : '📥';
-    const device = deviceType.toUpperCase();
+    const device = clientType.toUpperCase();
     console.log(`${icon} ${device}: ${direction} ${message.msgType} message:`, message);
   }
 }

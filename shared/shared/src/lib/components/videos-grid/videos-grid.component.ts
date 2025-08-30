@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Video } from '../../models/video-navigation';
 import { getYoutubeVideoId, getYoutubeThumbnailUrl } from '../../utils/youtube-helpers';
+import { ClientType } from '../../models';
 
 @Component({
   selector: 'shared-videos-grid',
@@ -21,7 +22,7 @@ import { getYoutubeVideoId, getYoutubeThumbnailUrl } from '../../utils/youtube-h
 export class SharedVideosGridComponent {
   @Input() videos: Video[] = [];
   @Input() selectedVideoId?: string;
-  @Input() displayMode: 'remote' | 'tv' = 'remote';
+  @Input() clientType: ClientType = 'remote';
   @Input() showBreadcrumb = true;
   
   @Output() videoSelected = new EventEmitter<string>();
@@ -41,20 +42,20 @@ export class SharedVideosGridComponent {
 
   // Helper methods for styling based on display mode
   getSectionClasses(): string {
-    return this.displayMode === 'tv' 
+    return this.clientType === 'tv' 
       ? 'videos-section tv-mode' 
       : 'videos-section remote-mode';
   }
 
   getGridClasses(): string {
-    return this.displayMode === 'tv' 
+    return this.clientType === 'tv' 
       ? 'videos-grid tv-mode' 
       : 'videos-grid remote-mode';
   }
 
   getCardClasses(): string {
     const baseClasses = 'video-card';
-    return this.displayMode === 'tv' 
+    return this.clientType === 'tv' 
       ? `${baseClasses} tv-card` 
       : `${baseClasses} remote-card`;
   }

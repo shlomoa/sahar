@@ -19,16 +19,25 @@ For complete architecture and protocol details, see the single source of truth: 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+
-- Angular CLI 20+ (only needed for direct `ng serve` / manual builds)
+- Node.js 18+ (Node 24 recommended for local runs shown in this repo)
+- Angular CLI 20+ (only needed for direct `ng serve` / manual builds or local production builds)
 - Local WiFi network
 
 ### Install Dependencies
-```bash
+You can either install per-package or install from the monorepo root. Examples:
+
+Per-package (same as before):
+```powershell
 cd apps/tv && npm install
 cd ../remote && npm install
 cd ../../server && npm install
 cd ../validation && npm install
+```
+
+From the repo root (preferred for a fresh workspace):
+```powershell
+# run once at repo root - this will populate each package's node_modules where package.json scripts expect them
+npm install
 ```
 
 ### Integration Run Modes
@@ -41,7 +50,7 @@ tv-stub | Remote prod UI, TV simulated | remote only | server + tv stub | partia
 remote-stub | TV prod UI, Remote simulated | tv only | server + remote stub | partial
 stubs | Both simulated stubs (fast loop) | none | server + tv stub + remote stub | Stub only
 
-Run examples (from repo root with workspace flag or inside validation folder):
+Run examples (from repo root with workspace flag or inside `validation`):
 ```powershell
 npm run mode:prod -w validation
 npm run tv-stub   -w validation
@@ -137,11 +146,25 @@ See the authoritative flow and details in: [ARCHITECTURE.md — Network Architec
 
 Canonical flows, commands, and hook references live in [VALIDATION.md](./VALIDATION.md). Refer there for environment checks, modes, and end-to-end scenarios.
 
-Manual Angular build verification:
-```bash
-cd apps/tv && npm run build
-cd ../remote && npm run build
+Manual Angular build verification and production notes:
+
+- Important: the server serves the TV app at `/tv` and the Remote app at `/remote`.
+  When producing a production build you must set the Angular base-href to match those paths so asset URLs resolve correctly.
+
+Example production builds (recommended):
+```powershell
+# TV production build with matching base href
+cd apps/tv
+ng build --configuration production --output-hashing none
+
+# Remote production build with matching base href
+cd ../remote
+ng build --configuration production  --output-hashing none
 ```
+
+Or use `npm run build` if your package.json scripts already encapsulate the above.
+
+Server-side dev workaround (dev only): the server can be configured to mirror the TV/Remote browser folders at the site root so root-relative asset paths resolve without rebuilding. This is a convenience for local debugging and is not recommended for production deployments.
 
 Stub HTTP endpoints:
 - `/health`, `/state`, `/logs`, `/reset` (both)

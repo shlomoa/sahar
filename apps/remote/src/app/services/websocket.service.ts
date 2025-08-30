@@ -13,6 +13,8 @@ import {
   NavigationCommandPayload,
   ControlAction,
   SaharMessage,
+  ClientType,
+  ConnectionState,
 } from 'shared';
 import { Performer, Video, LikedScene } from 'shared';
 import { WebSocketUtils } from 'shared';
@@ -20,10 +22,8 @@ import { WebSocketBaseService } from 'shared';
 import { getYoutubeVideoId, getYoutubeThumbnailUrl } from 'shared';
 
 // Local helper type for discovered devices (protocol-agnostic)
-interface NetworkDevice { deviceId: string; deviceName: string; deviceType: 'tv' | 'remote'; ip: string; port: number; lastSeen: number; capabilities?: string[] }
+interface NetworkDevice { deviceId: string; deviceName: string; clientType: ClientType; ip: string; port: number; lastSeen: number; capabilities?: string[] }
 
-// Connection states
-export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 @Injectable({
   providedIn: 'root'
@@ -89,7 +89,7 @@ export class WebSocketService extends WebSocketBaseService {
     super();
     this.deviceId = WebSocketUtils.generateDeviceId('remote');
     this.deviceName = 'iPad Remote Control';
-    this.deviceType = 'remote';
+    this.clientType = 'remote';
     
     this.registerCallbacks();
     
@@ -311,7 +311,7 @@ export class WebSocketService extends WebSocketBaseService {
         {
           deviceId: 'server-local',
           deviceName: 'Local Server',
-          deviceType: 'tv',
+          clientType: 'tv',
           ip: 'localhost',
           port: WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT,
           lastSeen: Date.now(),

@@ -20,7 +20,7 @@ import { LikedScene } from '../../models/video-navigation';
 export class SharedScenesGridComponent {
   @Input() scenes: LikedScene[] = [];
   @Input() selectedSceneId?: string;
-  @Input() displayMode: 'remote' | 'tv' = 'remote';
+  @Input() clientType: 'remote' | 'tv' = 'remote';
   @Input() showBreadcrumb = true;
   
   @Output() sceneSelected = new EventEmitter<string>();
@@ -41,20 +41,20 @@ export class SharedScenesGridComponent {
 
   // Helper methods for styling based on display mode
   getSectionClasses(): string {
-    return this.displayMode === 'tv' 
+    return this.clientType === 'tv' 
       ? 'scenes-section tv-mode' 
       : 'scenes-section remote-mode';
   }
 
   getGridClasses(): string {
-    return this.displayMode === 'tv' 
+    return this.clientType === 'tv' 
       ? 'scenes-grid tv-mode' 
       : 'scenes-grid remote-mode';
   }
 
   getCardClasses(): string {
     const baseClasses = 'scene-card';
-    return this.displayMode === 'tv' 
+    return this.clientType === 'tv' 
       ? `${baseClasses} tv-card` 
       : `${baseClasses} remote-card`;
   }

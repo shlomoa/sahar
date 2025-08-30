@@ -4,6 +4,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Performer } from '../../models/video-navigation';
+import { ClientType } from '../../models/messages';
 
 @Component({
   selector: 'shared-performers-grid',
@@ -20,7 +21,7 @@ import { Performer } from '../../models/video-navigation';
 export class SharedPerformersGridComponent {
   @Input() performers: Performer[] = [];
   @Input() selectedPerformerId?: string;
-  @Input() displayMode: 'remote' | 'tv' = 'remote'; // New: Support different display modes
+  @Input() clientType: ClientType = 'remote'; // New: Support different display modes
   
   @Output() performerSelected = new EventEmitter<string>();
 
@@ -39,14 +40,14 @@ export class SharedPerformersGridComponent {
 
   // Helper methods for CSS classes based on display mode
   getGridClasses(): string {
-    return this.displayMode === 'tv' 
+    return this.clientType === 'tv' 
       ? 'performers-grid tv-mode' 
       : 'performers-grid remote-mode';
   }
 
   getCardClasses(): string {
     const baseClasses = 'performer-card';
-    return this.displayMode === 'tv' 
+    return this.clientType === 'tv' 
       ? `${baseClasses} tv-card` 
       : `${baseClasses} remote-card`;
   }

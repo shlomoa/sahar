@@ -5,8 +5,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-
-type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
+import {
+  ClientType
+} from '../../models/messages';
+import { ConnectionState } from '../../models/websocket-protocol';
 
 @Component({
   selector: 'device-connection',
@@ -23,7 +25,7 @@ type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
   styleUrls: ['./device-connection.component.scss']
 })
 export class DeviceConnectionComponent {
-  @Input() connectionStatus: ConnectionStatus = 'disconnected';
+  @Input() connectionStatus: ConnectionState = 'disconnected';
   @Input() discoveredDevices: NetworkDevice[] = [];
   @Input() isScanning = false;
   
@@ -46,4 +48,4 @@ export class DeviceConnectionComponent {
 }
 
 // Local helper type for discovered devices
-type NetworkDevice = { deviceId: string; deviceName: string; deviceType: 'tv' | 'remote'; ip: string; port: number; lastSeen: number; capabilities?: string[] };
+type NetworkDevice = { deviceId: string; deviceName: string; clientType: ClientType; ip: string; port: number; lastSeen: number; capabilities?: string[] };

@@ -58,7 +58,7 @@
           <shared-performers-grid
             [performers]="performers"
             [selectedPerformerId]="currentNavigation.performerId"
-            [displayMode]="'remote'"
+            [clientType]="'remote'"
             (performerSelected)="navigateToPerformer($event)">
           </shared-performers-grid>
         }
@@ -67,7 +67,7 @@
           <shared-videos-grid
             [videos]="getVideosForPerformer(currentNavigation.performerId!)"
             [selectedVideoId]="currentNavigation.videoId"
-            [displayMode]="'remote'"
+            [clientType]="'remote'"
             [showBreadcrumb]="true"
             (videoSelected)="navigateToVideo(currentNavigation.performerId!, $event)"
             (backToPerformers)="navigateToPerformers()">
@@ -78,7 +78,7 @@
           <shared-scenes-grid
             [scenes]="getScenesForVideo(currentNavigation.performerId!, currentNavigation.videoId!)"
             [selectedSceneId]="currentNavigation.sceneId"
-            [displayMode]="'remote'"
+            [clientType]="'remote'"
             [showBreadcrumb]="true"
             (sceneSelected)="navigateToScene(currentNavigation.performerId!, currentNavigation.videoId!, $event)"
             (backToVideos)="navigateToVideos(currentNavigation.performerId!)">

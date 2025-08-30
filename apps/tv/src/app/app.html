@@ -54,7 +54,7 @@
       <shared-performers-grid
         *ngIf="currentLevel === 'performers'"
         [performers]="currentPerformers"
-        [displayMode]="'tv'"
+        [clientType]="'tv'"
         (performerSelected)="onPerformerSelected($event)">
       </shared-performers-grid>
       
@@ -62,7 +62,7 @@
       <shared-videos-grid
         *ngIf="currentLevel === 'videos'"
         [videos]="currentVideos"
-        [displayMode]="'tv'"
+        [clientType]="'tv'"
         [showBreadcrumb]="true"
         (videoSelected)="onVideoSelected($event)"
         (backToPerformers)="onBackToPerformers()">
@@ -72,7 +72,7 @@
       <shared-scenes-grid
         *ngIf="currentLevel === 'scenes'"
         [scenes]="currentScenes"
-        [displayMode]="'tv'"
+        [clientType]="'tv'"
         [showBreadcrumb]="true"
         (sceneSelected)="onSceneSelected($event)"
         (backToVideos)="onBackToVideos()">

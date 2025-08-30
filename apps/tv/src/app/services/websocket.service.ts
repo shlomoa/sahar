@@ -32,7 +32,7 @@ export class WebSocketService extends WebSocketBaseService {
     super();
     this.deviceId = WebSocketUtils.generateDeviceId('tv');
     this.deviceName = 'Sahar TV';
-    this.deviceType = 'tv';
+    this.clientType = 'tv';
     this.registerCallbacks();
     this.connect();
   }

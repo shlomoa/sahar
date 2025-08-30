@@ -1,8 +1,10 @@
+export type FsmState = 'initializing' | 'ready' | 'playing' | 'paused' | 'error';
+
 // Shared authoritative ApplicationState model (with versioning)
 // Version increments on every committed mutation so clients can reconcile ordering.
 export interface ApplicationState {
   version: number; // monotonically increasing
-  fsmState: 'initializing' | 'ready' | 'playing' | 'paused' | 'error';
+  fsmState: FsmState;
   connectedClients: {
     tv?: ClientInfo;
     remote?: ClientInfo;

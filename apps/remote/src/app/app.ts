@@ -4,7 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
 
 // Components
-import { VideoNavigationService, DeviceConnectionComponent, SharedPerformersGridComponent, SharedScenesGridComponent, SharedVideosGridComponent } from 'shared';
+import { VideoNavigationService, DeviceConnectionComponent, SharedPerformersGridComponent, SharedScenesGridComponent, SharedVideosGridComponent, ClientType } from 'shared';
 import { Performer, Video, LikedScene } from 'shared';
 import { ApplicationState } from 'shared';
 import { VideoControlsComponent } from './components/video-controls/video-controls.component';
@@ -313,4 +313,4 @@ export class App implements OnInit {
 }
 
 // Local helper type for discovered devices (protocol-agnostic)
-interface NetworkDevice { deviceId: string; deviceName: string; deviceType: 'tv' | 'remote'; ip: string; port: number; lastSeen: number; capabilities?: string[] }
+interface NetworkDevice { deviceId: string; deviceName: string; clientType: ClientType; ip: string; port: number; lastSeen: number; capabilities?: string[] }

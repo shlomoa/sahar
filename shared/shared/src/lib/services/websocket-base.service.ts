@@ -1,6 +1,7 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import {
+  ClientType,
   WebSocketMessage,
   MessageType,
   BasePayload,
@@ -35,7 +36,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
   // Device info - to be set by subclasses
   protected deviceId = '';
   protected deviceName = '';
-  protected deviceType: 'tv' | 'remote' = 'tv';
+  protected clientType: ClientType = 'tv';
   
   // Public getters for observables
   get connected$() {
@@ -95,14 +96,14 @@ export abstract class WebSocketBaseService implements OnDestroy {
       this.disconnect();
     }
 
-    console.log(`🔌 ${this.deviceType.toUpperCase()}: Connecting to ${url}`);
+    console.log(`🔌 ${this.clientType.toUpperCase()}: Connecting to ${url}`);
     this.connectionState$.next('connecting');
 
     try {
       this.ws = new WebSocket(url);
       this.setupWebSocketHandlers();      
     } catch (error) {
-      console.error(`❌ ${this.deviceType.toUpperCase()}: Failed to create WebSocket:`, error);
+      console.error(`❌ ${this.clientType.toUpperCase()}: Failed to create WebSocket:`, error);
       this.connectionState$.next('error');
       this.scheduleReconnect(url);
       return false
@@ -127,7 +128,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
 
   protected sendMessage(message: WebSocketMessage): void {
     if (!this.isConnected || !this.ws) {
-      console.warn(`⚠️ ${this.deviceType.toUpperCase()}: Cannot send message - not connected`);
+      console.warn(`⚠️ ${this.clientType.toUpperCase()}: Cannot send message - not connected`);
       return;
     }
 
@@ -136,13 +137,13 @@ export abstract class WebSocketBaseService implements OnDestroy {
         ...message,
         // Ensure timestamp/source are always present
         timestamp: (message as any).timestamp ?? Date.now(),
-        source: (message as any).source ?? this.deviceType,
+        source: (message as any).source ?? this.clientType,
       } as WebSocketMessage;
       
       this.ws.send(JSON.stringify(messageWithTimestamp));
-      console.log(`📤 ${this.deviceType.toUpperCase()}: Sent ${message.msgType} message:`, messageWithTimestamp);
+      console.log(`📤 ${this.clientType.toUpperCase()}: Sent ${message.msgType} message:`, messageWithTimestamp);
     } catch (error) {
-      console.error(`❌ ${this.deviceType.toUpperCase()}: Failed to send message:`, error);
+      console.error(`❌ ${this.clientType.toUpperCase()}: Failed to send message:`, error);
       this.errors$.next(`Failed to send message: ${error}`);
     }
   }
@@ -152,7 +153,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
     const gen = this.generators.get(msgType);
     const built = gen
       ? gen(payload)
-      : ({ msgType, payload: payload ?? {}, timestamp: Date.now(), source: this.deviceType } as WebSocketMessage);
+      : ({ msgType, payload: payload ?? {}, timestamp: Date.now(), source: this.clientType } as WebSocketMessage);
     this.sendMessage(built as WebSocketMessage);
   }
 
@@ -160,7 +161,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
     if (!this.ws) return;
 
     this.ws.onopen = () => {
-      console.log(`✅ ${this.deviceType.toUpperCase()}: WebSocket connected`);
+      console.log(`✅ ${this.clientType.toUpperCase()}: WebSocket connected`);
       this.connectionState$.next('connected');
       this.reconnectAttempts = 0;
       this.startHeartbeat();
@@ -170,7 +171,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
     this.ws.onmessage = (event) => {
       try {
         const message: SaharMessage = JSON.parse(event.data);
-        console.log(`📥 ${this.deviceType.toUpperCase()}: Received ${message.msgType} message:`, message);
+        console.log(`📥 ${this.clientType.toUpperCase()}: Received ${message.msgType} message:`, message);
         this.messages$.next(message as WebSocketMessage);
         const handler = this.handlers.get(message.msgType);
         if (handler) {
@@ -179,13 +180,13 @@ export abstract class WebSocketBaseService implements OnDestroy {
           this.handleMessage(message as WebSocketMessage);
         }
       } catch (error) {
-        console.error(`❌ ${this.deviceType.toUpperCase()}: Failed to parse message:`, error);
+        console.error(`❌ ${this.clientType.toUpperCase()}: Failed to parse message:`, error);
         this.errors$.next(`Invalid message received: ${error}`);
       }
     };
 
     this.ws.onclose = (event) => {
-      console.log(`🔌 ${this.deviceType.toUpperCase()}: WebSocket closed:`, event.code, event.reason);
+      console.log(`🔌 ${this.clientType.toUpperCase()}: WebSocket closed:`, event.code, event.reason);
       this.connectionState$.next('disconnected');
       
       if (this.heartbeatTimer) {
@@ -202,7 +203,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
     };
 
     this.ws.onerror = (error) => {
-      console.error(`❌ ${this.deviceType.toUpperCase()}: WebSocket error:`, error);
+      console.error(`❌ ${this.clientType.toUpperCase()}: WebSocket error:`, error);
       this.connectionState$.next('error');
       this.errors$.next('WebSocket connection error');
     };
@@ -212,7 +213,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
     this.reconnectAttempts++;
     const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 10000);
     
-    console.log(`🔄 ${this.deviceType.toUpperCase()}: Scheduling reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`);
+    console.log(`🔄 ${this.clientType.toUpperCase()}: Scheduling reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`);
     
     setTimeout(() => {
       if (this.reconnectAttempts <= this.maxReconnectAttempts) {
