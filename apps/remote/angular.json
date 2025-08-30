@@ -22,6 +22,7 @@
             "polyfills": [
               "zone.js"
             ],
+            "baseHref": "/remote/",
             "outputPath": "../../server/dist/remote",
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",

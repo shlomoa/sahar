@@ -509,6 +509,8 @@ app.use('/remote', express.static(path.join(remoteAppPath, 'browser'), { fallthr
 app.use('/remote/assets', express.static(path.join(remoteAppPath, 'browser/assets'), { fallthrough: true }));
 app.use('/tv/assets', express.static(path.join(tvAppPath, 'browser/assets'), { fallthrough: true }));
 
+app.use('/', express.static(path.join(tvAppPath, 'browser'), { fallthrough: true }));
+
 // Task 1.6: Dev reverse proxies for SSR HTML (when DEV_SSR=1) else fall back to built assets
 // TV base route: '/' (root) and '/tv'
 app.get(['/','/tv'], (req: Request, res: Response, next: NextFunction) => {
