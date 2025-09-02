@@ -1,40 +1,52 @@
 <!-- Connection setup (when not connected) -->
-<div *ngIf="connectionStatus === 'disconnected'" class="connection-setup">
-  <mat-card>
-    <mat-card-header>
-      <mat-card-title>📺 Connect to TV</mat-card-title>
-      <mat-card-subtitle>Scan for available devices on your network</mat-card-subtitle>
-    </mat-card-header>
-    
-    <mat-card-content>
-      <div *ngIf="discoveredDevices.length === 0 && isScanning" class="scanning">
-        <mat-progress-spinner mode="indeterminate" diameter="50"></mat-progress-spinner>
-        <p>Scanning for devices...</p>
-      </div>
+@if (connectionStatus === 'disconnected') {
+  <div class="connection-setup">
+    <mat-card>
+      <mat-card-header>
+        @if (networkDevice.clientType === 'tv') {
+          <mat-icon mat-card-avatar>tv</mat-icon>
+        } @else {
+          <mat-icon mat-card-avatar>remote</mat-icon>
+        }
+        <mat-card-title>Connecting {{ networkDevice.clientType }} to server</mat-card-title>
+        <mat-card-subtitle>Connecting to server on your network</mat-card-subtitle>
+      </mat-card-header>
       
-      <div *ngIf="discoveredDevices.length > 0" class="device-list">
-        <h4>Available Devices:</h4>
-        <mat-selection-list #deviceList (selectionChange)="onDeviceSelected($event)">
-          <mat-list-option *ngFor="let device of discoveredDevices" [value]="device">
-            <mat-icon matListItemIcon>tv</mat-icon>
-            <div matListItemTitle>{{ device.deviceName }}</div>
-            <div matListItemLine>{{ device.ip }}:{{ device.port }}</div>
-          </mat-list-option>
-        </mat-selection-list>
-      </div>
-
-      <div *ngIf="discoveredDevices.length === 0 && !isScanning" class="no-devices">
-        <mat-icon>tv_off</mat-icon>
-        <p>No devices found. Make sure your TV is on the same network.</p>
-      </div>
-    </mat-card-content>
-    
-    <mat-card-actions>
-      <button mat-raised-button color="primary" (click)="onRefreshDevices()" 
-              [disabled]="isScanning">
-        <mat-icon>refresh</mat-icon>
-        {{ isScanning ? 'Scanning...' : 'Refresh' }}
-      </button>
-    </mat-card-actions>
-  </mat-card>
-</div>
+      <mat-card-content>
+        @if (networkDevice.ip === null && isConnecting) {
+          <div class="scanning">
+            <mat-progress-spinner mode="indeterminate" diameter="50"></mat-progress-spinner>
+            <p>Connecting to server . . .</p>
+          </div>
+        }
+        @else if (networkDevice.ip !== null) {
+          <div class="device-info">
+            <h4>Connected to server</h4>
+            <mat-icon matListItemIcon>{{ networkDevice.clientType }}</mat-icon>          
+            <div matListItemLine>{{ networkDevice.ip }}:{{ networkDevice.port }}</div>
+          </div>
+        }
+        @else if (networkDevice.ip === null && !isConnecting) {
+          <div class="no-devices">
+            <mat-icon>server_off</mat-icon>
+            <p>Remote server not found. Make sure it is up and running.</p>
+          </div>
+        }
+        @else {
+          <div class="in-limbo">
+            <mat-icon>error</mat-icon>
+            <p>Unable to connect to server. Please try again.</p>
+          </div>
+        }
+      </mat-card-content>
+      
+      <mat-card-actions>
+        <button mat-raised-button color="primary" (click)="onReconnectDevice()" 
+                [disabled]="isConnecting">
+          <mat-icon>refresh</mat-icon>
+          {{ isConnecting ? 'Scanning...' : 'Refresh' }}
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  </div>
+}

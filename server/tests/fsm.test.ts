@@ -40,13 +40,13 @@ test('SaharFsm: initializes with version >= 1 and default state', () => {
 test('SaharFsm: registers tv and remote, transitions to ready once both present', () => {
     const fsm = new SaharFsm();
     const s0 = fsm.getSnapshot();
-    let res = fsm.registerClient('tv', 'tv-1', 'TV');
+    let res = fsm.registerClient('tv', 'tv-1');
     assert.ok(res.ok);
     const s1 = fsm.getSnapshot();
     expectVersionBump(s0, s1);
     assert.equal(s1.fsmState, 'initializing');
 
-    res = fsm.registerClient('remote', 'remote-1', 'Remote');
+    res = fsm.registerClient('remote', 'remote-1');
     assert.ok(res.ok);
     const s2 = fsm.getSnapshot();
     expectVersionBump(s1, s2);
@@ -54,7 +54,7 @@ test('SaharFsm: registers tv and remote, transitions to ready once both present'
 
     // duplicate client type rejected and no version change
     const before = fsm.getSnapshot();
-    const resDup = fsm.registerClient('tv', 'tv-2', 'TV2');
+    const resDup = fsm.registerClient('tv', 'tv-2');
     assert.equal(resDup.ok, false);
     const after = fsm.getSnapshot();
     expectNoVersionChange(before, after);
@@ -63,8 +63,8 @@ test('SaharFsm: registers tv and remote, transitions to ready once both present'
 // Deregister flow: losing either client regresses back to 'initializing'
 test('SaharFsm: deregisters a client and regresses to initializing', () => {
     const fsm = new SaharFsm();
-    fsm.registerClient('tv', 'tv-1', 'TV');
-    fsm.registerClient('remote', 'remote-1', 'Remote');
+    fsm.registerClient('tv', 'tv-1');
+    fsm.registerClient('remote', 'remote-1');
     const sReady = fsm.getSnapshot();
     assert.equal(sReady.fsmState, 'ready');
 
@@ -171,8 +171,8 @@ test('SaharFsm: controlCommand play/pause/seek/volume/mute toggles with no-op su
 // action_confirmation: failure drives error state; repeated same failure is no-op; success clears error and returns to ready
 test('SaharFsm: actionConfirmation toggles error/ready state and only bumps on change', () => {
     const fsm = new SaharFsm();
-    fsm.registerClient('tv', 'tv-1', 'TV');
-    fsm.registerClient('remote', 'remote-1', 'Remote');
+    fsm.registerClient('tv', 'tv-1');
+    fsm.registerClient('remote', 'remote-1');
     const sReady = fsm.getSnapshot();
     assert.equal(sReady.fsmState, 'ready');
 

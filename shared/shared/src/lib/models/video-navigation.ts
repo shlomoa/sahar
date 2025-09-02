@@ -47,7 +47,10 @@ export interface NavigationState {
   currentVideo?: Video;
 }
 
+
+
 // Example performer data structure
+/*
 export const performersData: Performer[] = [
   {
     id: 'yuval',
@@ -490,6 +493,7 @@ export const performersData: Performer[] = [
   }
 ];
 
+
 // Convert performers to legacy VideoItem format for backward compatibility
 export const inputVideoData: VideoItem[] = performersData.map(performer => ({
   id: performer.id,
@@ -518,3 +522,5 @@ export const inputVideoData: VideoItem[] = performersData.map(performer => ({
     };
   })
 }));
+
+*/

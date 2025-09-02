@@ -142,7 +142,7 @@ let pendingBroadcastVersion: number | null = null; // queued latest version whil
 let outstandingAckClients: Set<WebSocket> | null = null; // clients yet to ACK current broadcast
 
 // Track client connections and their type (plus last ACKed state version for observability)
-const clients = new Map<WebSocket, { clientType: ClientType; deviceId: string; deviceName: string; lastStateAckVersion?: number }>();
+const clients = new Map<WebSocket, { clientType: ClientType; deviceId: string; lastStateAckVersion?: number }>();
 
 // Readiness flag (infrastructure readiness: HTTP + WS initialized)
 let isReady = false;
@@ -307,7 +307,7 @@ wss.on('connection', (ws: WebSocket) => {
     logInfo('message_received', { msgType: msg.msgType });
     if (!isRegistered && msg.msgType === 'register') {
       const reg = msg as RegisterMessage;
-      const { clientType, deviceId, deviceName } = reg.payload;
+      const { clientType, deviceId } = reg.payload;
       // Enforce single TV / Remote uniqueness
       const snapshot = fsm.getSnapshot();
       if (clientType === 'tv' && snapshot.connectedClients.tv) {
@@ -318,8 +318,8 @@ wss.on('connection', (ws: WebSocket) => {
         sendError(ws, ERROR_CODES.CLIENT_TYPE_MISMATCH, 'A Remote client is already connected.', { close: true, meta: { attempted: 'remote' } });
         return;
       }
-      clients.set(ws, { clientType, deviceId, deviceName });
-      fsm.registerClient(clientType, deviceId, deviceName);
+      clients.set(ws, { clientType, deviceId });
+      fsm.registerClient(clientType, deviceId);
       ws.send(JSON.stringify(makeAck('server'))); // Ack first, then broadcast new state
       broadcastStateIfChanged();
       logInfo('client_registered', { clientType, deviceId });

@@ -1,13 +1,5 @@
-import { WEBSOCKET_CONFIG } from '../models/websocket-protocol';
-import { ClientType, WebSocketMessage, BasePayload, MessageSource, MessageType } from '../models/messages';
-// Local lightweight error shape used by legacy helpers (not part of protocol types)
-export interface WebSocketClientError {
-  code: string;
-  message: string;
-  timestamp: number;
-  deviceId?: string;
-}
-
+import { ClientType, NetworkDevice, WEBSOCKET_CONFIG, WebSocketClientError } from '../models/websocket-protocol';
+import { WebSocketMessage, BasePayload, MessageSource, MessageType } from '../models/messages';
 
 // Utility functions for WebSocket operations
 export class WebSocketUtils {  
@@ -39,7 +31,7 @@ export class WebSocketUtils {
     ];
 
     ranges.forEach(base => {
-      for (let i = 1; i <= 25; i++) {
+      for (let i = 1; i <= 255; i++) {
         ips.push(`${base}.${i}`);
       }
     });
@@ -47,11 +39,14 @@ export class WebSocketUtils {
     return ips;
   }
 
-  static getGatewayBaseIP(): string {
-    // In a browser environment, we can't directly access network interfaces
-    // This is a simplified approach - in a real app you might want to detect this differently
-    return '192.168.1'; // Default to most common home network range
-  }
+  static generateNetworkDevice(networkDevice: NetworkDevice): NetworkDevice {
+    if (!networkDevice.deviceId || networkDevice.deviceId.trim() === '') {
+      networkDevice.deviceId = this.generateDeviceId(networkDevice.clientType);
+    }
+    networkDevice.ip = window.location.hostname;
+    networkDevice.port = window.location.port;
+    return networkDevice;
+  }   
 
   static async testWebSocketConnection(url: string, timeout = 5000): Promise<boolean> {
     return new Promise((resolve) => {

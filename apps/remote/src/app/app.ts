@@ -4,9 +4,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
 
 // Components
-import { VideoNavigationService, DeviceConnectionComponent, SharedPerformersGridComponent, SharedScenesGridComponent, SharedVideosGridComponent, ClientType } from 'shared';
+import { VideoNavigationService, DeviceConnectionComponent, SharedPerformersGridComponent, SharedScenesGridComponent, SharedVideosGridComponent, ClientType, WebSocketUtils, NetworkDevice } from 'shared';
 import { Performer, Video, LikedScene } from 'shared';
-import { ApplicationState } from 'shared';
+
 import { VideoControlsComponent } from './components/video-controls/video-controls.component';
 
 // Services and Models
@@ -32,14 +32,19 @@ import { RemoteNavigationState, ConnectionStatus } from './models/remote-navigat
 export class App implements OnInit {
   // Data
   performers: Performer[] = [];
-  
+  clientType: ClientType = 'remote';
   // Navigation state (synced with TV) - starts undefined until connected
   currentNavigation: RemoteNavigationState = { level: 'performers' };
   
   // Connection management - starts disconnected
   connectionStatus: ConnectionStatus = 'disconnected';
-  discoveredDevices: NetworkDevice[] = [];
-  isScanning = false;
+  networkDevice: NetworkDevice = WebSocketUtils.generateNetworkDevice(
+    {deviceId: '', 
+     clientType: 'remote',
+     ip: '',
+     port: '',
+     lastSeen: 0,
+     capabilities: undefined} as NetworkDevice);
   autoConnectEnabled = true;
   
   // Video control states
@@ -58,7 +63,7 @@ export class App implements OnInit {
 
   // WebSocket event handlers
   private setupWebSocketListeners() {
-  this.websocketService.getConnectionState().subscribe(state => {
+    this.websocketService.getConnectionState().subscribe(state => {
       this.connectionStatus = state === 'connected' ? 'connected' : 
                               state === 'connecting' ? 'connecting' : 'disconnected';
       
@@ -67,30 +72,21 @@ export class App implements OnInit {
         console.log('❌ Disconnected - resetting navigation state');
         this.currentNavigation = { level: 'performers' };
       }
-      
+     
       console.log('🔌 Connection status:', this.connectionStatus);
     });
-
+    /*
     this.websocketService.getTVState().subscribe(state => {
       const nav = state?.payload?.navigation;
       const player = state?.payload?.player;
       if (nav) this.synchronizeWithTVNavigation(nav);
       if (player) this.synchronizeWithTVPlayer(player);
     });
-
-    this.websocketService.getDiscoveredDevices().subscribe(devices => {
-      this.discoveredDevices = devices;
-      console.log('🔍 Discovered devices:', this.discoveredDevices);
-    });
-
-    this.websocketService.getScanningState().subscribe(scanning => {
-      this.isScanning = scanning;
-    });
-
+    */
     // Track auto-connect state
     this.autoConnectEnabled = this.websocketService.isAutoConnectEnabled();
   }
-
+  /*
   // Synchronization methods
   private synchronizeWithTVNavigation(tvNav: ApplicationState['navigation']) {
     console.log('📍 Synchronizing navigation with TV:', tvNav);
@@ -137,19 +133,22 @@ export class App implements OnInit {
       };
     }
   }
+  */
 
   // Device connection methods
-  connectToDevice(device: NetworkDevice) {
-    console.log('🔌 Connecting to device:', device);
+  connectToDevice() : NetworkDevice {
+    console.log('🔌 Connecting to device:', this.networkDevice);
     this.connectionStatus = 'connecting';
-    this.websocketService.connectToDevice(device);
+    this.websocketService.connectToDevice(this.networkDevice);
+    return this.networkDevice;
   }
 
-  startDeviceDiscovery() {
-    console.log('🔍 Starting device discovery...');
-    this.websocketService.startDeviceDiscovery();
+  reconnectToDevice() : NetworkDevice {
+    console.log('🔌 Reconnecting to device:', this.networkDevice);
+    this.connectionStatus = 'connecting';
+    this.websocketService.reconnectToDevice(this.networkDevice);
+    return this.networkDevice;
   }
-
   // Navigation methods
   navigateToPerformer(performerId: string) {
     console.log('👤 Navigate to performer:', performerId);
@@ -311,6 +310,3 @@ export class App implements OnInit {
     return currentIndex < video.likedScenes.length - 1;
   }
 }
-
-// Local helper type for discovered devices (protocol-agnostic)
-interface NetworkDevice { deviceId: string; deviceName: string; clientType: ClientType; ip: string; port: number; lastSeen: number; capabilities?: string[] }

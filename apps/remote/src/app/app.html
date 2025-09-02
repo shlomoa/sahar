@@ -12,10 +12,8 @@
   <!-- Device Connection Section (always visible when not connected) -->
   <device-connection
     [connectionStatus]="connectionStatus"
-    [discoveredDevices]="discoveredDevices"
-    [isScanning]="isScanning"
-    (deviceSelected)="connectToDevice($event)"
-    (refreshDevices)="startDeviceDiscovery()">
+    [networkDevice]="connectToDevice()"
+    (reconnectDevice)="reconnectToDevice()">
   </device-connection>
 
   <!-- Navigation Content (only when connected) -->

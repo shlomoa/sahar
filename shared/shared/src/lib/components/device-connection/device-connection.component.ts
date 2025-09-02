@@ -5,10 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import {
-  ClientType
-} from '../../models/messages';
-import { ConnectionState } from '../../models/websocket-protocol';
+import { ConnectionState, NetworkDevice } from '../../models/websocket-protocol';
 
 @Component({
   selector: 'device-connection',
@@ -26,26 +23,14 @@ import { ConnectionState } from '../../models/websocket-protocol';
 })
 export class DeviceConnectionComponent {
   @Input() connectionStatus: ConnectionState = 'disconnected';
-  @Input() discoveredDevices: NetworkDevice[] = [];
-  @Input() isScanning = false;
+  @Input() networkDevice: NetworkDevice = { deviceId: '', clientType: 'remote', ip: null, port: '', lastSeen: 0 };
   
-  @Output() deviceSelected = new EventEmitter<NetworkDevice>();
-  @Output() refreshDevices = new EventEmitter<void>();
+  @Output() reconnectDevice = new EventEmitter<void>();
 
-  onDeviceSelected(event: any) {
-    // Handle MatSelectionListChange event - get the selected option's value
-    const selectedOptions = event.options;
-    if (selectedOptions && selectedOptions.length > 0) {
-      const selectedDevice = selectedOptions[0].value;
-      console.log('📱 Device selected in component:', selectedDevice);
-      this.deviceSelected.emit(selectedDevice);
-    }
-  }
+  isConnecting: boolean = false;
 
-  onRefreshDevices() {
-    this.refreshDevices.emit();
+  onReconnectDevice() {
+    this.isConnecting = true;
+    this.reconnectDevice.emit();
   }
 }
-
-// Local helper type for discovered devices
-type NetworkDevice = { deviceId: string; deviceName: string; clientType: ClientType; ip: string; port: number; lastSeen: number; capabilities?: string[] };

@@ -1,6 +1,8 @@
 // WebSocket Communication Protocol for the Unified Appliance Model
 // =================================================================================================
 
+export type ClientType = 'tv' | 'remote';
+
 // Protocol Configuration
 export const WEBSOCKET_CONFIG = {
   SERVER_DEFAULT_PORT: 8080,
@@ -25,3 +27,13 @@ export const ERROR_CODES = {
 } as const;
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
+
+export type NetworkDevice = { deviceId: string; clientType: ClientType; ip: string | null; port: string; lastSeen: number; capabilities?: string[] };
+
+// Local lightweight error shape used by legacy helpers (not part of protocol types)
+export interface WebSocketClientError {
+  code: string;
+  message: string;
+  timestamp: number;
+  deviceId?: string;
+}

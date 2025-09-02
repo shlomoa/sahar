@@ -12,17 +12,14 @@ import {
   NavigationAction,
   NavigationCommandPayload,
   ControlAction,
-  SaharMessage,
-  ClientType,
+  SaharMessage,  
   ConnectionState,
+  NetworkDevice,
 } from 'shared';
 import { Performer, Video, LikedScene } from 'shared';
 import { WebSocketUtils } from 'shared';
 import { WebSocketBaseService } from 'shared';
 import { getYoutubeVideoId, getYoutubeThumbnailUrl } from 'shared';
-
-// Local helper type for discovered devices (protocol-agnostic)
-interface NetworkDevice { deviceId: string; deviceName: string; clientType: ClientType; ip: string; port: number; lastSeen: number; capabilities?: string[] }
 
 
 @Injectable({
@@ -88,7 +85,6 @@ export class WebSocketService extends WebSocketBaseService {
   constructor() {
     super();
     this.deviceId = WebSocketUtils.generateDeviceId('remote');
-    this.deviceName = 'iPad Remote Control';
     this.clientType = 'remote';
     
     this.registerCallbacks();
@@ -118,7 +114,6 @@ export class WebSocketService extends WebSocketBaseService {
     this.sendByType('register', {
       clientType: 'remote',
       deviceId: this.deviceId,
-      deviceName: this.deviceName,
     } as RegisterPayload);
     
     // Optionally seed data on first connect
@@ -133,7 +128,7 @@ export class WebSocketService extends WebSocketBaseService {
   protected override onReconnect(): void {
     this.debugLog('Remote WebSocket reconnecting...');
     const url = this.lastConnectedUrl ?? this.defaultUrl;
-    this.connect(url);
+    this.reconnect(url);
   }
 
   override ngOnDestroy(): void {
@@ -270,7 +265,6 @@ export class WebSocketService extends WebSocketBaseService {
         payload: {
           clientType: 'remote',
           deviceId: this.deviceId,
-          deviceName: this.deviceName,
         } as RegisterPayload,
       }),
       data: (payload?: BasePayload | null) => ({
@@ -289,12 +283,14 @@ export class WebSocketService extends WebSocketBaseService {
     });
   }
 
+  private autoConnectEnabled = true;
+  /*
   // ------------------------
   // Legacy discovery stubs to keep current UI compiling; no real scanning
   // ------------------------
   private discoveredDevices$ = new BehaviorSubject<NetworkDevice[]>([]);
   private scanningSubject = new BehaviorSubject<boolean>(false);
-  private autoConnectEnabled = true;
+
 
   getDiscoveredDevices(): Observable<NetworkDevice[]> {
     return this.discoveredDevices$.asObservable();
@@ -321,14 +317,31 @@ export class WebSocketService extends WebSocketBaseService {
       this.scanningSubject.next(false);
     }, 500);
   }
-
-  connectToDevice(device: { ip: string; port: number }): void {
+  */
+  connectToDevice(device: NetworkDevice): void {
     this.lastConnectedUrl = `ws://${device.ip}:${device.port}${WEBSOCKET_CONFIG.WS_PATH}`;
     this.connect(this.lastConnectedUrl);
   }
 
+  reconnectToDevice(device: NetworkDevice): void {
+    if (this.lastConnectedUrl) {      
+      const tmpUrl = `ws://${device.ip}:${device.port}${WEBSOCKET_CONFIG.WS_PATH}`;
+      this.debugLog('Reconnecting to url:', tmpUrl);
+      if (this.lastConnectedUrl !== tmpUrl) {
+        this.debugLog('Device URL has changed, updating lastConnectedUrl');
+        this.connectToDevice(device);
+      } else {
+        this.debugLog('Device URL unchanged, reconnecting to lastConnectedUrl');
+        this.connectionState$.next('connecting');
+        this.reconnect(this.lastConnectedUrl);
+      }
+    } else {
+      this.debugLog('No previous device URL to reconnect to, connecting to specified device');
+      this.connectToDevice(device);;
+    }
+  }
+
   protected override connect(url: string): boolean {
-    this.lastConnectedUrl = url;
     return super.connect(url);
   }
 

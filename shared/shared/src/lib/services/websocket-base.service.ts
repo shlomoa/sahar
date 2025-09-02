@@ -1,12 +1,12 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
-import {
-  ClientType,
+import {  
   WebSocketMessage,
   MessageType,
   BasePayload,
   SaharMessage,
 } from '../models/messages';
+import { ClientType } from '../models/websocket-protocol';
 import { ConnectionState } from '../models';
 
 @Injectable()
@@ -35,7 +35,6 @@ export abstract class WebSocketBaseService implements OnDestroy {
 
   // Device info - to be set by subclasses
   protected deviceId = '';
-  protected deviceName = '';
   protected clientType: ClientType = 'tv';
   
   // Public getters for observables
@@ -124,6 +123,10 @@ export abstract class WebSocketBaseService implements OnDestroy {
 
     this.connectionState$.next('disconnected');
     this.reconnectAttempts = 0;
+  }
+
+  protected reconnect(url: string): void {
+    this.scheduleReconnect(url);
   }
 
   protected sendMessage(message: WebSocketMessage): void {

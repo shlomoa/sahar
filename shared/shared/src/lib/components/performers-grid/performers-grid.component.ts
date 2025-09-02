@@ -4,7 +4,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Performer } from '../../models/video-navigation';
-import { ClientType } from '../../models/messages';
+import { ClientType } from '../../models/websocket-protocol';
 
 @Component({
   selector: 'shared-performers-grid',

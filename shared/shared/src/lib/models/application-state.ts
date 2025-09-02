@@ -37,5 +37,4 @@ export interface ApplicationState {
 
 export interface ClientInfo {
   deviceId: string;
-  deviceName: string;
 }

@@ -31,7 +31,6 @@ export class WebSocketService extends WebSocketBaseService {
   constructor() {
     super();
     this.deviceId = WebSocketUtils.generateDeviceId('tv');
-    this.deviceName = 'Sahar TV';
     this.clientType = 'tv';
     this.registerCallbacks();
     this.connect();
@@ -48,7 +47,6 @@ export class WebSocketService extends WebSocketBaseService {
     this.sendByType('register', {
       clientType: 'tv',
       deviceId: this.deviceId,
-      deviceName: this.deviceName,
     } as RegisterPayload);
   }
 
@@ -87,7 +85,6 @@ export class WebSocketService extends WebSocketBaseService {
         payload: {
           clientType: 'tv',
           deviceId: this.deviceId,
-          deviceName: this.deviceName,
         } as RegisterPayload,
       }),
       action_confirmation: (payload) => ({

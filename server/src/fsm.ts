@@ -58,20 +58,20 @@ export class SaharFsm {
     return JSON.parse(JSON.stringify(this.state)) as ApplicationState;
   }
 
-  registerClient(type: ClientType, deviceId: string, deviceName: string): { ok: boolean; reason?: string } {
-    if (this.state.connectedClients[type]) {
+  registerClient(clientType: ClientType, deviceId: string): { ok: boolean; reason?: string } {
+    if (this.state.connectedClients[clientType]) {
       return { ok: false, reason: 'duplicate_client_type' };
     }
-    this.state.connectedClients[type] = { deviceId, deviceName };
+    this.state.connectedClients[clientType] = { deviceId };
     this.dirty = true;
     this.recalcFsm();
     this.commit();
     return { ok: true };
   }
 
-  deregisterClient(type: ClientType) {
-    if (this.state.connectedClients[type]) {
-      delete this.state.connectedClients[type];
+  deregisterClient(clientType: ClientType) {
+    if (this.state.connectedClients[clientType]) {
+      delete this.state.connectedClients[clientType];
       this.dirty = true;
       this.recalcFsm();
       this.commit();

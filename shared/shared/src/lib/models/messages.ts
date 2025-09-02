@@ -2,9 +2,9 @@
 // This file is auto-generated to ensure all protocol messages are covered and up-to-date
 
 import { ApplicationState } from '../models/application-state';
+import { ClientType } from './websocket-protocol';
 
 export type MessageSource = 'tv' | 'remote' | 'server';
-export type ClientType = 'tv' | 'remote';
 
 export type MessageType =
   // Client -> Server
@@ -29,7 +29,6 @@ export interface BasePayload {
 export interface RegisterPayload extends BasePayload {
   clientType: ClientType;
   deviceId: string;
-  deviceName: string;
 }
 
 export interface WebSocketMessage {
@@ -153,7 +152,7 @@ export type SaharMessage =
   | ErrorMessage
   | HeartbeatMessage;
 
-  // =================================================================================================
+// =================================================================================================
 // ACTION SETS (Authoritative Lists)
 // Centralized canonical sets for quick membership validation in the server.
 // These MUST mirror the string literal unions declared in NavigationCommandPayload.action
