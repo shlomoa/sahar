@@ -9,13 +9,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { QRCodeComponent } from 'angularx-qrcode';
 import { Observable, Subscription } from 'rxjs';
-import { VideoNavigationService, ControlCommandMessage, getYoutubeVideoId } from 'shared';
+import { VideoNavigationService, ControlCommandMessage, getYoutubeVideoId, NetworkDevice, WebSocketUtils } from 'shared';
 import { WEBSOCKET_CONFIG } from 'shared';
 import { SharedPerformersGridComponent, SharedVideosGridComponent, SharedScenesGridComponent } from 'shared';
 import { NavigationState, VideoItem, Video, LikedScene, Performer } from 'shared';
 import { WebSocketService } from './services/websocket.service';
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
-
 
 
 @Component({
@@ -47,6 +46,8 @@ export class App implements OnInit, OnDestroy {
   private readonly navigationService = inject(VideoNavigationService);
   private readonly webSocketService = inject(WebSocketService);
   private readonly snackBar = inject(MatSnackBar);
+
+  
 
   // Video playback state
   currentVideo: Video | null = null;
@@ -220,7 +221,7 @@ export class App implements OnInit, OnDestroy {
           duration: 5000
         });
         snackBarRef.onAction().subscribe(() => {
-          this.webSocketService.connect();
+          console.info('Network disconnected:');          
         });
       }
     });
@@ -232,10 +233,14 @@ export class App implements OnInit, OnDestroy {
     });
 
     this.subscriptions.push(connectionSub, errorSub);
-
-    // Start the WebSocket connection
-    this.webSocketService.connect();
     
+  }
+
+    // Connected device
+  deviceInfo(): NetworkDevice {
+    const networkDevice = this.webSocketService.deviceInfo;
+    console.log('🔌 Connecting to device:', networkDevice);
+    return networkDevice
   }
 
   // Event handlers for shared components

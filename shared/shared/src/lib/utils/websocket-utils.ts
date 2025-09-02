@@ -39,7 +39,7 @@ export class WebSocketUtils {
     return ips;
   }
 
-  static generateNetworkDevice(networkDevice: NetworkDevice): NetworkDevice {
+  static populateNetworkDevice(networkDevice: NetworkDevice) {
     if (!networkDevice.deviceId || networkDevice.deviceId.trim() === '') {
       networkDevice.deviceId = this.generateDeviceId(networkDevice.clientType);
     }
@@ -47,6 +47,11 @@ export class WebSocketUtils {
     networkDevice.port = window.location.port;
     return networkDevice;
   }   
+
+  static generateHostUrl(networkDevice: NetworkDevice): string {
+    // Simplified: single configured server port
+    return `ws://${networkDevice.ip}:${networkDevice.port}${WEBSOCKET_CONFIG.WS_PATH}`;
+  }
 
   static async testWebSocketConnection(url: string, timeout = 5000): Promise<boolean> {
     return new Promise((resolve) => {

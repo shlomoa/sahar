@@ -1,4 +1,4 @@
-import { ApplicationState } from 'shared';
+import { ApplicationState, ActionConfirmationStatus } from 'shared';
 import { ClientType, NavigationCommandPayload, ControlCommandPayload } from 'shared';
 
 /**
@@ -172,7 +172,7 @@ export class SaharFsm {
     }
   }
 
-  actionConfirmation(status: 'success' | 'failure', errorMessage?: string) {
+  actionConfirmation(status: ActionConfirmationStatus, errorMessage?: string) {
     const beforeErr = this.state.error ? this.state.error.code + this.state.error.message : 'none';
     const beforeState = this.state.fsmState;
     if (status === 'failure') {

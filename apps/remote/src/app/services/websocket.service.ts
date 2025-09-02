@@ -4,7 +4,6 @@ import {
   ErrorMessage,
   DataPayload,
   WebSocketMessage,
-  WEBSOCKET_CONFIG,
   StateSyncMessage,
   ControlCommandPayload,
   BasePayload,
@@ -16,10 +15,8 @@ import {
   ConnectionState,
   NetworkDevice,
 } from 'shared';
-import { Performer, Video, LikedScene } from 'shared';
 import { WebSocketUtils } from 'shared';
 import { WebSocketBaseService } from 'shared';
-import { getYoutubeVideoId, getYoutubeThumbnailUrl } from 'shared';
 
 
 @Injectable({
@@ -38,9 +35,7 @@ export class WebSocketService extends WebSocketBaseService {
   private lastErrorTimestamp: number | null = null;
   private messageTimings: number[] = [];
   
-  // Default server URL
-  private readonly defaultUrl = `ws://localhost:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}${WEBSOCKET_CONFIG.WS_PATH}`;
-  
+ 
   /**
    * Add a debug log entry to the buffer and console
    */
@@ -84,15 +79,15 @@ export class WebSocketService extends WebSocketBaseService {
 
   constructor() {
     super();
-    this.deviceId = WebSocketUtils.generateDeviceId('remote');
-    this.clientType = 'remote';
-    
+    WebSocketUtils.populateNetworkDevice({clientType: 'remote'} as NetworkDevice);
+      
     this.registerCallbacks();
     
     console.log('🎮 Remote WebSocket Service initialized');
-    console.log(`📱 Device ID: ${this.deviceId}`);
-    // Connect to default server
-    this.connect(this.defaultUrl);
+    console.log(`📱 Device ID: ${this.networkDevice.deviceId}`);
+    // Get the server url
+    const tmpUrl = WebSocketUtils.generateHostUrl(this.networkDevice!);
+    this.connect(tmpUrl);
   }
 
   // Abstract method implementations
@@ -105,7 +100,7 @@ export class WebSocketService extends WebSocketBaseService {
       if (this.messageTimings.length > 100) this.messageTimings.shift();
     }
     this.lastMessageTimestamp = now;
-    this.debugLog(`Received message (unhandled): ${message.msgType}`);
+    this.debugLog(`📱 Remote: Received message (unhandled): ${message.msgType}`);
   }
 
   protected override onConnected(): void {
@@ -113,12 +108,12 @@ export class WebSocketService extends WebSocketBaseService {
     // Register with the server using the shared protocol
     this.sendByType('register', {
       clientType: 'remote',
-      deviceId: this.deviceId,
+      deviceId: this.networkDevice.deviceId,
     } as RegisterPayload);
     
     // Optionally seed data on first connect
-    console.log('📤 Seeding initial data to server/TV');
-    this.sendDataToTV();
+    // console.log('📤 Seeding initial data to server/TV');
+    // this.sendDataToTV();
   }
 
   protected override onDisconnected(): void {
@@ -126,9 +121,17 @@ export class WebSocketService extends WebSocketBaseService {
   }
 
   protected override onReconnect(): void {
-    this.debugLog('Remote WebSocket reconnecting...');
-    const url = this.lastConnectedUrl ?? this.defaultUrl;
-    this.reconnect(url);
+    this.debugLog('📱Remote: WebSocket reconnecting...');
+    if (!this.lastConnectedUrl) {
+      this.debugLog('No previous URL to reconnect to, aborting reconnect');
+      return;
+    }
+    this.reconnect(this.lastConnectedUrl);
+  }
+
+  protected override connect(url: string): boolean {
+    console.log(`📱Remote: connecting to WebSocket at ${url}`);
+    return super.connect(url);
   }
 
   override ngOnDestroy(): void {
@@ -177,6 +180,7 @@ export class WebSocketService extends WebSocketBaseService {
   }
 
   // Send data to TV when connection is established
+  /*
   sendDataToTV(): void {
     // Import the actual performers data
     import('../../../../../server/src/mock-data').then(({ performersData }) => {
@@ -216,6 +220,7 @@ export class WebSocketService extends WebSocketBaseService {
       console.error('❌ Failed to load performers data:', error);
     });
   }
+  */
 
   protected override sendMessage(message: WebSocketMessage): void {
     if (this.isConnected) {
@@ -264,7 +269,7 @@ export class WebSocketService extends WebSocketBaseService {
         source: 'remote',
         payload: {
           clientType: 'remote',
-          deviceId: this.deviceId,
+          deviceId: this.networkDevice.deviceId,
         } as RegisterPayload,
       }),
       data: (payload?: BasePayload | null) => ({
@@ -318,31 +323,25 @@ export class WebSocketService extends WebSocketBaseService {
     }, 500);
   }
   */
-  connectToDevice(device: NetworkDevice): void {
-    this.lastConnectedUrl = `ws://${device.ip}:${device.port}${WEBSOCKET_CONFIG.WS_PATH}`;
-    this.connect(this.lastConnectedUrl);
+  connectToDevice(): void {
+    if (!this.lastConnectedUrl) {
+      this.debugLog('No previous URL to connect to, aborting connectToDevice');
+      return;
+    }
+    this.debugLog('Connecting to device at', this.lastConnectedUrl);
+    this.connectionState$.next('connecting');
+    this.connect(this.lastConnectedUrl!);
   }
 
-  reconnectToDevice(device: NetworkDevice): void {
+  reconnectToDevice(): void {
     if (this.lastConnectedUrl) {      
-      const tmpUrl = `ws://${device.ip}:${device.port}${WEBSOCKET_CONFIG.WS_PATH}`;
-      this.debugLog('Reconnecting to url:', tmpUrl);
-      if (this.lastConnectedUrl !== tmpUrl) {
-        this.debugLog('Device URL has changed, updating lastConnectedUrl');
-        this.connectToDevice(device);
-      } else {
-        this.debugLog('Device URL unchanged, reconnecting to lastConnectedUrl');
-        this.connectionState$.next('connecting');
-        this.reconnect(this.lastConnectedUrl);
-      }
+
+      this.debugLog('Device URL unchanged, reconnecting to lastConnectedUrl');
+      this.connectionState$.next('connecting');
+      this.reconnect(this.lastConnectedUrl);
     } else {
       this.debugLog('No previous device URL to reconnect to, connecting to specified device');
-      this.connectToDevice(device);;
     }
-  }
-
-  protected override connect(url: string): boolean {
-    return super.connect(url);
   }
 
   enableAutoConnect(): void { this.autoConnectEnabled = true; }

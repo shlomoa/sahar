@@ -80,9 +80,10 @@ export interface ControlCommandMessage {
   payload: ControlCommandPayload;
 }
 
+export type ActionConfirmationStatus = 'success' | 'failure';
 // Action Confirmation
 export interface ActionConfirmationPayload extends BasePayload {
-  status: 'success' | 'failure';
+  status: ActionConfirmationStatus;
   errorMessage?: string;
 }
 export interface ActionConfirmationMessage {

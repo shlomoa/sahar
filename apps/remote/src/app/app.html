@@ -12,7 +12,7 @@
   <!-- Device Connection Section (always visible when not connected) -->
   <device-connection
     [connectionStatus]="connectionStatus"
-    [networkDevice]="connectToDevice()"
+    [networkDevice]="deviceInfo()"
     (reconnectDevice)="reconnectToDevice()">
   </device-connection>
 

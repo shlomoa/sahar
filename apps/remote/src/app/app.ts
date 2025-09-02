@@ -38,13 +38,6 @@ export class App implements OnInit {
   
   // Connection management - starts disconnected
   connectionStatus: ConnectionStatus = 'disconnected';
-  networkDevice: NetworkDevice = WebSocketUtils.generateNetworkDevice(
-    {deviceId: '', 
-     clientType: 'remote',
-     ip: '',
-     port: '',
-     lastSeen: 0,
-     capabilities: undefined} as NetworkDevice);
   autoConnectEnabled = true;
   
   // Video control states
@@ -135,19 +128,18 @@ export class App implements OnInit {
   }
   */
 
-  // Device connection methods
-  connectToDevice() : NetworkDevice {
-    console.log('🔌 Connecting to device:', this.networkDevice);
-    this.connectionStatus = 'connecting';
-    this.websocketService.connectToDevice(this.networkDevice);
-    return this.networkDevice;
+  // Connected device
+  deviceInfo(): NetworkDevice {
+    const networkDevice = this.websocketService.deviceInfo;
+    console.log('🔌 Connecting to device:', networkDevice);
+    return networkDevice
   }
 
-  reconnectToDevice() : NetworkDevice {
-    console.log('🔌 Reconnecting to device:', this.networkDevice);
+  reconnectToDevice() {
+    const networkDevice = this.websocketService.deviceInfo;
+    console.log('🔌 Reconnecting to device:', networkDevice);
     this.connectionStatus = 'connecting';
-    this.websocketService.reconnectToDevice(this.networkDevice);
-    return this.networkDevice;
+    this.websocketService.reconnectToDevice();
   }
   // Navigation methods
   navigateToPerformer(performerId: string) {

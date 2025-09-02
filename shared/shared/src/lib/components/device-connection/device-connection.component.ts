@@ -23,7 +23,7 @@ import { ConnectionState, NetworkDevice } from '../../models/websocket-protocol'
 })
 export class DeviceConnectionComponent {
   @Input() connectionStatus: ConnectionState = 'disconnected';
-  @Input() networkDevice: NetworkDevice = { deviceId: '', clientType: 'remote', ip: null, port: '', lastSeen: 0 };
+  @Input() networkDevice: NetworkDevice = { deviceId: '', clientType: 'remote', ip: '', port: '', lastSeen: 0 };
   
   @Output() reconnectDevice = new EventEmitter<void>();
 

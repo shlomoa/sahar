@@ -3,21 +3,29 @@ import { RegisterPayload, VideoNavigationService } from 'shared';
 import { WebSocketBaseService } from 'shared';
 import { WebSocketUtils } from 'shared';
 import {
-  WebSocketMessage,
-  WEBSOCKET_CONFIG,
+  WebSocketMessage,  
   NavigationCommandMessage,
   ControlCommandMessage,
   StateSyncMessage,
   ErrorMessage,
   HeartbeatMessage,
   ActionConfirmationMessage,
-  ActionConfirmationPayload,
+  ActionConfirmationPayload
 } from 'shared';
 
 @Injectable({
   providedIn: 'root'
 })
 export class WebSocketService extends WebSocketBaseService {
+  private receivedMessageCount = 0;
+  private lastMessageTimestamp: number | null = null;
+  private messageTimings: number[] = [];
+  private debugLogBuffer: string[] = [];
+  private maxDebugLogEntries = 200;
+  private sentMessageCount = 0;
+  private errorCount = 0;
+  private lastErrorTimestamp: number | null = null;
+
   // Lightweight playback state used for action confirmations
   private playerState = {
     isPlaying: false,
@@ -28,17 +36,69 @@ export class WebSocketService extends WebSocketBaseService {
 
   private navigationService = inject(VideoNavigationService);
 
+      
+  /**
+   * Add a debug log entry to the buffer and console
+   */
+  private debugLog(entry: string, ...args: unknown[]): void {
+    const timestamp = new Date().toISOString();
+    const formatted = `[${timestamp}] ${entry}`;
+    this.debugLogBuffer.push(formatted + (args.length ? ' ' + JSON.stringify(args) : ''));
+    if (this.debugLogBuffer.length > this.maxDebugLogEntries) {
+      this.debugLogBuffer.shift();
+    }
+    // Also print to console for real-time feedback
+    // Use a special emoji for debug logs
+    console.log('🐞', formatted, ...args);
+  }
+  
+  /**
+   * Get the current debug log buffer (for UI or export)
+   */
+  getDebugLog(): string[] {
+    return [...this.debugLogBuffer];
+  }
+  
+  /**
+   * Get current message and error counters
+   */
+  getDebugStats() {
+    return {
+      sent: this.sentMessageCount,
+      received: this.receivedMessageCount,
+      errors: this.errorCount,
+      lastMessageTimestamp: this.lastMessageTimestamp,
+      lastErrorTimestamp: this.lastErrorTimestamp,
+      avgMessageInterval: this.messageTimings.length > 1 ?
+        (this.messageTimings.reduce((a, b) => a + b, 0) / (this.messageTimings.length - 1)).toFixed(2) : 'N/A',
+      logBufferSize: this.debugLogBuffer.length
+    };
+  }
+
   constructor() {
     super();
-    this.deviceId = WebSocketUtils.generateDeviceId('tv');
-    this.clientType = 'tv';
+    this.networkDevice.clientType = 'tv'; 
+    WebSocketUtils.populateNetworkDevice(this.networkDevice);
+        
     this.registerCallbacks();
-    this.connect();
+
+    console.log('🎮 Remote WebSocket Service initialized');
+    console.log(`📺 Device ID: ${this.networkDevice.deviceId}`);
+    // Get the server url
+    const tmpUrl = WebSocketUtils.generateHostUrl(this.networkDevice);
+    this.connect(tmpUrl);
   }
 
   // Abstract method implementations
   protected override handleMessage(message: WebSocketMessage): void {
     // Fallback when no specific handler is registered
+    this.receivedMessageCount++;
+    const now = Date.now();
+    if (this.lastMessageTimestamp) {
+      this.messageTimings.push(now - this.lastMessageTimestamp);
+      if (this.messageTimings.length > 100) this.messageTimings.shift();
+    }
+    this.lastMessageTimestamp = now;
     console.warn('📺 TV: Unhandled message type (no registered handler):', message.msgType);
   }
 
@@ -46,7 +106,7 @@ export class WebSocketService extends WebSocketBaseService {
     console.log('📺 TV WebSocket connected - registering with server');
     this.sendByType('register', {
       clientType: 'tv',
-      deviceId: this.deviceId,
+      deviceId: this.networkDevice.deviceId,
     } as RegisterPayload);
   }
 
@@ -55,11 +115,11 @@ export class WebSocketService extends WebSocketBaseService {
   }
 
   protected override onReconnect(): void {
-    this.connect();
+    console.log('📺 TV WebSocket reconnect');
   }
 
   // Connect to WebSocket server (for testing with localhost:8000)
-  public override connect(url = `ws://localhost:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}`): boolean {
+  protected override connect(url: string): boolean {
     console.log(`📺 TV connecting to WebSocket at ${url}`);
     return super.connect(url);
   }  
@@ -84,7 +144,7 @@ export class WebSocketService extends WebSocketBaseService {
         source: 'tv',
         payload: {
           clientType: 'tv',
-          deviceId: this.deviceId,
+          deviceId: this.networkDevice.deviceId,
         } as RegisterPayload,
       }),
       action_confirmation: (payload) => ({
