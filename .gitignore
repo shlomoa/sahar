@@ -118,3 +118,5 @@ public
 /out-tsc
 /bazel-out
 **/.angular
+**/package-lock.json
+shared/.vscode
