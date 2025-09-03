@@ -17,14 +17,6 @@ import {
   providedIn: 'root'
 })
 export class WebSocketService extends WebSocketBaseService {
-  private receivedMessageCount = 0;
-  private lastMessageTimestamp: number | null = null;
-  private messageTimings: number[] = [];
-  private debugLogBuffer: string[] = [];
-  private maxDebugLogEntries = 200;
-  private sentMessageCount = 0;
-  private errorCount = 0;
-  private lastErrorTimestamp: number | null = null;
 
   // Lightweight playback state used for action confirmations
   private playerState = {
@@ -35,46 +27,7 @@ export class WebSocketService extends WebSocketBaseService {
   };
 
   private navigationService = inject(VideoNavigationService);
-
-      
-  /**
-   * Add a debug log entry to the buffer and console
-   */
-  private debugLog(entry: string, ...args: unknown[]): void {
-    const timestamp = new Date().toISOString();
-    const formatted = `[${timestamp}] ${entry}`;
-    this.debugLogBuffer.push(formatted + (args.length ? ' ' + JSON.stringify(args) : ''));
-    if (this.debugLogBuffer.length > this.maxDebugLogEntries) {
-      this.debugLogBuffer.shift();
-    }
-    // Also print to console for real-time feedback
-    // Use a special emoji for debug logs
-    console.log('🐞', formatted, ...args);
-  }
   
-  /**
-   * Get the current debug log buffer (for UI or export)
-   */
-  getDebugLog(): string[] {
-    return [...this.debugLogBuffer];
-  }
-  
-  /**
-   * Get current message and error counters
-   */
-  getDebugStats() {
-    return {
-      sent: this.sentMessageCount,
-      received: this.receivedMessageCount,
-      errors: this.errorCount,
-      lastMessageTimestamp: this.lastMessageTimestamp,
-      lastErrorTimestamp: this.lastErrorTimestamp,
-      avgMessageInterval: this.messageTimings.length > 1 ?
-        (this.messageTimings.reduce((a, b) => a + b, 0) / (this.messageTimings.length - 1)).toFixed(2) : 'N/A',
-      logBufferSize: this.debugLogBuffer.length
-    };
-  }
-
   constructor() {
     console.log('📺 TV: WebSocket Service initializing');
     super();

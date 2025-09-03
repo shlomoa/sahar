@@ -17,6 +17,52 @@ export abstract class WebSocketBaseService implements OnDestroy {
   protected maxReconnectAttempts = 5;
   protected heartbeatInterval = 30000; // 30 seconds
   protected heartbeatTimer: number | undefined = undefined;
+  protected debugLogBuffer: string[] = [];
+  protected maxDebugLogEntries = 200;
+  protected sentMessageCount = 0;
+  protected errorCount = 0;
+  protected lastErrorTimestamp: number | null = null;
+  protected receivedMessageCount = 0;
+  protected lastMessageTimestamp: number | null = null;
+  protected messageTimings: number[] = [];
+
+    /**
+   * Add a debug log entry to the buffer and console
+   */
+  protected debugLog(entry: string, ...args: unknown[]): void {
+    const timestamp = new Date().toISOString();
+    const formatted = `[${timestamp}] ${entry}`;
+    this.debugLogBuffer.push(formatted + (args.length ? ' ' + JSON.stringify(args) : ''));
+    if (this.debugLogBuffer.length > this.maxDebugLogEntries) {
+      this.debugLogBuffer.shift();
+    }
+    // Also print to console for real-time feedback
+    // Use a special emoji for debug logs
+    console.log('🐞', formatted, ...args);
+  }
+
+    /**
+   * Get the current debug log buffer (for UI or export)
+   */
+  protected getDebugLog(): string[] {
+    return [...this.debugLogBuffer];
+  }
+  
+  /**
+   * Get current message and error counters
+   */
+  protected getDebugStats() {
+    return {
+      sent: this.sentMessageCount,
+      received: this.receivedMessageCount,
+      errors: this.errorCount,
+      lastMessageTimestamp: this.lastMessageTimestamp,
+      lastErrorTimestamp: this.lastErrorTimestamp,
+      avgMessageInterval: this.messageTimings.length > 1 ?
+        (this.messageTimings.reduce((a, b) => a + b, 0) / (this.messageTimings.length - 1)).toFixed(2) : 'N/A',
+      logBufferSize: this.debugLogBuffer.length
+    };
+  }
 
   // Protocol-driven extensibility maps
   private generators = new Map<
