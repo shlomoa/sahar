@@ -6,7 +6,7 @@ import {
   BasePayload,
   SaharMessage,
 } from '../models/messages';
-import { ClientType, NetworkDevice } from '../models/websocket-protocol';
+import { NetworkDevice } from '../models/websocket-protocol';
 import { ConnectionState } from '../models';
 
 @Injectable()
@@ -93,7 +93,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
   }
 
   // Common WebSocket connection logic
-  protected connect(url: string): boolean {
+  protected connect(url: string): boolean {    
     if (this.ws) {
       this.disconnect();
     }
@@ -102,8 +102,9 @@ export abstract class WebSocketBaseService implements OnDestroy {
     this.connectionState$.next('connecting');
 
     try {
-      this.ws = new WebSocket(url);
-      this.setupWebSocketHandlers();      
+      this.ws = new WebSocket(url);      
+      this.setupWebSocketHandlers();
+      console.log(`🔌 completed setting up WebSocket handlers`);
     } catch (error) {
       console.error(`❌ ${this.networkDevice.clientType.toUpperCase()}: Failed to create WebSocket:`, error);
       this.connectionState$.next('error');

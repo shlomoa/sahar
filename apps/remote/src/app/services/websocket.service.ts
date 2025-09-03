@@ -12,8 +12,7 @@ import {
   NavigationCommandPayload,
   ControlAction,
   SaharMessage,  
-  ConnectionState,
-  NetworkDevice,
+  ConnectionState,  
 } from 'shared';
 import { WebSocketUtils } from 'shared';
 import { WebSocketBaseService } from 'shared';
@@ -79,7 +78,8 @@ export class WebSocketService extends WebSocketBaseService {
 
   constructor() {
     super();
-    WebSocketUtils.populateNetworkDevice({clientType: 'remote'} as NetworkDevice);
+    this.networkDevice.clientType = 'remote'; 
+    WebSocketUtils.populateNetworkDevice(this.networkDevice);
       
     this.registerCallbacks();
     
@@ -88,6 +88,7 @@ export class WebSocketService extends WebSocketBaseService {
     // Get the server url
     const tmpUrl = WebSocketUtils.generateHostUrl(this.networkDevice!);
     this.connect(tmpUrl);
+    console.log(`📱 Remote: WebSocket Service initialized`);
   }
 
   // Abstract method implementations

@@ -76,17 +76,19 @@ export class WebSocketService extends WebSocketBaseService {
   }
 
   constructor() {
+    console.log('📺 TV: WebSocket Service initializing');
     super();
     this.networkDevice.clientType = 'tv'; 
     WebSocketUtils.populateNetworkDevice(this.networkDevice);
         
     this.registerCallbacks();
-
-    console.log('🎮 Remote WebSocket Service initialized');
+    
     console.log(`📺 Device ID: ${this.networkDevice.deviceId}`);
     // Get the server url
     const tmpUrl = WebSocketUtils.generateHostUrl(this.networkDevice);
+    console.log(`📺 Connecting to WebSocket server at ${tmpUrl}`);
     this.connect(tmpUrl);
+    console.log('📺 TV: WebSocket Service initialized');    
   }
 
   // Abstract method implementations
