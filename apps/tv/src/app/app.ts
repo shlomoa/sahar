@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { QRCodeComponent } from 'angularx-qrcode';
 import { Observable, Subscription } from 'rxjs';
-import { VideoNavigationService, ControlCommandMessage, getYoutubeVideoId, NetworkDevice, WebSocketUtils } from 'shared';
+import { VideoNavigationService, ControlCommandMessage, getYoutubeVideoId, NetworkDevice } from 'shared';
 import { WEBSOCKET_CONFIG } from 'shared';
 import { SharedPerformersGridComponent, SharedVideosGridComponent, SharedScenesGridComponent } from 'shared';
 import { NavigationState, VideoItem, Video, LikedScene, Performer } from 'shared';
@@ -115,8 +115,7 @@ export class App implements OnInit, OnDestroy {
     // Prefer server-provided LAN IP from /host-ip, fall back to the browser hostname.
     const protocol = window.location.protocol;
     const defaultHost = window.location.hostname; // If the TV is accessed via FQDN, this will be the FQDN
-    const remotePort = WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT;
-    const buildRemoteUrl = (host: string) => `${protocol}//${host}:${remotePort}`;
+    const buildRemoteUrl = (host: string) => `${protocol}//${host}:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}/remote`;
 
     // Start with a provisional URL based on the browser hostname.
     this.remoteUrl = buildRemoteUrl(defaultHost);
