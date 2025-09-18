@@ -536,7 +536,7 @@ app.get(['/tv/*splat','/*splat'], (req: Request, res: Response, next: NextFuncti
 // Catch-all deep links for Remote
 app.get('/remote/*splat', (req: Request, res: Response, next: NextFunction) => {
   if (/\.[a-zA-Z0-9]+$/.test(req.path)) return next();
-  if (DEV_SSR) return devProxy(`http://localhost:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}`)(req, res, next);
+  if (DEV_SSR) return devProxy(`http://${getBestHostIP()}:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}`)(req, res, next);
   res.sendFile(remoteIndexPath);
 });
 
