@@ -27,21 +27,22 @@ export class WebSocketService extends WebSocketBaseService {
   };
 
   private navigationService = inject(VideoNavigationService);
+  protected override logMessagePrefix = '📺 TV: ';
   
-  constructor() {
-    console.log('📺 TV: WebSocket Service initializing');
+  constructor() {    
     super();
+    this.debugLog(`WebSocket Service initializing`);
     this.networkDevice.clientType = 'tv'; 
     WebSocketUtils.populateNetworkDevice(this.networkDevice);
         
     this.registerCallbacks();
     
-    console.log(`📺 Device ID: ${this.networkDevice.deviceId}`);
+    this.debugLog(`Device ID: ${this.networkDevice.deviceId}`);
     // Get the server url
     const tmpUrl = WebSocketUtils.generateHostUrl(this.networkDevice);
-    console.log(`📺 Connecting to WebSocket server at ${tmpUrl}`);
+    this.debugLog(`Connecting to WebSocket server at ${tmpUrl}`);
     this.connect(tmpUrl);
-    console.log('📺 TV: WebSocket Service initialized');    
+    this.debugLog('WebSocket Service initialized');    
   }
 
   // Abstract method implementations
@@ -58,24 +59,24 @@ export class WebSocketService extends WebSocketBaseService {
   }
 
   protected override onConnected(): void {
-    console.log('📺 TV WebSocket connected - registering with server');
+    this.debugLog('WebSocket connected - registering with server');
     this.sendByType('register', {
-      clientType: 'tv',
+      clientType: this.networkDevice.clientType,
       deviceId: this.networkDevice.deviceId,
     } as RegisterPayload);
   }
 
   protected override onDisconnected(): void {
-    console.log('📺 TV WebSocket disconnected');
+    this.debugLog('WebSocket disconnected');
   }
 
   protected override onReconnect(): void {
-    console.log('📺 TV WebSocket reconnect');
+    this.debugLog('WebSocket reconnect');
   }
 
   // Connect to WebSocket server (for testing with localhost:8000)
   protected override connect(url: string): boolean {
-    console.log(`📺 TV connecting to WebSocket at ${url}`);
+    this.debugLog(`connecting to WebSocket at ${url}`);
     return super.connect(url);
   }  
 
@@ -96,22 +97,22 @@ export class WebSocketService extends WebSocketBaseService {
       register: () => ({
         msgType: 'register',
         timestamp: Date.now(),
-        source: 'tv',
+        source: this.networkDevice.clientType,
         payload: {
-          clientType: 'tv',
+          clientType: this.networkDevice.clientType,
           deviceId: this.networkDevice.deviceId,
         } as RegisterPayload,
       }),
       action_confirmation: (payload) => ({
         msgType: 'action_confirmation',
         timestamp: Date.now(),
-        source: 'tv',
+        source: this.networkDevice.clientType,
         payload: (payload as ActionConfirmationPayload) ?? { status: 'success' },
       } as ActionConfirmationMessage),
       heartbeat: () => ({
         msgType: 'heartbeat',
         timestamp: Date.now(),
-        source: 'tv',
+        source: this.networkDevice.clientType,
         payload: { msgType: 'heartbeat' }}),
     });
   }

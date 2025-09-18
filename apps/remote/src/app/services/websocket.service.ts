@@ -28,7 +28,7 @@ export class WebSocketService extends WebSocketBaseService {
   // Remote-specific properties
   private lastConnectedUrl: string | null = null;  // Remote-specific observables
   private tvState$ = new BehaviorSubject<StateSyncMessage | null>(null);
-
+  protected override logMessagePrefix = '📱 Remote: ';
   constructor() {
     super();
     this.networkDevice.clientType = 'remote'; 
@@ -36,12 +36,12 @@ export class WebSocketService extends WebSocketBaseService {
       
     this.registerCallbacks();
     
-    console.log('🎮 Remote WebSocket Service initialized');
-    console.log(`📱 Device ID: ${this.networkDevice.deviceId}`);
+    this.debugLog('🎮 WebSocket Service initialized');
+    this.debugLog(`Device ID: ${this.networkDevice.deviceId}`);
     // Get the server url
     const tmpUrl = WebSocketUtils.generateHostUrl(this.networkDevice!);
     this.connect(tmpUrl);
-    console.log(`📱 Remote: WebSocket Service initialized`);
+    this.debugLog(`WebSocket Service initialized`);
   }
 
   // Abstract method implementations
@@ -58,10 +58,10 @@ export class WebSocketService extends WebSocketBaseService {
   }
 
   protected override onConnected(): void {
-    console.log('✅ Remote WebSocket connected - sending registration');
+    this.debugLog(' ✅ WebSocket connected - sending registration');
     // Register with the server using the shared protocol
     this.sendByType('register', {
-      clientType: 'remote',
+      clientType: this.networkDevice.clientType,
       deviceId: this.networkDevice.deviceId,
     } as RegisterPayload);
     
@@ -71,11 +71,11 @@ export class WebSocketService extends WebSocketBaseService {
   }
 
   protected override onDisconnected(): void {
-    this.debugLog('Remote WebSocket disconnected');
+    this.debugLog('WebSocket disconnected');
   }
 
   protected override onReconnect(): void {
-    this.debugLog('📱Remote: WebSocket reconnecting...');
+    this.debugLog('WebSocket reconnecting...');
     if (!this.lastConnectedUrl) {
       this.debugLog('No previous URL to reconnect to, aborting reconnect');
       return;
@@ -84,7 +84,7 @@ export class WebSocketService extends WebSocketBaseService {
   }
 
   protected override connect(url: string): boolean {
-    console.log(`📱Remote: connecting to WebSocket at ${url}`);
+    this.debugLog(`connecting to WebSocket at ${url}`);
     return super.connect(url);
   }
 
@@ -133,49 +133,6 @@ export class WebSocketService extends WebSocketBaseService {
     this.sendByType('control_command', payload);
   }
 
-  // Send data to TV when connection is established
-  /*
-  sendDataToTV(): void {
-    // Import the actual performers data
-    import('../../../../../server/src/mock-data').then(({ performersData }) => {
-      // Convert the Remote app data format to the shared protocol format
-      const dataPayload: DataPayload = {
-        msgType: 'data',
-        data: {
-          performers: performersData.map((performer: Performer) => ({
-            id: performer.id.toString(),
-            name: performer.name,
-            thumbnail: performer.thumbnail,
-            videos: performer.videos.map((video: Video) => ({
-              id: video.id.toString(),
-              title: video.title,
-              youtubeId: getYoutubeVideoId(video.url) ?? 'unknown',
-              thumbnail: (() => {
-                const vid = getYoutubeVideoId(video.url);
-                return vid ? getYoutubeThumbnailUrl(vid, 'hqdefault') : 'https://via.placeholder.com/320x180?text=No+Thumbnail';
-              })(),
-              scenes: video.likedScenes.map((scene: LikedScene) => ({
-                id: scene.id.toString(),
-                title: scene.title,
-                startTime: scene.startTime,
-                endTime: scene.endTime || (scene.startTime + 60)
-              }))
-            }))
-          })),
-          dataVersion: '1.0',
-          checksum: 'abc123def456',
-          totalSize: performersData.length
-        }
-      };
-
-  console.log('📤 Remote sending ACTUAL data to TV');
-  this.sendByType('data', dataPayload);
-    }).catch(error => {
-      console.error('❌ Failed to load performers data:', error);
-    });
-  }
-  */
-
   protected override sendMessage(message: WebSocketMessage): void {
     if (this.isConnected) {
       this.sentMessageCount++;
@@ -220,23 +177,23 @@ export class WebSocketService extends WebSocketBaseService {
       register: () => ({
         msgType: 'register',
         timestamp: Date.now(),
-        source: 'remote',
+        source: this.networkDevice.clientType,
         payload: {
-          clientType: 'remote',
+          clientType: this.networkDevice.clientType,
           deviceId: this.networkDevice.deviceId,
         } as RegisterPayload,
       }),
       data: (payload?: BasePayload | null) => ({
         msgType: 'data',
         timestamp: Date.now(),
-        source: 'remote',
+        source: this.networkDevice.clientType,
         payload: payload ?? { msgType: 'data',
                               data: {performerId: 'invalid'}} as DataPayload,
       } as SaharMessage),
       heartbeat: (payload?: BasePayload) => ({
         msgType: 'heartbeat',
         timestamp: Date.now(),
-        source: 'remote',
+        source: this.networkDevice.clientType,
         payload: payload ?? { msgType: 'heartbeat' },
       }),
     });

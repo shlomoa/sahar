@@ -25,6 +25,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
   protected receivedMessageCount = 0;
   protected lastMessageTimestamp: number | null = null;
   protected messageTimings: number[] = [];
+  protected logMessagePrefix: string = '';
 
     /**
    * Add a debug log entry to the buffer and console
