@@ -29,7 +29,7 @@
       <div class="qr-caption">Scan to connect</div>
     </div>
     <!-- Video Player (when playing) -->
-  <div class="video-player-area" *ngIf="currentLevel === 'playing' && currentVideo && currentScene">
+    <div class="video-player-area" *ngIf="currentLevel === 'playing' && currentVideo && currentScene">
       <video-player
         [currentVideo]="currentVideo"
         [currentScene]="currentScene"

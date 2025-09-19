@@ -165,67 +165,127 @@ function sendError(ws: WebSocket, code: string, message: string, opts: { close?:
 // --- Validation ---
 
 function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebSocketMessage } | { ok: false; code: string; reason: string; close?: boolean } {
+  // Basic shape checks
   if (typeof raw !== 'object' || raw === null) {
     return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Non-object message', close: !isRegistered };
   }
-  const { msgType, payload } = raw as { msgType?: string; payload?: any };
+  const { msgType } = raw as { msgType?: unknown };
   if (typeof msgType !== 'string') {
     return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Missing type', close: !isRegistered };
   }
+
+  // Helpers: shallow sanitizers and guards
+  const asString = (v: any, max = 200) => (typeof v === 'string' ? v.trim().slice(0, max) : undefined);
+  const asNumber = (v: any) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
+  const asBoolean = (v: any) => (typeof v === 'boolean' ? v : undefined);
+  const isPlainObject = (v: any) => !!v && typeof v === 'object' && !Array.isArray(v);
+
+  // Generic deep sanitizer for arbitrary payloads used by 'data' messages.
+  // Limits depth and keys per object to avoid memory/CPU abuse from large/recursive payloads.
+  function sanitizeAny(obj: any, depth = 0): any {
+    if (depth > 3) return undefined;
+    if (obj === null) return null;
+    if (typeof obj === 'string') return asString(obj, 1000);
+    if (typeof obj === 'number') return asNumber(obj);
+    if (typeof obj === 'boolean') return asBoolean(obj);
+    if (Array.isArray(obj)) {
+      if (obj.length > 200) return undefined;
+      return obj.slice(0, 200).map(i => sanitizeAny(i, depth + 1)).filter(() => true);
+    }
+    if (isPlainObject(obj)) {
+      const out: any = {};
+      const keys = Object.keys(obj).slice(0, 200);
+      for (const k of keys) {
+        // skip prototype pollution attempts
+        if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+        out[k] = sanitizeAny(obj[k], depth + 1);
+      }
+      return out;
+    }
+    return undefined;
+  }
+
+  // Build sanitized message per type. Always return an object shaped: { msgType, timestamp?, payload? }
+  const base: any = { msgType };
+
+  // Preserve timestamp only if it's a finite number
+  if (typeof (raw as any).timestamp === 'number' && Number.isFinite((raw as any).timestamp)) base.timestamp = (raw as any).timestamp;
+
+  // Registration must be the first message for unregistered clients
   if (!isRegistered) {
-  if (msgType !== 'register') {
+    if (msgType !== 'register') {
       return { ok: false, code: ERROR_CODES.INVALID_REGISTRATION, reason: 'First message must be register', close: true };
     }
-    // register payload checks
-    if (!payload || typeof payload !== 'object') {
-      return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Register missing payload', close: true };
-    }
-    if (payload.clientType !== 'tv' && payload.clientType !== 'remote') {
-      return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid clientType', close: true };
-    }
-    if (typeof payload.deviceId !== 'string' || !payload.deviceId) {
-      return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid deviceId', close: true };
-    }
-    if (typeof payload.deviceName !== 'string' || !payload.deviceName) {
-      return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid deviceName', close: true };
-    }
-    return { ok: true, msg: raw as WebSocketMessage };
+    const payload = (raw as any).payload;
+    if (!isPlainObject(payload)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Register missing payload', close: true };
+    const clientType = asString(payload.clientType, 10);
+    if (clientType !== 'tv' && clientType !== 'remote') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid clientType', close: true };
+    const deviceId = asString(payload.deviceId, 200);
+    if (!deviceId) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid deviceId', close: true };
+    const deviceName = asString(payload.deviceName, 200) || '';
+    base.payload = { clientType, deviceId, deviceName };
+    return { ok: true, msg: base as WebSocketMessage };
   }
-  // Already registered client
+
+  // For registered clients, accept and sanitize known types only
   switch (msgType) {
     case 'register':
-      return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Duplicate register' }; // no close
+      return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Duplicate register' };
+
     case 'data': {
-      // Accept any JSON object payload; silently ignore non-object
-      if (!payload || typeof payload !== 'object') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Data missing payload' };
-      return { ok: true, msg: raw as WebSocketMessage };
+      const payload = (raw as any).payload;
+      if (!isPlainObject(payload)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Data missing payload' };
+      base.payload = sanitizeAny(payload, 0);
+      return { ok: true, msg: base as WebSocketMessage };
     }
+
     case 'navigation_command': {
-      if (!payload || typeof payload !== 'object') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Navigation missing payload' };
-      if (!NAVIGATION_ACTION_SET.has(payload.action)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid navigation action' };
-      if (payload.targetId && typeof payload.targetId !== 'string') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid targetId' };
-      return { ok: true, msg: raw as WebSocketMessage };
+      const payload = (raw as any).payload;
+      if (!isPlainObject(payload)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Navigation missing payload' };
+      const action = asString(payload.action, 50);
+  if (!action || !NAVIGATION_ACTION_SET.has(action as any)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid navigation action' };
+      const targetId = payload.targetId ? asString(payload.targetId, 200) : undefined;
+      base.payload = { action, ...(targetId ? { targetId } : {}) };
+      return { ok: true, msg: base as WebSocketMessage };
     }
+
     case 'control_command': {
-      if (!payload || typeof payload !== 'object') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Control missing payload' };
-      if (!CONTROL_ACTION_SET.has(payload.action)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid control action' };
-      if (payload.startTime && typeof payload.startTime !== 'number') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid startTime' };
-      if (payload.seekTime && typeof payload.seekTime !== 'number') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid seekTime' };
-      if (payload.volume && (typeof payload.volume !== 'number' || payload.volume < 0 || payload.volume > 1)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid volume' };
-      return { ok: true, msg: raw as WebSocketMessage };
+      const payload = (raw as any).payload;
+      if (!isPlainObject(payload)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Control missing payload' };
+      const action = asString(payload.action, 50);
+  if (!action || !CONTROL_ACTION_SET.has(action as any)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid control action' };
+      const startTime = typeof payload.startTime === 'number' ? payload.startTime : undefined;
+      const seekTime = typeof payload.seekTime === 'number' ? payload.seekTime : undefined;
+      const volume = typeof payload.volume === 'number' ? payload.volume : undefined;
+      if (volume !== undefined && (volume < 0 || volume > 1)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid volume' };
+      const safePayload: any = { action };
+      if (startTime !== undefined) safePayload.startTime = startTime;
+      if (seekTime !== undefined) safePayload.seekTime = seekTime;
+      if (volume !== undefined) safePayload.volume = volume;
+      return { ok: true, msg: { ...base, payload: safePayload } as WebSocketMessage };
     }
+
     case 'action_confirmation': {
-      if (!payload || typeof payload !== 'object') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Confirmation missing payload' };
-      if (payload.status !== 'success' && payload.status !== 'failure') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid confirmation status' };
-      return { ok: true, msg: raw as WebSocketMessage };
+      const payload = (raw as any).payload;
+      if (!isPlainObject(payload)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Confirmation missing payload' };
+      const status = asString(payload.status, 20);
+      if (status !== 'success' && status !== 'failure') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid confirmation status' };
+      const errorMessage = payload.errorMessage ? asString(payload.errorMessage, 1000) : undefined;
+      base.payload = { status, ...(errorMessage ? { errorMessage } : {}) };
+      return { ok: true, msg: base as WebSocketMessage };
     }
+
     case 'ack': {
-      // Allow bare ack (payload optional)
-      return { ok: true, msg: raw as WebSocketMessage };
+      // Allow ack with optional small payload (sanitized)
+      const payload = (raw as any).payload;
+      base.payload = isPlainObject(payload) ? sanitizeAny(payload, 0) : undefined;
+      return { ok: true, msg: base as WebSocketMessage };
     }
+
     case 'state_sync':
     case 'error':
       return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Client cannot send server-only type' };
+
     default:
       return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Unsupported message type' };
   }

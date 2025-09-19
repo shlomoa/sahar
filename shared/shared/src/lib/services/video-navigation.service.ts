@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { Performer, LikedScene, NavigationState } from '../models/video-navigation';
 import { getYoutubeThumbnailUrl } from '../utils/youtube-helpers';
+import { ApplicationState } from '../models/application-state';
 
 @Injectable({
   providedIn: 'root'
@@ -16,6 +17,16 @@ export class VideoNavigationService {
   private performersData: Performer[] = [];
   private navigationSubject = new BehaviorSubject<NavigationState>(this.navigationState);
   public navigation$ = this.navigationSubject.asObservable();
+  // Player state observable exposed to TV app
+  private playerState: ApplicationState['player'] = {
+    isPlaying: false,
+    currentTime: 0,
+    duration: 0,
+    volume: 100,
+    muted: false,
+  };
+  private playerSubject = new BehaviorSubject<ApplicationState['player']>(this.playerState);
+  public player$ = this.playerSubject.asObservable();
   constructor() {
     console.log('� Shared Navigation Service initialized');
     // This path is for the TV app
@@ -177,17 +188,38 @@ export class VideoNavigationService {
   private playSceneObject(scene: LikedScene): void {
     console.log('📺 TV: Playing scene object:', scene.title, 'at time:', scene.startTime);
 
-    // Update navigation state to indicate we're playing a scene
+    // Update navigation state to indicate we're playing a scene (explicit playback marker)
     this.navigationState = {
       ...this.navigationState,
-      breadcrumb: [...this.navigationState.breadcrumb, `▶️ ${scene.title}`],
+      // Keep breadcrumb semantic (no emoji markers). The player observable carries playingSceneId.
+      breadcrumb: [...this.navigationState.breadcrumb],
       canGoBack: true
     };
-
-    // Emit the updated state so the main component can respond
     this.navigationSubject.next(this.navigationState);
 
-    console.log('📺 TV: Scene playback initiated for:', scene.title, 'at time:', scene.startTime);
+    // Update player observable with explicit playing scene id
+    this.playerState = {
+      ...this.playerState,
+      isPlaying: true,
+      currentTime: scene.startTime,
+      // duration left undefined if unknown
+      youtubeId: undefined,
+      playingSceneId: scene.id
+    } as ApplicationState['player'];
+    this.playerSubject.next(this.playerState);
+
+    console.log('📺 TV: Scene playback initiated for:', scene.title, 'at time:', scene.startTime, 'sceneId:', scene.id);
+  }
+
+  // Player state API used by websocket handlers to set authoritative state
+  setPlayerState(player: Partial<ApplicationState['player']>): void {
+    this.playerState = { ...this.playerState, ...(player as ApplicationState['player']) } as ApplicationState['player'];
+    this.playerSubject.next(this.playerState);
+  }
+
+  clearPlayingScene(): void {
+    this.playerState = { ...this.playerState, isPlaying: false, playingSceneId: undefined } as ApplicationState['player'];
+    this.playerSubject.next(this.playerState);
   }
 
   getCurrentState(): NavigationState {

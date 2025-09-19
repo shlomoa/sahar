@@ -14,6 +14,8 @@ import {
   SaharMessage,  
   ConnectionState,  
 } from 'shared';
+import { VideoNavigationService, ApplicationState, Performer } from 'shared';
+import { inject } from '@angular/core';
 import { WebSocketUtils } from 'shared';
 import { WebSocketBaseService } from 'shared';
 
@@ -29,10 +31,12 @@ export class WebSocketService extends WebSocketBaseService {
   private lastConnectedUrl: string | null = null;  // Remote-specific observables
   private tvState$ = new BehaviorSubject<StateSyncMessage | null>(null);
   protected override logMessagePrefix = '📱 Remote: ';
+  private navigationService = inject(VideoNavigationService);
   constructor() {
     super();
     this.networkDevice.clientType = 'remote'; 
     WebSocketUtils.populateNetworkDevice(this.networkDevice);
+  // Navigation service obtained via DI (inject above)
       
     this.registerCallbacks();
     
@@ -153,9 +157,58 @@ export class WebSocketService extends WebSocketBaseService {
     // Inbound handlers
     this.registerHandlers({
       state_sync: (msg: SaharMessage) => {
-        const state = msg as StateSyncMessage;
-        this.tvState$.next(state);
+        const stateMsg = msg as StateSyncMessage;
+        this.tvState$.next(stateMsg);
         this.debugLog('State sync received');
+
+        // Apply authoritative snapshot to shared navigation service so Remote UI can reflect server state
+        try {
+          const state = stateMsg.payload as ApplicationState;
+
+          // Apply seeded performers if present
+          const dataUnknown: unknown = (state as unknown as { data?: unknown }).data;
+          if (dataUnknown && typeof dataUnknown === 'object' && 'performers' in (dataUnknown as Record<string, unknown>)) {
+            const maybePerformers = (dataUnknown as Record<string, unknown>)['performers'];
+            if (Array.isArray(maybePerformers) && maybePerformers.length > 0 && maybePerformers.every(p => typeof p === 'object')) {
+              this.navigationService.setPerformersData(maybePerformers as Performer[]);
+            }
+          }
+
+          // Reconcile navigation
+          const nav = state.navigation;
+          if (nav) {
+            switch (nav.currentLevel) {
+              case 'performers':
+                this.navigationService.goHome();
+                break;
+              case 'videos':
+                if (nav.performerId) this.navigationService.navigateToPerformer(nav.performerId);
+                break;
+              case 'scenes':
+                if (nav.performerId) this.navigationService.navigateToPerformer(nav.performerId);
+                if (nav.videoId) this.navigationService.navigateToVideo(nav.videoId);
+                if (nav.sceneId) this.navigationService.playScene(nav.sceneId);
+                break;
+            }
+          }
+          // Apply authoritative player state if present
+          if (state.player && typeof state.player === 'object') {
+            try {
+              interface PlayerState { playingSceneId?: string; isPlaying?: boolean }
+              // Assert that navigationService may implement setPlayerState
+              const navWithPlayer = this.navigationService as unknown as { setPlayerState?: (p: PlayerState) => void };
+              if (typeof navWithPlayer.setPlayerState === 'function') {
+                navWithPlayer.setPlayerState(state.player as PlayerState);
+              } else {
+                this.debugLog('setPlayerState not available on VideoNavigationService (skipping)');
+              }
+            } catch (e) {
+              console.warn('📱 Remote: failed to apply player state', e);
+            }
+          }
+        } catch (err) {
+          console.error('📱 Remote: failed to apply state_sync', err);
+        }
       },
       error: (msg: SaharMessage) => {
         const err = msg as ErrorMessage;

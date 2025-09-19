@@ -1,12 +1,7 @@
 /* TV Application SCSS - Optimized for 80% data view layout */
 
-.tv-containe/* Data View Area (when browsing, not playing video) */
-.data-view {
-  width: 100%;
-  height: 100%;
-  padding: 16px;
-  overflow-y: auto;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);display: flex;
+.tv-container {
+  display: flex;
   flex-direction: column;
   height: 100vh;
   width: 100vw;
@@ -81,15 +76,16 @@
 
 /* Data View Area (when browsing, not playing video) */
 .data-view {
+  width: 100%;
   height: 100%;
   padding: 16px;
   overflow-y: auto;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  
+
   mat-grid-list {
     height: 100%;
   }
-  
+
   mat-grid-tile {
     background: transparent;
   }

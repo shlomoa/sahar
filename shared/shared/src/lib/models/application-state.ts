@@ -28,6 +28,8 @@ export interface ApplicationState {
     volume: number;
     muted: boolean;
     youtubeId?: string;
+    // Optional explicit marker for which scene is currently playing (avoid embedding emojis in breadcrumb)
+    playingSceneId?: string;
   };
   error?: {
     code: string;

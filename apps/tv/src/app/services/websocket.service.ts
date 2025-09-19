@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { RegisterPayload, VideoNavigationService } from 'shared';
+import { RegisterPayload, VideoNavigationService, ApplicationState, Performer } from 'shared';
 import { WebSocketBaseService } from 'shared';
 import { WebSocketUtils } from 'shared';
 import {
@@ -174,7 +174,58 @@ export class WebSocketService extends WebSocketBaseService {
   }
 
   private handleStateSync(message: StateSyncMessage): void {
-    console.log('📺 TV state sync:', message.payload);
+    // Apply authoritative server snapshot to the TV navigation view-model.
+    try {
+      const state = message.payload as ApplicationState;
+      this.debugLog?.(`Received state_sync v${state.version}`);
+
+      // If server provided performers (seeded data), apply it to the navigation service.
+      // Shape is flexible in Milestone 1 so check defensively.
+      const dataUnknown: unknown = (state as unknown as { data?: unknown }).data;
+      if (dataUnknown && typeof dataUnknown === 'object' && 'performers' in (dataUnknown as Record<string, unknown>)) {
+        const maybePerformers = (dataUnknown as Record<string, unknown>)['performers'];
+        if (Array.isArray(maybePerformers) && maybePerformers.length > 0 && maybePerformers.every(p => typeof p === 'object')) {
+          // Treat runtime-checked array elements as `Performer` for the navigation service.
+          this.navigationService.setPerformersData(maybePerformers as Performer[]);
+        }
+      }
+
+      // Reconcile navigation level from authoritative state
+      const nav = state.navigation;
+      if (nav) {
+        switch (nav.currentLevel) {
+          case 'performers':
+            this.navigationService.goHome();
+            break;
+          case 'videos':
+            if (nav.performerId) this.navigationService.navigateToPerformer(nav.performerId);
+            break;
+          case 'scenes':
+            // Ensure we navigate into performer and video before playing the scene
+            if (nav.performerId) this.navigationService.navigateToPerformer(nav.performerId);
+            if (nav.videoId) this.navigationService.navigateToVideo(nav.videoId);
+            if (nav.sceneId) this.navigationService.playScene(nav.sceneId);
+            break;
+        }
+      }
+      // Apply authoritative player snapshot if present
+      if (state.player && typeof state.player === 'object') {
+        try {
+          interface PlayerState { playingSceneId?: string; isPlaying?: boolean }
+          const navWithPlayer = this.navigationService as unknown as { setPlayerState?: (p: PlayerState) => void };
+          if (typeof navWithPlayer.setPlayerState === 'function') {
+            navWithPlayer.setPlayerState(state.player as PlayerState);
+          } else {
+            // No setPlayerState available; we keep breadcrumb-only behavior (no change here)
+            this.debugLog('setPlayerState not available on VideoNavigationService (skipping)');
+          }
+        } catch (e) {
+          console.warn('📺 Failed to apply player state from state_sync', e);
+        }
+      }
+    } catch (err) {
+      console.error('📺 Failed to apply state_sync:', err);
+    }
   }
 
   private handleAck(): void {

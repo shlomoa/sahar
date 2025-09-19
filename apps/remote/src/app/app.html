@@ -1,5 +1,6 @@
+<!-- Remote Application Layout -->
 <div class="remote-container">
-  <!-- Header -->
+  <!-- Navigation Bar (10%) -->
   <mat-toolbar color="primary" class="remote-header">
     <span class="header-title">📱 SAHAR TV Remote</span>
     <span class="spacer"></span>
@@ -8,13 +9,6 @@
         connectionStatus === 'connecting' ? '🟡 Connecting...' : '🔴 Disconnected'}}
     </span>
   </mat-toolbar>
-
-  <!-- Device Connection Section (always visible when not connected) -->
-  <device-connection
-    [connectionStatus]="connectionStatus"
-    [networkDevice]="deviceInfo()"
-    (reconnectDevice)="reconnectToDevice()">
-  </device-connection>
 
   <!-- Navigation Content (only when connected) -->
   @if (connectionStatus === 'connected') {

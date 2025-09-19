@@ -8,7 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { QRCodeComponent } from 'angularx-qrcode';
-import { Observable, Subscription } from 'rxjs';
+import { Observable, Subscription, isObservable } from 'rxjs';
 import { VideoNavigationService, ControlCommandMessage, getYoutubeVideoId, NetworkDevice } from 'shared';
 import { WEBSOCKET_CONFIG } from 'shared';
 import { SharedPerformersGridComponent, SharedVideosGridComponent, SharedScenesGridComponent } from 'shared';
@@ -35,7 +35,8 @@ import { VideoPlayerComponent } from './components/video-player/video-player.com
     SharedScenesGridComponent
   ],
   templateUrl: './app.html',
-  styleUrl: './app.scss'
+  styleUrls: ['./app.scss'],
+  standalone: true
 })
 export class App implements OnInit, OnDestroy {
   @ViewChild(VideoPlayerComponent) private videoPlayer?: VideoPlayerComponent;
@@ -45,9 +46,7 @@ export class App implements OnInit, OnDestroy {
 
   private readonly navigationService = inject(VideoNavigationService);
   private readonly webSocketService = inject(WebSocketService);
-  private readonly snackBar = inject(MatSnackBar);
-
-  
+  private readonly snackBar = inject(MatSnackBar);  
 
   // Video playback state
   currentVideo: Video | null = null;
@@ -63,6 +62,9 @@ export class App implements OnInit, OnDestroy {
   get playbackIsPlaying(): boolean { // basic POC default
     return this.videoPlayer?.isPlaying ?? false;
   }
+
+  // Local playback flag (derived from player$)
+  isPlaying = false;
 
   // QR: Remote entry URL to encode
   remoteUrl = '';
@@ -149,28 +151,63 @@ export class App implements OnInit, OnDestroy {
         thumbnail: item.thumbnail,
         type: item.type
       })));
-      
-      // Check if this is a scene playback (breadcrumb indicates playing)
-      if (nav.breadcrumb.some(crumb => crumb.startsWith('▶️')) && nav.currentVideo) {
-        console.log('📺 Scene playback detected via navigation state');
-        this.currentVideo = nav.currentVideo;
-        
-        // Find the scene being played (look for the last breadcrumb with ▶️)
-        const sceneTitle = nav.breadcrumb.find(crumb => crumb.startsWith('▶️'))?.substring(3);
-        if (sceneTitle) {
-          const scene = nav.currentVideo.likedScenes.find(s => s.title === sceneTitle);
-          if (scene) {
-            this.currentScene = scene;
-            console.log('📺 Starting video playback from WebSocket:', {
-              video: this.currentVideo.title,
-              scene: this.currentScene.title,
-              url: this.currentVideo.url,
-              startTime: this.currentScene.startTime
-            });
+    });
+
+    // Subscribe to explicit player state when available. If the shared package
+    // hasn't been rebuilt for the consuming app, use a runtime guard so this
+    // code doesn't crash. Falling back to breadcrumb parsing is no longer the
+    // default, but the navigation state still contains breadcrumbs for older
+    // remotes.
+  interface PlayerState { playingSceneId?: string; isPlaying?: boolean }
+
+    const navAny = this.navigationService as unknown as Record<string, unknown>;
+    const player$ = navAny['player$'] as Observable<PlayerState> | undefined;
+    if (player$ && isObservable(player$)) {
+      const playerSub = player$.subscribe((player: PlayerState | undefined) => {
+        if (!player || !player.playingSceneId) {
+          this.currentVideo = null;
+          this.currentScene = null;
+          this.isPlaying = false;
+          return;
+        }
+        // Try to resolve the scene id to a Video and LikedScene
+        const nav = this.navigationService.getCurrentState();
+        let foundScene: LikedScene | undefined;
+        let foundVideo: Video | null = null;
+        if (nav.currentVideo) {
+          foundScene = nav.currentVideo.likedScenes.find((s) => s.id === player.playingSceneId);
+          if (foundScene) foundVideo = nav.currentVideo;
+        }
+        if (!foundScene) {
+          // Search performers/videos for the scene id
+          const performers = this.navigationService.getPerformersData();
+          outer: for (const p of performers) {
+            for (const v of p.videos) {
+              const s = v.likedScenes.find((s2) => s2.id === player.playingSceneId);
+              if (s) {
+                foundScene = s;
+                foundVideo = v;
+                break outer;
+              }
+            }
           }
         }
-      }
-    });
+        if (foundScene && foundVideo) {
+          this.currentVideo = foundVideo;
+          this.currentScene = foundScene;
+          this.isPlaying = !!player.isPlaying;
+          console.log('📺 Starting video playback from player$:', {
+            video: this.currentVideo?.title,
+            scene: this.currentScene.title,
+            url: this.currentVideo?.url,
+            startTime: this.currentScene.startTime
+          });
+        } else {
+          console.warn('Could not resolve playingSceneId to a known scene:', player.playingSceneId);
+        }
+      });
+      this.subscriptions.push(playerSub);
+    }
 
     // Initialize WebSocket connection and wire control commands to YouTube player
     this.initializeWebSocket();

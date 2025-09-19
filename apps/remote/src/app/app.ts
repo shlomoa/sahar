@@ -4,7 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
 
 // Components
-import { VideoNavigationService, DeviceConnectionComponent, SharedPerformersGridComponent, SharedScenesGridComponent, SharedVideosGridComponent, ClientType, WebSocketUtils, NetworkDevice } from 'shared';
+import { VideoNavigationService, SharedPerformersGridComponent, SharedScenesGridComponent, SharedVideosGridComponent, ClientType, NetworkDevice } from 'shared';
 import { Performer, Video, LikedScene } from 'shared';
 
 import { VideoControlsComponent } from './components/video-controls/video-controls.component';
@@ -14,20 +14,19 @@ import { WebSocketService } from './services/websocket.service';
 import { RemoteNavigationState, ConnectionStatus } from './models/remote-navigation';
 
 @Component({
-  selector: 'app-root',
-  standalone: true,
+  selector: 'app-root',  
   imports: [
     CommonModule,
     MatToolbarModule,
     MatButtonModule,
-    VideoControlsComponent,
-    DeviceConnectionComponent,
+    VideoControlsComponent,    
     SharedPerformersGridComponent,
     SharedScenesGridComponent,
     SharedVideosGridComponent
   ],
   templateUrl: './app.html',
-  styleUrl: './app.scss'
+  styleUrls: ['./app.scss'],
+  standalone: true,
 })
 export class App implements OnInit {
   // Data
