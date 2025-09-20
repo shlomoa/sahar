@@ -156,7 +156,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
       console.error(`❌ ${this.networkDevice.clientType.toUpperCase()}: Failed to create WebSocket:`, error);
       this.connectionState$.next('error');
       this.scheduleReconnect(url);
-      return false
+      return false;
     }
     return true;
   }
