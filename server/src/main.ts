@@ -141,8 +141,8 @@ let currentBroadcastVersion: number | null = null; // version currently awaiting
 let pendingBroadcastVersion: number | null = null; // queued latest version while waiting
 let outstandingAckClients: Set<WebSocket> | null = null; // clients yet to ACK current broadcast
 
-// Track client connections and their type (plus last ACKed state version for observability)
-const clients = new Map<WebSocket, { clientType: ClientType; deviceId: string; lastStateAckVersion?: number }>();
+// Track client connections and their type (plus last ACKed state version and heartbeat for observability)
+const clients = new Map<WebSocket, { clientType: ClientType; deviceId: string; lastStateAckVersion?: number; lastHeartbeat?: number }>();
 
 // Readiness flag (infrastructure readiness: HTTP + WS initialized)
 let isReady = false;
@@ -275,6 +275,13 @@ function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebS
       return { ok: true, msg: base as WebSocketMessage };
     }
 
+    case 'heartbeat': {
+      // Allow small heartbeat payloads (sanitized) for liveness checks
+      const payload = (raw as any).payload;
+      base.payload = isPlainObject(payload) ? sanitizeAny(payload, 0) : undefined;
+      return { ok: true, msg: base as WebSocketMessage };
+    }
+
     case 'ack': {
       // Allow ack with optional small payload (sanitized)
       const payload = (raw as any).payload;
@@ -351,16 +358,19 @@ wss.on('connection', (ws: WebSocket) => {
   ws.on('message', (data: RawData) => {
     const isRegistered = clients.has(ws);
     let parsed: any;
+    const rawText = typeof data === 'string' ? data : data.toString();
     try {
-      const text = typeof data === 'string' ? data : data.toString();
-      parsed = JSON.parse(text);
+      parsed = JSON.parse(rawText);
     } catch (e) {
-      sendError(ws, ERROR_CODES.INVALID_MESSAGE_FORMAT, 'Invalid JSON', { close: !isRegistered, meta: { preRegistered: !isRegistered } });
+      sendError(ws, ERROR_CODES.INVALID_MESSAGE_FORMAT, 'Invalid JSON', { close: !isRegistered, meta: { preRegistered: !isRegistered, rawMessage: rawText.slice(0,2000) } });
       return;
     }
     const v = validateMessage(parsed, isRegistered);
     if (!v.ok) {
-      sendError(ws, v.code, v.reason, { close: !!v.close, meta: { preRegistered: !isRegistered } });
+      // Include a truncated raw message and any incoming msgType for easier debugging
+      const incomingType = parsed && typeof (parsed as any).msgType === 'string' ? (parsed as any).msgType : null;
+      const rawTextTrunc = rawText.slice(0, 2000);
+      sendError(ws, v.code, v.reason, { close: !!v.close, meta: { preRegistered: !isRegistered, incomingMsgType: incomingType, rawMessage: rawTextTrunc } });
       return;
     }
     const msg = v.msg;
@@ -445,10 +455,19 @@ wss.on('connection', (ws: WebSocket) => {
         sendError(ws, ERROR_CODES.INVALID_MESSAGE_FORMAT, 'Duplicate register attempt');
         break;
       }
-      default: {
-        // Should not happen (validated earlier)
-        sendError(ws, ERROR_CODES.INVALID_MESSAGE_FORMAT, 'Unhandled type after validation');
-      }
+    
+    case 'heartbeat': {
+      // Record last heartbeat timestamp for observability and reply with an ack
+      const meta = clients.get(ws);
+      if (meta) meta.lastHeartbeat = Date.now();
+      ws.send(JSON.stringify(makeAck('server')));
+      logInfo('heartbeat_received', { from: meta?.clientType, deviceId: meta?.deviceId });
+      break;
+    }
+    default: {
+      // Should not happen (validated earlier)
+      sendError(ws, ERROR_CODES.INVALID_MESSAGE_FORMAT, 'Unhandled type after validation');
+    }
     }
   });
 
@@ -500,7 +519,7 @@ app.get('/ready', (_req: Request, res: Response) => {
 // Enriched health snapshot (debug / monitoring)
 app.get('/health', (_req: Request, res: Response) => {
   const wsConnections = [...wss.clients].length;
-  const registered = [...clients.values()].map(c => ({ clientType: c.clientType, deviceId: c.deviceId }));
+  const registered = [...clients.values()].map(c => ({ clientType: c.clientType, deviceId: c.deviceId, lastHeartbeat: c.lastHeartbeat ?? null }));
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
