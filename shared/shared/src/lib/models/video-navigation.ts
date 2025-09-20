@@ -1,6 +1,6 @@
 // Performer data structure for YouTube-like content
 import { getYoutubeVideoId, getYoutubeThumbnailUrl } from '../utils/youtube-helpers';
-
+export type ItemType = 'video' | 'category' | 'segment' | 'performer';
 export interface Performer {
   id: string;
   name: string;
@@ -32,7 +32,7 @@ export interface VideoItem {
   id: string;
   title: string;
   thumbnail: string;
-  type: 'video' | 'category' | 'segment' | 'performer';
+  itemType: ItemType;
   url?: string;
   children?: VideoItem[];
   startTime?: number; // For scenes with time offset

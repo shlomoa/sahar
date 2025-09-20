@@ -1,5 +1,7 @@
 export type FsmState = 'initializing' | 'ready' | 'playing' | 'paused' | 'error';
 
+export type NavigationLevel = 'performers' | 'videos' | 'scenes' | 'playing' | 'scene-selected';
+
 // Shared authoritative ApplicationState model (with versioning)
 // Version increments on every committed mutation so clients can reconcile ordering.
 export interface ApplicationState {

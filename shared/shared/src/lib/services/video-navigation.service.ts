@@ -63,7 +63,7 @@ export class VideoNavigationService {
           id: 'waiting',
           title: 'Waiting for Remote Connection...',
           thumbnail: '',
-          type: 'category'
+          itemType: 'category'
         }
       ],
       breadcrumb: ['Waiting for Remote...'],
@@ -88,7 +88,7 @@ export class VideoNavigationService {
         id: performer.id,
         title: performer.name,
         thumbnail: performer.thumbnail,
-        type: 'performer' as const
+        itemType: 'performer' as const
       })),
       breadcrumb: ['Home'],
       canGoBack: false,
@@ -110,7 +110,7 @@ export class VideoNavigationService {
         id: video.id,
         title: video.title,
         thumbnail: this.getVideoThumbnail(video.url) || '',
-        type: 'video' as const,
+        itemType: 'video' as const,
         url: video.url
       })),
       breadcrumb: ['Home', performer.name],
@@ -139,7 +139,7 @@ export class VideoNavigationService {
         id: scene.id,
         title: scene.title,
         thumbnail: scene.thumbnail || this.getVideoThumbnail(video.url) || '',
-        type: 'segment' as const,
+        itemType: 'segment' as const,
         url: `${video.url}&t=${scene.startTime}`,
         startTime: scene.startTime,
         endTime: scene.endTime

@@ -1,7 +1,7 @@
 <!-- TV Application Layout -->
 <div class="tv-container">
   <!-- Navigation Bar (10%) -->
-  <mat-toolbar class="nav-bar" color="primary">
+  <mat-toolbar color="primary" class="tv-nav-bar">
     <button mat-icon-button (click)="onHomeClick()">
       <mat-icon>home</mat-icon>
     </button>
@@ -14,7 +14,12 @@
     </div>
     
     <span class="spacer"></span>
-    
+
+    <span class="connection-status">
+      {{connectionStatus === 'connected' ? '🟢 Connected' : 
+        connectionStatus === 'connecting' ? '🟡 Connecting...' : '🔴 Disconnected'}}
+    </span>
+
     <button mat-icon-button (click)="onBackClick()" 
             *ngIf="(navigation$ | async)?.canGoBack">
       <mat-icon>arrow_back</mat-icon>
@@ -23,73 +28,83 @@
 
   <!-- Main Content Area (80%) -->
   <div class="main-content">
-    <!-- QR (Task 2.26): Show Remote entry URL as QR -->
-    <div class="qr-block" title="Scan to connect (opens /remote)">
-      <qrcode [qrdata]="remoteUrl" [width]="96" [errorCorrectionLevel]="'M'"></qrcode>
-      <div class="qr-caption">Scan to connect</div>
-    </div>
+    <!-- QR (Task 2.26): Show Remote entry URL as QR. Hidden when both TV and Remote are connected -->
+    @if (!bothConnected) {
+      <div class="qr-block" title="Scan to connect (opens /remote)">
+        <qrcode [qrdata]="remoteUrl" [width]="96" [errorCorrectionLevel]="'M'"></qrcode>
+        <div class="qr-caption">Scan to connect</div>
+      </div>
+    }
     <!-- Video Player (when playing) -->
-    <div class="video-player-area" *ngIf="currentLevel === 'playing' && currentVideo && currentScene">
-      <video-player
-        [currentVideo]="currentVideo"
-        [currentScene]="currentScene"
-        [videoId]="playbackVideoId || undefined"
-        [isPlaying]="playbackIsPlaying"
-        [positionSec]="playbackPositionSec"
-        [autoplay]="true"
-        [showControls]="true"
-        (playerReady)="onPlayerReady()"
-        (videoStarted)="onVideoStarted()"
-        (videoPaused)="onVideoPaused()"
-        (videoEnded)="onVideoEnded()"
-        (timeUpdate)="onTimeUpdate($event)">
-      </video-player>
-    </div>
-
+    @if (currentLevel === 'playing' && currentVideo && currentScene) {
+      <div class="video-player-area" >
+        <video-player
+          [currentVideo]="currentVideo"
+          [currentScene]="currentScene"
+          [videoId]="playbackVideoId || undefined"
+          [isPlaying]="playbackIsPlaying"
+          [positionSec]="playbackPositionSec"
+          [autoplay]="true"
+          [showControls]="true"
+          (playerReady)="onPlayerReady()"
+          (videoStarted)="onVideoStarted()"
+          (videoPaused)="onVideoPaused()"
+          (videoEnded)="onVideoEnded()"
+          (timeUpdate)="onTimeUpdate($event)">
+        </video-player>
+      </div>
+    }
     <!-- Data View using shared components -->
-    <div class="data-view" *ngIf="currentLevel !== 'playing'">
-      
-      <!-- Performers Level -->
-      <shared-performers-grid
-        *ngIf="currentLevel === 'performers'"
-        [performers]="currentPerformers"
-        [clientType]="'tv'"
-        (performerSelected)="onPerformerSelected($event)">
-      </shared-performers-grid>
-      
-      <!-- Videos Level -->
-      <shared-videos-grid
-        *ngIf="currentLevel === 'videos'"
-        [videos]="currentVideos"
-        [clientType]="'tv'"
-        [showBreadcrumb]="true"
-        (videoSelected)="onVideoSelected($event)"
-        (backToPerformers)="onBackToPerformers()">
-      </shared-videos-grid>
-      
-      <!-- Scenes Level -->
-      <shared-scenes-grid
-        *ngIf="currentLevel === 'scenes'"
-        [scenes]="currentScenes"
-        [clientType]="'tv'"
-        [showBreadcrumb]="true"
-        (sceneSelected)="onSceneSelected($event)"
-        (backToVideos)="onBackToVideos()">
-      </shared-scenes-grid>
-      
-    </div>
+    @if (currentLevel !== 'playing') {
+      <div class="data-view">
+        @switch (currentLevel) {
+        
+          @case ('performers') {
+            <shared-performers-grid            
+              [performers]="currentPerformers"
+              [clientType]="'tv'"
+              (performerSelected)="onPerformerSelected($event)">
+            </shared-performers-grid>
+          }
+        
+          @case ('videos') {
+            <shared-videos-grid
+              [videos]="currentVideos"
+              [clientType]="'tv'"
+              [showBreadcrumb]="true"
+              (videoSelected)="onVideoSelected($event)"
+              (backToPerformers)="onBackToPerformers()">
+            </shared-videos-grid>
+          }
+        
+          @case ('scenes') {
+            <shared-scenes-grid
+              [scenes]="currentScenes"
+              [clientType]="'tv'"
+              [showBreadcrumb]="true"
+              (sceneSelected)="onSceneSelected($event)"
+              (backToVideos)="onBackToVideos()">
+            </shared-scenes-grid>
+          }
+        }
+      </div>
+    }
   </div>
 
   <!-- Status Bar (10%) -->
   <mat-toolbar class="status-bar" color="accent">
-    <div *ngIf="navigation$ | async as nav">
-      <span>Connection: Connected</span>
-      <span class="spacer"></span>
+    <div *ngIf="navigation$ | async as nav">      
       <span>Items: {{ nav.currentLevel.length }}</span>
       <span class="spacer"></span>
-      <span *ngIf="nav.currentPerformer">Performer: {{ nav.currentPerformer.name }}</span>
-      <span *ngIf="nav.currentVideo">Video: {{ nav.currentVideo.title }}</span>
-      <span *ngIf="currentScene">Scene: {{ currentScene.title }}</span>
+      @if (nav.currentPerformer) {
+        <span>Performer: {{ nav.currentPerformer.name }}</span>
+      }
+      @if (nav.currentVideo) {
+        <span>Video: {{ nav.currentVideo.title }}</span>
+      }
+      @if (currentScene) {
+        <span>Scene: {{ currentScene.title }}</span>
+      }
     </div>
   </mat-toolbar>
 </div>

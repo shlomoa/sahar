@@ -1,17 +1,13 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
-
-// Components
-import { VideoNavigationService, SharedPerformersGridComponent, SharedScenesGridComponent, SharedVideosGridComponent, ClientType, NetworkDevice } from 'shared';
+import { Observable, Subscription } from 'rxjs';
+import { VideoNavigationService, SharedPerformersGridComponent, SharedScenesGridComponent, SharedVideosGridComponent, ClientType, NetworkDevice, ConnectionState, NavigationState, NavigationLevel } from 'shared';
 import { Performer, Video, LikedScene } from 'shared';
-
 import { VideoControlsComponent } from './components/video-controls/video-controls.component';
-
-// Services and Models
 import { WebSocketService } from './services/websocket.service';
-import { RemoteNavigationState, ConnectionStatus } from './models/remote-navigation';
+
 
 @Component({
   selector: 'app-root',  
@@ -28,29 +24,94 @@ import { RemoteNavigationState, ConnectionStatus } from './models/remote-navigat
   styleUrls: ['./app.scss'],
   standalone: true,
 })
-export class App implements OnInit {
+export class App implements OnInit, OnDestroy {
+  protected title = 'Sahar TV Remote';
+  navigation$: Observable<NavigationState>;
+  private subscriptions: Subscription[] = [];
+  
+  // Service injections
+  private readonly navigationService = inject(VideoNavigationService);
+  private readonly websocketService = inject(WebSocketService);
+  private readonly videoNavigationService = inject(VideoNavigationService);
+
+  // Video playback state
+  currentVideo: Video | undefined = undefined;
+  currentScene: LikedScene | undefined = undefined;
+
   // Data
   performers: Performer[] = [];
   clientType: ClientType = 'remote';
-  // Navigation state (synced with TV) - starts undefined until connected
-  currentNavigation: RemoteNavigationState = { level: 'performers' };
-  
+   
   // Connection management - starts disconnected
-  connectionStatus: ConnectionStatus = 'disconnected';
+  connectionStatus: ConnectionState = 'disconnected';
   autoConnectEnabled = true;
   
   // Video control states
   isPlaying = false;
   isMuted = false;
   volumeLevel = 50;
+  
 
-  private websocketService = inject(WebSocketService);
-  private videoNavigationService = inject(VideoNavigationService);
+    // Current navigation level helpers for templates
+  get currentPerformers(): Performer[] {
+    const nav = this.navigationService.getCurrentState();
+    if (nav.breadcrumb.length === 1) { // Home level
+      // Get the actual performers data with full video information
+      return this.navigationService.getPerformersData();
+    }
+    return [];
+  }
+
+  get currentPerformer(): Performer | undefined {
+    const nav = this.navigationService.getCurrentState();
+    if (nav.breadcrumb.length >= 2 && nav.currentPerformer) { // Videos or deeper level
+      return nav.currentPerformer;
+    }
+    return undefined;
+  }
+
+  get currentVideos(): Video[] {
+    const nav = this.navigationService.getCurrentState();
+    if (nav.breadcrumb.length === 2 && nav.currentPerformer) { // Videos level
+      return nav.currentPerformer.videos;
+    }
+    return [];
+  }
+
+  get currentScenes(): LikedScene[] {
+    const nav = this.navigationService.getCurrentState();
+    if (nav.breadcrumb.length === 3 && nav.currentVideo) { // Scenes level
+      return nav.currentVideo.likedScenes;
+    }
+    return [];
+  }
+
+  get currentLevel(): NavigationLevel {
+    const nav = this.navigationService.getCurrentState();
+    if (this.currentVideo && this.currentScene) return 'playing';
+    if (nav.breadcrumb.length === 1) return 'performers';
+    if (nav.breadcrumb.length === 2) return 'videos';
+    if (nav.breadcrumb.length === 3) return 'scenes';
+    return 'performers';
+  }
+
+  constructor(
+    //private navigationService: VideoNavigationService,
+    //private webSocketService: WebSocketService,
+    //private snackBar: MatSnackBar
+  ) {
+    this.navigation$ = this.navigationService.navigation$;
+  }
+  
 
   ngOnInit() {
     this.performers = this.videoNavigationService.getPerformersData();
     this.setupWebSocketListeners();
     // Device discovery is now handled by the WebSocket service
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.forEach(sub => sub.unsubscribe());    
   }
 
   // WebSocket event handlers
@@ -61,71 +122,15 @@ export class App implements OnInit {
       
       // Reset navigation when disconnected
       if (this.connectionStatus === 'disconnected') {
-        console.log('❌ Disconnected - resetting navigation state');
-        this.currentNavigation = { level: 'performers' };
+        console.log('❌ Disconnected - resetting navigation state');        
       }
      
       console.log('🔌 Connection status:', this.connectionStatus);
     });
-    /*
-    this.websocketService.getTVState().subscribe(state => {
-      const nav = state?.payload?.navigation;
-      const player = state?.payload?.player;
-      if (nav) this.synchronizeWithTVNavigation(nav);
-      if (player) this.synchronizeWithTVPlayer(player);
-    });
-    */
+
     // Track auto-connect state
     this.autoConnectEnabled = this.websocketService.isAutoConnectEnabled();
   }
-  /*
-  // Synchronization methods
-  private synchronizeWithTVNavigation(tvNav: ApplicationState['navigation']) {
-    console.log('📍 Synchronizing navigation with TV:', tvNav);
-    
-    if (tvNav.currentLevel === 'performers') {
-      this.currentNavigation = { level: 'performers' };
-    } else if (tvNav.currentLevel === 'videos' && tvNav.performerId) {
-      this.currentNavigation = { 
-        level: 'videos', 
-        performerId: tvNav.performerId.toString() 
-      };
-    } else if (tvNav.currentLevel === 'scenes' && tvNav.performerId && tvNav.videoId) {
-      this.currentNavigation = { 
-        level: 'scenes', 
-        performerId: tvNav.performerId.toString(),
-        videoId: tvNav.videoId.toString()
-      };
-    } else if (tvNav.sceneId) {
-      this.currentNavigation = { 
-        level: 'scene-selected', 
-        performerId: tvNav.performerId?.toString(),
-        videoId: tvNav.videoId?.toString(),
-        sceneId: tvNav.sceneId?.toString()
-      };
-    }
-    
-    console.log('📱 Remote navigation updated:', this.currentNavigation);
-  }
-
-  private synchronizeWithTVPlayer(playerState: ApplicationState['player']) {
-    console.log('🎮 Synchronizing player state with TV:', playerState);
-    
-    this.isPlaying = playerState.isPlaying || false;
-    this.isMuted = playerState.volume === 0;
-    this.volumeLevel = playerState.volume || 50;
-    
-    // Keep current scene selection if present; server exposes youtubeId not scene/video IDs here
-    if (this.currentNavigation.level === 'scene-selected') {
-      this.currentNavigation = {
-        level: 'scene-selected',
-        performerId: this.currentNavigation.performerId,
-        videoId: this.currentNavigation.videoId,
-        sceneId: this.currentNavigation.sceneId
-      };
-    }
-  }
-  */
 
   // Connected device
   deviceInfo(): NetworkDevice {
@@ -140,41 +145,49 @@ export class App implements OnInit {
     this.connectionStatus = 'connecting';
     this.websocketService.reconnectToDevice();
   }
+
   // Navigation methods
   navigateToPerformer(performerId: string) {
     console.log('👤 Navigate to performer:', performerId);
     this.websocketService.sendNavigationCommand('navigate_to_performer', performerId.toString(), 'performer');
-    this.currentNavigation = { level: 'videos', performerId };
+    this.navigationService.navigateToPerformer(performerId);
   }
 
   navigateToPerformers() {
     console.log('🏠 Navigate to performers');
     this.websocketService.sendNavigationCommand('navigate_to_performer', 'home', 'performer');
-    this.currentNavigation = { level: 'performers' };
+    this.navigationService.goHome();
   }
 
-  navigateToVideo(performerId: string, videoId: string) {
-    console.log('🎬 Navigate to video:', performerId, videoId);
+  navigateToVideo(videoId: string) {
+    console.log('🎬 Navigate to video:', videoId);
     this.websocketService.sendNavigationCommand('navigate_to_video', videoId.toString(), 'video');
-    this.currentNavigation = { level: 'scenes', performerId, videoId };
+    this.navigationService.navigateToVideo(videoId);
   }
 
   navigateToVideos(performerId: string) {
     console.log('📹 Navigate to videos for performer:', performerId);
     this.websocketService.sendNavigationCommand('navigate_to_performer', performerId.toString(), 'performer');
-    this.currentNavigation = { level: 'videos', performerId };
+    this.navigationService.navigateToPerformer(performerId);
   }
 
-  navigateToScene(performerId: string, videoId: string, sceneId: string) {
-    console.log('🎯 Navigate to scene:', performerId, videoId, sceneId);
+  navigateToScene(sceneId: string) {
+    console.log('🎯 Navigate to scene:', sceneId);
     this.websocketService.sendNavigationCommand('navigate_to_scene', sceneId, 'scene');
-    this.currentNavigation = { level: 'scene-selected', performerId, videoId, sceneId: sceneId };
+    //@TODO: update the state and the GUI accordingly
   }
 
-  navigateToScenes(performerId: string, videoId: string) {
-    console.log('🎬 Navigate to scenes for video:', performerId, videoId);
+  navigateToScenes(videoId: string) {
+    console.log('🎬 Navigate to scenes for video:', videoId);
     this.websocketService.sendNavigationCommand('navigate_to_video', videoId.toString(), 'video');
-    this.currentNavigation = { level: 'scenes', performerId, videoId };
+    this.navigationService.navigateToVideo(videoId);
+  }
+
+  navigateToPreviousScene() {
+    throw new Error('Method not implemented.');
+  }
+  navigateToNextScene() {
+    throw new Error('Method not implemented.');
   }
 
   // Data access methods
@@ -190,19 +203,11 @@ export class App implements OnInit {
   }
 
   getCurrentVideo(): Video | undefined {
-    if (!this.currentNavigation.performerId || !this.currentNavigation.videoId) {
-      return undefined;
-    }
-    const performer = this.performers.find(p => p.id === this.currentNavigation.performerId!);
-    return performer?.videos.find(v => v.id === this.currentNavigation.videoId!);
+    return this.currentVideo;
   }
 
   getCurrentScene(): LikedScene | undefined {
-    if (!this.currentNavigation.sceneId) {
-      return undefined;
-    }
-    const video = this.getCurrentVideo();
-    return video?.likedScenes.find((s: LikedScene) => s.id === this.currentNavigation.sceneId);
+    return this.currentScene
   }
 
   // Video control methods
@@ -244,36 +249,6 @@ export class App implements OnInit {
     }
   }
 
-  private navigateToPreviousScene() {
-    const video = this.getCurrentVideo();
-    if (!video || !this.currentNavigation.sceneId) return;
-    
-    const currentIndex = video.likedScenes.findIndex((s: LikedScene) => s.id === this.currentNavigation.sceneId);
-    if (currentIndex > 0) {
-      const previousScene = video.likedScenes[currentIndex - 1];
-      this.navigateToScene(
-        this.currentNavigation.performerId!,
-        this.currentNavigation.videoId!,
-        previousScene.id
-      );
-    }
-  }
-
-  private navigateToNextScene() {
-    const video = this.getCurrentVideo();
-    if (!video || !this.currentNavigation.sceneId) return;
-    
-    const currentIndex = video.likedScenes.findIndex((s: LikedScene) => s.id === this.currentNavigation.sceneId);
-    if (currentIndex < video.likedScenes.length - 1) {
-      const nextScene = video.likedScenes[currentIndex + 1];
-      this.navigateToScene(
-        this.currentNavigation.performerId!,
-        this.currentNavigation.videoId!,
-        nextScene.id
-      );
-    }
-  }
-
   onVolumeChange(value: number) {
     this.volumeLevel = value;
     // Volume control not available in shared protocol, send play command with value
@@ -283,21 +258,24 @@ export class App implements OnInit {
 
   // Enhanced controls visibility
   showEnhancedControls(): boolean {
-    return this.currentNavigation.level === 'scene-selected' && 
-           this.connectionStatus === 'connected';
+    return (this.currentLevel === 'scene-selected') && 
+           (this.connectionStatus === 'connected');
   }
 
   hasPreviousScene(): boolean {
-    const video = this.getCurrentVideo();
-    if (!video || !this.currentNavigation.sceneId) return false;
-    const currentIndex = video.likedScenes.findIndex((s: LikedScene) => s.id === this.currentNavigation.sceneId);
-    return currentIndex > 0;
+    throw new Error('Method not implemented.');
   }
 
   hasNextScene(): boolean {
-    const video = this.getCurrentVideo();
-    if (!video || !this.currentNavigation.sceneId) return false;
-    const currentIndex = video.likedScenes.findIndex((s: LikedScene) => s.id === this.currentNavigation.sceneId);
-    return currentIndex < video.likedScenes.length - 1;
+    throw new Error('Method not implemented.');
   }
+
+  onBackClick(): void {
+    this.navigationService.goBack();
+  }
+
+  onHomeClick(): void {
+    this.navigationService.goHome();
+  }
+
 }

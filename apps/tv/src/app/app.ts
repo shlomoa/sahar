@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { QRCodeComponent } from 'angularx-qrcode';
 import { Observable, Subscription, isObservable } from 'rxjs';
-import { VideoNavigationService, ControlCommandMessage, getYoutubeVideoId, NetworkDevice } from 'shared';
+import { VideoNavigationService, ControlCommandMessage, getYoutubeVideoId, NetworkDevice, ApplicationState, ConnectionState, NavigationLevel } from 'shared';
 import { WEBSOCKET_CONFIG } from 'shared';
 import { SharedPerformersGridComponent, SharedVideosGridComponent, SharedScenesGridComponent } from 'shared';
 import { NavigationState, VideoItem, Video, LikedScene, Performer } from 'shared';
@@ -69,6 +69,11 @@ export class App implements OnInit, OnDestroy {
   // QR: Remote entry URL to encode
   remoteUrl = '';
 
+  // Visibility flag: when both TV and Remote are connected according to server state
+  bothConnected = false;
+  // Connection status text to mirror Remote's UI mapping: 'connected' | 'connecting' | 'disconnected'
+  connectionStatus: ConnectionState = 'disconnected';
+
   // Current navigation level helpers for templates
   get currentPerformers(): Performer[] {
     const nav = this.navigationService.getCurrentState();
@@ -95,7 +100,7 @@ export class App implements OnInit, OnDestroy {
     return [];
   }
 
-  get currentLevel(): 'performers' | 'videos' | 'scenes' | 'playing' {
+  get currentLevel(): NavigationLevel {
     const nav = this.navigationService.getCurrentState();
     if (this.currentVideo && this.currentScene) return 'playing';
     if (nav.breadcrumb.length === 1) return 'performers';
@@ -143,13 +148,14 @@ export class App implements OnInit, OnDestroy {
         console.warn('QR is using localhost. Access the TV via its FQDN or IP so the QR encodes a scannable host.');
       }
     })();
+
     // Navigation service automatically initializes to home
     this.navigation$.subscribe(nav => {
       console.log('Navigation state updated:', nav);
       console.log('Current level items:', nav.currentLevel.map(item => ({
         title: item.title,
         thumbnail: item.thumbnail,
-        type: item.type
+        type: item.itemType
       })));
     });
 
@@ -158,7 +164,7 @@ export class App implements OnInit, OnDestroy {
     // code doesn't crash. Falling back to breadcrumb parsing is no longer the
     // default, but the navigation state still contains breadcrumbs for older
     // remotes.
-  interface PlayerState { playingSceneId?: string; isPlaying?: boolean }
+    interface PlayerState { playingSceneId?: string; isPlaying?: boolean }
 
     const navAny = this.navigationService as unknown as Record<string, unknown>;
     const player$ = navAny['player$'] as Observable<PlayerState> | undefined;
@@ -241,6 +247,28 @@ export class App implements OnInit, OnDestroy {
       }
     });
     this.subscriptions.push(controlSub);
+
+    // Watch for authoritative state_sync messages so we can hide the QR when both clients are connected
+    const stateSub = this.webSocketService.messages.subscribe((msg) => {
+      try {
+        if (!msg || msg.msgType !== 'state_sync') return;
+        const payloadUnknown = msg.payload as unknown;
+        const state = payloadUnknown as ApplicationState | undefined;
+        const connectedClients = (state && (state as ApplicationState).connectedClients) ?? undefined;
+        const tvConn = connectedClients?.tv ?? false;
+        const remoteConn = connectedClients?.remote ?? false;
+        this.bothConnected = !!tvConn && !!remoteConn;
+      } catch (e) {
+        console.warn('Failed to parse state_sync for connection info', e);
+      }
+    });
+    this.subscriptions.push(stateSub);
+
+    // Subscribe to WebSocket connection state to expose the same connection indicator as Remote
+    const connSub = this.webSocketService.connected$.subscribe((state: ConnectionState) => {
+      this.connectionStatus = state === 'connected' ? 'connected' : state === 'connecting' ? 'connecting' : 'disconnected';
+    });
+    this.subscriptions.push(connSub);
   }
 
   ngOnDestroy(): void {
@@ -323,7 +351,7 @@ export class App implements OnInit, OnDestroy {
   onItemClick(item: VideoItem): void {
     console.log('Clicked item:', item); // Debug log
     let nav: NavigationState;
-    switch (item.type) {
+    switch (item.itemType) {
       case 'performer':
         this.navigationService.navigateToPerformer(item.id);
         break;
