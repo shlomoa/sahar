@@ -6,6 +6,17 @@
   "scripts": {
     "build": "ng build",
     "start": "node dist/main.js",
+    "shared:build": "cd ../shared && npm run build",
+    "shared:pack": "cd ../shared && npm run pack",
+    "shared:buildpack": "npm run shared:build && npm run shared:pack",
+    "shared:install:server": "npm i --save ../shared/dist/shared",
+    "shared:install:tv": "cd ../apps/tv && npm i --save ../../shared/dist/shared",
+    "shared:install:remote": "cd ../apps/remote && npm i --save ../../shared/dist/shared",
+    "shared:install:all": "npm run shared:install:server && npm run shared:install:tv && npm run shared:install:remote",
+    "build:clients": "cd ../apps/tv && npm run build && cd ../remote && npm run build",
+    "relink:shared": "npm run shared:buildpack && npm run shared:install:all",
+    "rebuild:all": "npm run build && npm run build:clients",
+    "start:with-shared": "npm run relink:shared && npm run rebuild:all && node dist/main.js",
     "typecheck": "tsc -p tsconfig.server.json --noEmit",
     "test": "npm run build && node --test dist/tests/**/*.test.js"
   },
@@ -20,11 +31,11 @@
     "@angular/platform-browser": "^20.0.0",
     "@angular/router": "^20.0.0",
     "http-proxy": "^1.18.1",
-    "rxjs": "~7.8.0",
-    "shared": "file:../shared/dist/shared",
+    "rxjs": "~7.8.0",    
     "tslib": "^2.3.0",
     "ws": "^8.14.2",
-    "zone.js": "~0.15.0"
+    "zone.js": "~0.15.0",
+    "shared": "file:../shared/dist/shared"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^20.0.5",

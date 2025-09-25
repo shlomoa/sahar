@@ -1,13 +1,12 @@
 #!/usr/bin/env ts-node
 /**
- * TV Stub (TypeScript)
- * - Registers as tv, acks all state_sync
- * - HTTP: /health /state /logs /reset
+ * Remote Stub (TypeScript)
+ * - Registers as remote
+ * - HTTP control: /health /state /logs /reset /command
  */
 import http, { IncomingMessage, ServerResponse } from 'http';
 import WebSocket from 'ws';
-import { createLogger } from '../shared/shared/src/lib/utils/logging.js';
-import { WEBSOCKET_CONFIG } from '../shared/shared/src/lib/models/websocket-protocol.js';
+import { NavigationCommandPayload, ControlCommandPayload, createLogger, WEBSOCKET_CONFIG } from 'shared';
 import { VALIDATION_CONFIG, buildLocalServerUrl } from '../config/validation-config.js';
 
 interface StubState {
@@ -17,10 +16,11 @@ interface StubState {
   wsReady: boolean;
 }
 
+// Merge centralized validation config with minimal per-stub adjustable fields.
 const DEFAULTS = {
   serverUrl: buildLocalServerUrl(),
-  httpPort: VALIDATION_CONFIG.STUB_PORTS.tv,
-  clientId: 'tv-stub-1',
+  httpPort: VALIDATION_CONFIG.STUB_PORTS.remote,
+  clientId: 'remote-stub-1',
   ackTimeoutMs: WEBSOCKET_CONFIG.ACK_TIMEOUT,
   backoffBaseMs: VALIDATION_CONFIG.RECONNECT.BASE_MS,
   backoffMaxMs: VALIDATION_CONFIG.RECONNECT.MAX_MS,
@@ -35,7 +35,7 @@ const state: StubState = {
 };
 
 const logBuffer: any[] = [];
-const logger = createLogger({ component: 'tv_stub', client_id: DEFAULTS.clientId }, { onRecord: (r) => {
+const logger = createLogger({ component: 'remote_stub', client_id: DEFAULTS.clientId }, { onRecord: (r) => {
   logBuffer.push(r);
   if (logBuffer.length > 500) logBuffer.shift();
 }});
@@ -47,6 +47,7 @@ const log = (level: 'info' | 'warn' | 'error' | 'debug', event: string, detail?:
 
 let ws: WebSocket | undefined;
 let reconnectAttempts = 0;
+let pendingAckResolve: (() => void) | null = null;
 
 function connect() {
   log('info', 'ws.connect.start', { url: DEFAULTS.serverUrl });
@@ -60,8 +61,8 @@ function connect() {
     const register = {
       msgType: 'register' as const,
       timestamp: Date.now(),
-      source: 'tv' as const,
-      payload: { clientType: 'tv', deviceId: DEFAULTS.clientId, deviceName: process.env.DEVICE_NAME || 'TV Stub' },
+      source: 'remote' as const,
+      payload: { clientType: 'remote', deviceId: DEFAULTS.clientId, deviceName: process.env.DEVICE_NAME || 'Remote Stub' },
     };
     ws?.send(JSON.stringify(register));
   });
@@ -72,12 +73,13 @@ function connect() {
       if (msg.msgType === 'ack') {
         state.lastAckAt = Date.now();
         log('info', 'ws.ack', { from: msg.source });
+        if (pendingAckResolve) { pendingAckResolve(); pendingAckResolve = null; }
         return;
       }
       if (msg.msgType === 'state_sync') {
         state.lastStateSync = { payload: msg.payload, ts: Date.now() };
         log('info', 'ws.state_sync');
-        const ack = { msgType: 'ack', timestamp: Date.now(), source: 'tv', payload: { ack: msg.msgType } };
+        const ack = { msgType: 'ack', timestamp: Date.now(), source: 'remote', payload: { ack: msg.msgType } };
         ws?.send(JSON.stringify(ack));
         return;
       }
@@ -107,6 +109,18 @@ function scheduleReconnect() {
   setTimeout(connect, delay);
 }
 
+function waitForAck(timeoutMs: number) {
+  return new Promise<void>((resolve, reject) => {
+    pendingAckResolve = resolve;
+    setTimeout(() => {
+      if (pendingAckResolve) {
+        pendingAckResolve = null;
+        reject(new Error('ACK timeout'));
+      }
+    }, timeoutMs);
+  });
+}
+
 function parseBody(req: IncomingMessage): Promise<any> {
   return new Promise((resolve) => {
     let buffer = '';
@@ -133,6 +147,37 @@ const server = http.createServer(async (req, res) => {
     state.lastAckAt = null;
     log('info', 'http.reset');
     return sendJson(res, 200, { ok: true });
+  }
+  if (req.method === 'POST' && pathname === '/command') {
+    const body = await parseBody(req);
+    try {
+      if (body.msgType === 'seed') {
+        const msg = { msgType: 'data', timestamp: Date.now(), source: 'remote', payload: body.payload || {} };
+        ws?.send(JSON.stringify(msg));
+        log('info', 'http.command.seed', { size: JSON.stringify(body.payload || {}).length });
+        return sendJson(res, 200, { ok: true });
+      }
+      if (body.msgType !== 'navigation_command' && body.msgType !== 'control_command') {
+        return sendJson(res, 400, { error: 'Invalid type' });
+      }
+      // Narrow payload types
+      const payload = body.payload || {};
+      if (body.msgType === 'navigation_command') {
+        const navPayload = payload as Partial<NavigationCommandPayload>;
+        if (!navPayload.action) return sendJson(res, 400, { error: 'Missing navigation action' });
+      } else if (body.msgType === 'control_command') {
+        const ctlPayload = payload as Partial<ControlCommandPayload>;
+        if (!ctlPayload.action) return sendJson(res, 400, { error: 'Missing control action' });
+      }
+      const msg = { msgType: body.msgType, timestamp: Date.now(), source: 'remote', payload };
+      ws?.send(JSON.stringify(msg));
+      log('info', 'http.command.sent', { msgType: body.msgType });
+      await waitForAck(DEFAULTS.ackTimeoutMs);
+      return sendJson(res, 200, { ok: true });
+    } catch (e: any) {
+      log('error', 'http.command.error', { error: e.message });
+      return sendJson(res, 500, { error: e.message });
+    }
   }
   return sendJson(res, 404, { error: 'Not Found' });
 });
