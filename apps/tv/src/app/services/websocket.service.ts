@@ -1,22 +1,27 @@
 import { Injectable, inject } from '@angular/core';
-import { RegisterPayload, VideoNavigationService, ApplicationState, Performer } from 'shared';
-import { WebSocketBaseService } from 'shared';
-import { WebSocketUtils } from 'shared';
 import {
+  RegisterPayload,
+  VideoNavigationService,
+  ApplicationState,
+  Performer,
   WebSocketMessage,  
   NavigationCommandMessage,
   ControlCommandMessage,
   StateSyncMessage,
   ErrorMessage,
   HeartbeatMessage,
-  ActionConfirmationMessage,
-  ActionConfirmationPayload
+  ActionConfirmationPayload,
+  BasePayload,
+  WebSocketBaseService, 
+  WebSocketUtils
 } from 'shared';
 
 @Injectable({
   providedIn: 'root'
 })
 export class WebSocketService extends WebSocketBaseService {
+  // TV duplicate connection management - inherited from base class
+
 
   // Lightweight playback state used for action confirmations
   private playerState = {
@@ -37,6 +42,7 @@ export class WebSocketService extends WebSocketBaseService {
         
     this.registerCallbacks();
     
+    this.debugLog('WebSocket Service initialized');
     this.debugLog(`Device ID: ${this.networkDevice.deviceId}`);
     // Get the server url
     const tmpUrl = WebSocketUtils.generateHostUrl(this.networkDevice);
@@ -74,11 +80,15 @@ export class WebSocketService extends WebSocketBaseService {
     this.debugLog('WebSocket reconnect');
   }
 
-  // Connect to WebSocket server (for testing with localhost:8000)
+  // Connect to WebSocket server
   protected override connect(url: string): boolean {
     this.debugLog(`connecting to WebSocket at ${url}`);
     return super.connect(url);
   }  
+
+  override ngOnDestroy(): void {
+    super.ngOnDestroy();
+  }
 
   // Registration for protocol handlers and generators
   private registerCallbacks(): void {
@@ -94,26 +104,9 @@ export class WebSocketService extends WebSocketBaseService {
 
     // Generators for outbound messages
     this.registerGenerators({
-      register: () => ({
-        msgType: 'register',
-        timestamp: Date.now(),
-        source: this.networkDevice.clientType,
-        payload: {
-          clientType: this.networkDevice.clientType,
-          deviceId: this.networkDevice.deviceId,
-        } as RegisterPayload,
-      }),
-      action_confirmation: (payload) => ({
-        msgType: 'action_confirmation',
-        timestamp: Date.now(),
-        source: this.networkDevice.clientType,
-        payload: (payload as ActionConfirmationPayload) ?? { status: 'success' },
-      } as ActionConfirmationMessage),
-      heartbeat: () => ({
-        msgType: 'heartbeat',
-        timestamp: Date.now(),
-        source: this.networkDevice.clientType,
-        payload: { msgType: 'heartbeat' }}),
+      register: () => this.generateRegisterMessage(),
+      action_confirmation: (payload) => this.generateActionConfirmationMessage(payload as ActionConfirmationPayload),
+      heartbeat: () => this.generateHeartbeatMessage(),
     });
   }
 
@@ -174,10 +167,20 @@ export class WebSocketService extends WebSocketBaseService {
   }
 
   private handleStateSync(message: StateSyncMessage): void {
+
     // Apply authoritative server snapshot to the TV navigation view-model.
+    this.debugLog('State sync received');
+
+    // Apply authoritative snapshot to shared navigation service so Remote UI can reflect server state
     try {
       const state = message.payload as ApplicationState;
-      this.debugLog?.(`Received state_sync v${state.version}`);
+      // Log incoming payload for diagnosis
+      this.debugLog?.(`Received state_sync v${state?.version}`);
+      try {
+        this.debugLog('state_sync payload:', state);
+      } catch (e) { 
+        this.debugLog('debug print failed', e); 
+      }
 
       // If server provided performers (seeded data), apply it to the navigation service.
       // Shape is flexible in Milestone 1 so check defensively.
@@ -223,21 +226,34 @@ export class WebSocketService extends WebSocketBaseService {
           console.warn('📺 Failed to apply player state from state_sync', e);
         }
       }
+
+      // After successfully applying the authoritative snapshot, acknowledge the version
+      try {
+        const version = (state as ApplicationState)?.version;
+        if (typeof version === 'number' || typeof version === 'string') {
+          // Construct a BasePayload-compatible wrapper and include version via unknown cast
+          const ackPayload = { msgType: 'ack', version } as BasePayload;
+          this.sendByType('ack', ackPayload);
+          this.debugLog(`sent ack for state_sync v${version}`);
+        }
+      } catch (e) {
+        this.debugLog('Failed to send ack for state_sync', e);
+      }
     } catch (err) {
-      console.error('📺 Failed to apply state_sync:', err);
+      console.error(this.logMessagePrefix, 'Failed to apply state_sync:', err);
     }
   }
 
   private handleAck(): void {
-    console.log('📺 TV ack received');
+    this.debugLog('ack received');
   }
 
   private handleError(message: ErrorMessage): void {
-    console.error('📺 TV error received:', message.payload);
+    this.debugLog('error received:', message.payload);
   }
 
   private handleHeartbeat(message: HeartbeatMessage): void {
-    console.log('📺 TV heartbeat received:', message.payload);
+    this.debugLog('heartbeat received:', message.payload);
   }
 
   private sendActionConfirmation(status: 'success' | 'failure', errorMessage?: string): void {

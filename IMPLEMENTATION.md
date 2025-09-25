@@ -26,13 +26,98 @@ This document outlines the implementation details for the SAHAR TV Remote system
 
 ---
 
+## Shared Library (`shared/`)
+
+### Models and services shared between TV, Remote, and Server.
+- **Models**: TypeScript interfaces and types for messages, application state, navigation levels, and commands.
+    - **ApplicationState**: Central state structure shared between server and clients.
+    - **Messages**: Message types and interfaces.
+        - Message Format
+            All messages adhere to the `WebSocketMessage` interface defined in `shared/models/messages.ts`.
+
+            ```typescript
+                interface WebSocketMessage {
+                    msgType: MessageType;
+                    timestamp: number;
+                    source: MessageSource;
+                    payload: BasePayload;
+                }
+            ```
+    - **webSocket-protocol**: Connection states, utilities, and base classes.
+        - Protocol constants (defaults)
+
+            These defaults guide implementations and tests; they can be overridden via configuration at runtime (see IMPLEMENTATION Task 1.5).
+
+            - ACK_TIMEOUT: 5000
+            - WS_PATH: "/ws"
+            - TV_DEV_PORT: 4203
+            - REMOTE_DEV_PORT: 4202
+            - SERVER_PORT: 8080
+            - HEALTH_STATUS: "ok" | "degraded" | "error" (not currently implemented in code; future work)
+
+- **Services**: Shared services for navigation and WebSocket handling.
+    - **VideoNavigationService**: Shared navigation logic and state management.
+    - **WebSocketBaseService**: Base class for WebSocket services in TV and Remote. Handles connection, reconnection, heartbeats, and message parsing.
+    - **NavigationService**: Navigation logic and state management.
+
+### shared componenets
+- **DeviceConnectionComponent**: Device connection indications and information.
+- **SharedPerformersGridComponent**: Reusable component to display a grid of performers with selection capabilities.
+- **SharedVideosGridComponent**: Reusable component to display a grid of videos with selection capabilities.
+- **SharedScenesListComponent**: Reusable component to display a list of scenes with selection capabilities.
+
+### utilities
+- **WebSocketUtils**: Utility functions for WebSocket message handling and validation.
+
 ## Server-Side - Unified Server + SSR Host
 
-Goal: Evolve `server/websocket-server.ts` into the Unified Server and SSR host. In dev, proxy to Angular SSR servers. In prod, discover and run SSR bundles in child processes, proxy routes to them, and serve browser assets directly. Keep a single-origin WebSocket gateway at `/ws` and provide health endpoints.
+Goal: Evolve `server/websocket-server.ts` into the Unified Server and SSR host `server/main.ts`. In dev, proxy to Angular SSR servers. In prod, discover and run SSR bundles in child processes, proxy routes to them, and serve browser assets directly. Keep a single-origin WebSocket gateway at `/ws` and provide health endpoints.
 
 Prerequisites
 - TV/Remote dev: When developing with SSR, each app runs `ng serve --ssr` on its own dev port (TV: 4203, Remote: 4202).
 - TV/Remote prod: `ng build` produces `apps/<app>/dist/<name>/{browser,server}`.
+
+### ApplicationState definition and implementation
+The state is maintained and managed in the server FSM. Clients receive authoritative state snapshots via `state_sync` messages after each committed change.
+
+```typescript
+// Monotonic version increases on each committed state change
+export interface ApplicationState {
+    version: number;
+    fsmState: FsmState;
+    connectedClients: {
+        tv?: ClientInfo;
+        remote?: ClientInfo;
+    };
+    navigation: {
+        currentLevel: NavigationLevel;
+        performerId?: string;
+        videoId?: string;
+        sceneId?: string;
+        breadcrumb: string[];
+    };
+    player: {
+        isPlaying: boolean;
+        currentTime: number;
+        duration: number;
+        volume: number;
+        muted: boolean;
+        youtubeId?: string;
+        // Optional explicit marker for which scene is currently playing (avoid embedding emojis in breadcrumb)
+        playingSceneId?: string;
+    };
+    // Optional cache of content; server may echo subset for convenience
+    data?: {
+        performers?: any[];
+        videos?: Video[];
+        scenes?: Scene[];
+    };
+    error?: {
+        code: string;
+        message: string;
+    };
+}
+```
 
 ---
 
@@ -91,10 +176,6 @@ The Unified Server exposes three HTTP endpoints with JSON payloads for preflight
 
 ---
 
-
-
-
-
 ## Structured Logging (Server + Stubs)
 
 All runtime components (Unified Server, TV Stub, Remote Stub) emit single-line JSON logs to stdout for deterministic parsing during validation.
@@ -102,7 +183,7 @@ Context: Initial structured logging (Task 1.12 / 1.20) provides JSON-esque event
 
 ### Schema
 
-```
+```json
 {
     ts: string (ISO 8601 UTC),
     level: "debug" | "info" | "warn" | "error" | "critical",

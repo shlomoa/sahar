@@ -17,7 +17,7 @@ export interface ApplicationState {
     // Add other seeded data properties as needed
   };
   navigation: {
-    currentLevel: 'performers' | 'videos' | 'scenes';
+    currentLevel: NavigationLevel;
     performerId?: string;
     videoId?: string;
     sceneId?: string;

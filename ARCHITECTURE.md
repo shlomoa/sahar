@@ -45,6 +45,7 @@ Note: 4202/4203 are development SSR ports. In production, a single server port s
   - Handles client connections and recovers from disconnections
   - Ensures all communications strictly adhere to the FSM and protocol
   - Relays messages and synchronizes state between clients
+  - Own and manage all performers/videos/scenes data 🔧 *Refactoring Needed*
 - **Key technologies:** Node.js, TypeScript, Express, ws, state management
 
 Additional serving responsibilities (clarification):
@@ -59,13 +60,14 @@ Additional serving responsibilities (clarification):
 
 ### TV Application (`apps/tv/`)
 
--   **Role**: Display and Video Player (Client)
--   **URL**: `http://<server-ip>:<port>/` (Served by the Unified Server)
+-   **Role**: Display video navigation and play selected YouTube video scene (Client)
+-   **URL**: `http://<server-ip>:<port>/tv` (Served by the Unified Server)
 -   **WebSocket**: Client, connects to the Unified Server
--   **Technology**: Angular 20+ with Material Design
+-   **Technology**: Angular 20+ with Material Design, Angular youtube player, Angular QR code
 
 **Responsibilities**:
 -   Connect to the WebSocket Gateway on the Unified Server 🔧 *Refactoring Needed*
+-   Publish a QR code as an IP discovery mechanism.
 -   Receive all state updates from the Unified Server 🔧 *Refactoring Needed*
 -   Display synchronized performers/videos/scenes grids 🔧 *Refactoring Needed*
 -   Play YouTube videos with @angular/youtube-player integration 🔧 *Refactoring Needed*
@@ -83,7 +85,7 @@ Additional serving responsibilities (clarification):
 
 ### Remote Application (`apps/remote/`)
 
--   **Role**: Control Interface (Client)
+-   **Role**: Specialized TV Remote Control Interface (Client)
 -   **URL**: `http://<server-ip>:<port>/remote` (Served by the Unified Server)
 -   **WebSocket**: Client, connects to the Unified Server
 -   **Technology**: Angular 20+ with Material Design
@@ -133,14 +135,7 @@ The entire system operates on a strictly synchronous, server-centric communicati
 
 ### Protocol constants (defaults)
 
-These defaults guide implementations and tests; they can be overridden via configuration at runtime (see IMPLEMENTATION Task 1.5).
-
-- ACK_TIMEOUT: 5000
-- WS_PATH: "/ws"
-- TV_DEV_PORT: 4203
-- REMOTE_DEV_PORT: 4202
-- SERVER_PORT: 8080
-- HEALTH_STATUS: "ok" | "degraded" | "error" (not currently implemented in code; future work)
+[See IMEPLEMENTATION.md for authoritative runtime constants.](./IMPLEMENTATION.md#models-and-constants---protocol-constants)
 
 Notes
 - Stop-and-wait allows only one in-flight message per peer; on timeout, the sender treats the connection as lost and reconnects.
@@ -167,17 +162,6 @@ This protocol enforces a strict, lock-step communication flow to guarantee messa
 4.  **Timeout:** If the sender does not receive an `ack` within a specified period (`ACK_TIMEOUT`), it must consider the connection lost and initiate reconnection procedures.
 5.  **Exception:** The `ack` message is the *only* message that is not acknowledged, which prevents an infinite loop.
 
-#### Message Format
-All messages adhere to the `WebSocketMessage` interface defined in `shared/websocket/websocket-protocol.ts`.
-
-```typescript
-interface WebSocketMessage {
-  type: MessageType;
-  timestamp: number;
-  source: 'tv' | 'remote' | 'server';
-  payload: any;
-}
-```
 
 #### Key Message Types & Flow Example (`play` command)
 
@@ -211,36 +195,7 @@ interface WebSocketMessage {
 ### Server-owned ApplicationState (authoritative schema)
 
 The server owns and broadcasts the full application state. Minimal baseline below; apps may ignore fields they do not need.
-
-```typescript
-// Monotonic version increases on each committed state change
-export interface ApplicationState {
-    version: number;
-    clients: {
-        tv: { connected: boolean; id?: string };
-        remote: { connected: boolean; id?: string };
-    };
-    navigation: {
-        view: 'home' | 'performers' | 'videos' | 'scenes';
-        selectedPerformerId?: string;
-        selectedVideoId?: string;
-        selectedSceneId?: string;
-    };
-    playback: {
-        isPlaying: boolean;
-        currentVideoId?: string;
-        currentSceneId?: string;
-        positionSec?: number; // last known position
-        volume?: number;      // 0..1
-    };
-    // Optional cache of content; server may echo subset for convenience
-    data?: {
-        performers?: any[];
-        videos?: Video[];
-        scenes?: Scene[];
-    };
-}
-```
+[See IMEPLEMNTATION.md](./ARCHITECTURE.md#sahar-tv-remote---Server-Side-ApplicationState-authoritative-schema) for the authoritative schema and field descriptions.
 
 State rules
 - The server increments `version` after an acknowledged state mutation.
@@ -290,23 +245,35 @@ Ports (clarification):
 
 ## Data Flow Architecture
 
-### Content Data Flow
+### Server-owned Data Model
 ```
-1. Remote App Startup
+1. Server Startup
    ↓
-2. Load Performers/Videos/Scenes Data (Local to Remote)
+2. Load Performers/Videos/Scenes Data (Local to Server)
    ↓
-3. Network Discovery (Find Server)
+3. Store Data in Server Memory (Authoritative Source)
    ↓
-4. WebSocket Connection Established
+4. Reset FSM to Initial State
    ↓
-5. Data Transfer (Remote → Server)
+5. Await Client Connections
+```
+
+### TV and remote Clients Data Flow initialization
+
+```
+1. Client App Startup
    ↓
-6. TV Receives Data from Server
+2. WebSocket Connection Established
    ↓
-7. `navigation_command` (Remote → Server)
+3. Data Transfer (Server → Client)
    ↓
-8. Real-time `state_sync` (Bidirectional)
+4. Client Receives Data from Server
+   ↓
+5. Client Renders UI Based on Received Data
+   ↓
+6. Client confirms status and message recieved
+   ↓
+7. Client Awaits Further Commands/State Updates
 ```
 
 ### Navigation State Flow
@@ -319,11 +286,44 @@ WebSocket Message Sent (Remote → Server)
     ↓
 Server FSM Validates & Updates State
     ↓
-TV Updates Display State
+WebSocket Message Sent (Server → TV)
     ↓
-Status Confirmation (Server → Remote)
+TV Updates display State
     ↓
-Remote Updates UI State
+`action_confirmation` created (TV)
+    ↓
+WebSocket Message Sent (TV → Server)
+    ↓
+Server FSM Validates Confirmation
+    ↓
+WebSocket Status Confirmation (Server → Remote)
+    ↓
+Remote Updates display State
+```
+
+### Video control Flow
+```
+User Interaction (Remote)
+    ↓
+`control_command` created
+    ↓
+WebSocket Message Sent (Remote → Server)
+    ↓
+Server FSM Validates & Updates State
+    ↓
+WebSocket Message Sent (Server → TV)
+    ↓
+TV Executes Video Control Action async
+    ↓
+`action_confirmation` created  (TV)
+    ↓
+WebSocket Message Sent (TV → Server)
+    ↓
+Server FSM Validates Confirmation
+    ↓
+WebSocket Status Confirmation (Server → Remote)
+    ↓
+Remote Updates display State async
 ```
 
 ## System Requirements

@@ -5,6 +5,9 @@ import {
   MessageType,
   BasePayload,
   SaharMessage,
+  RegisterPayload,
+  ActionConfirmationPayload,
+  ActionConfirmationMessage,
 } from '../models/messages';
 import { NetworkDevice } from '../models/websocket-protocol';
 import { ConnectionState } from '../models';
@@ -25,7 +28,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
   protected receivedMessageCount = 0;
   protected lastMessageTimestamp: number | null = null;
   protected messageTimings: number[] = [];
-  protected logMessagePrefix: string = '';
+  protected logMessagePrefix: string = 'Debug 🐞';
 
     /**
    * Add a debug log entry to the buffer and console
@@ -39,7 +42,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
     }
     // Also print to console for real-time feedback
     // Use a special emoji for debug logs
-    console.log('🐞', formatted, ...args);
+    console.log(this.logMessagePrefix, formatted, ...args);
   }
 
     /**
@@ -119,6 +122,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
   }
 
   unregisterGenerator(msgType: MessageType): void {
+    this.debugLog(`unregistering message generator handler for type: ${msgType}`);
     this.generators.delete(msgType);
   }
 
@@ -136,6 +140,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
   }
 
   unregisterHandler(msgType: MessageType): void {
+    this.debugLog(`unregistering message type and handler ${msgType}`);
     this.handlers.delete(msgType);
   }
 
@@ -162,6 +167,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
   }
 
   protected disconnect(): void {
+    console.log(`🔌 disconnecting . . .`);
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = undefined;
@@ -174,6 +180,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
 
     this.connectionState$.next('disconnected');
     this.reconnectAttempts = 0;
+    console.log(`🔌 disconnected !`);
   }
 
   protected reconnect(url: string): void {
@@ -181,6 +188,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
   }
 
   protected sendMessage(message: WebSocketMessage): void {
+    console.log(`📤 ${this.networkDevice.clientType.toUpperCase()}: Preparing to send ${message.msgType} message`);
     if (!this.isConnected || !this.ws) {
       console.warn(`⚠️ ${this.networkDevice.clientType.toUpperCase()}: Cannot send message - not connected`);
       return;
@@ -204,6 +212,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
 
   // High-level send using a registered generator; falls back to a minimal wrapper
   public sendByType(msgType: MessageType, payload?: BasePayload): void {
+    console.log(`📤 ${this.networkDevice.clientType.toUpperCase()}: Sending message of type ${msgType}`);
     const gen = this.generators.get(msgType);
     const built = gen
       ? gen(payload)
@@ -257,7 +266,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
     };
 
     this.ws.onerror = (error) => {
-      console.error(`❌ ${this.networkDevice.clientType.toUpperCase()}: WebSocket error:`, error);
+      console.error(this.logMessagePrefix, `❌ ${this.networkDevice.clientType.toUpperCase()}: WebSocket error:`, error);
       this.connectionState$.next('error');
       this.errors$.next('WebSocket connection error');
     };
@@ -281,6 +290,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
   }
 
   private startHeartbeat(): void {
+    this.debugLog('Starting heartbeat interval');
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer);
     }
@@ -293,6 +303,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
   }
 
   protected sendHeartbeat(): void {
+    this.debugLog('sending heartbeat');
     // Use generator if registered; else send minimal payload
     if (this.generators.get('heartbeat')) {
       this.sendByType('heartbeat');
@@ -301,6 +312,37 @@ export abstract class WebSocketBaseService implements OnDestroy {
     this.sendByType('heartbeat', {msgType: 'heartbeat'});
   }
 
+  // message generators for common types
+  protected generateRegisterMessage(): SaharMessage {
+    return {
+      msgType: 'register',
+      timestamp: Date.now(),
+      source: this.networkDevice.clientType,
+      payload: {
+        clientType: this.networkDevice.clientType,
+        deviceId: this.networkDevice.deviceId,
+      } as RegisterPayload,
+    };
+  }
+
+  protected generateHeartbeatMessage(payload?: BasePayload | null): SaharMessage {
+    return {
+      msgType: 'heartbeat',
+      timestamp: Date.now(),
+      source: this.networkDevice.clientType,
+      payload: payload ?? { msgType: 'heartbeat' },
+      } as SaharMessage;
+  }
+
+  protected generateActionConfirmationMessage(payload?: BasePayload): SaharMessage {
+    return {
+      msgType: 'action_confirmation',
+      timestamp: Date.now(),
+      source: this.networkDevice.clientType,
+      payload: (payload as ActionConfirmationPayload) ?? { status: 'success' },
+    } as ActionConfirmationMessage;
+  }
+  
   // Abstract methods for subclasses to implement
   protected abstract handleMessage(message: WebSocketMessage): void;
   protected abstract onConnected(): void;

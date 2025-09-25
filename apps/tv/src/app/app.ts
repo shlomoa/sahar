@@ -71,6 +71,8 @@ export class App implements OnInit, OnDestroy {
 
   // Visibility flag: when both TV and Remote are connected according to server state
   bothConnected = false;
+  // internal debounce timer id used to avoid flicker when connections flap
+  private _bothConnectedDebounceTimer: number | null = null;
   // Connection status text to mirror Remote's UI mapping: 'connected' | 'connecting' | 'disconnected'
   connectionStatus: ConnectionState = 'disconnected';
 
@@ -255,9 +257,27 @@ export class App implements OnInit, OnDestroy {
         const payloadUnknown = msg.payload as unknown;
         const state = payloadUnknown as ApplicationState | undefined;
         const connectedClients = (state && (state as ApplicationState).connectedClients) ?? undefined;
-        const tvConn = connectedClients?.tv ?? false;
-        const remoteConn = connectedClients?.remote ?? false;
-        this.bothConnected = !!tvConn && !!remoteConn;
+        const tvConn = !!connectedClients?.tv;
+        const remoteConn = !!connectedClients?.remote;
+        const shouldBeBoth = tvConn && remoteConn;
+
+        // Debounce transitions to avoid QR flicker on short connection flaps.
+        // If both become true, apply immediately. If either disconnects, wait
+        // a short grace period before hiding the QR.
+        if (shouldBeBoth) {
+          if (this._bothConnectedDebounceTimer) {
+            window.clearTimeout(this._bothConnectedDebounceTimer);
+            this._bothConnectedDebounceTimer = null;
+          }
+          this.bothConnected = true;
+        } else {
+          if (this._bothConnectedDebounceTimer) window.clearTimeout(this._bothConnectedDebounceTimer);
+          // wait 1500ms before clearing bothConnected so short flakes don't show QR
+          this._bothConnectedDebounceTimer = window.setTimeout(() => {
+            this.bothConnected = false;
+            this._bothConnectedDebounceTimer = null;
+          }, 1500);
+        }
       } catch (e) {
         console.warn('Failed to parse state_sync for connection info', e);
       }

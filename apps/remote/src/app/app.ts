@@ -26,6 +26,63 @@ import { WebSocketService } from './services/websocket.service';
 })
 export class App implements OnInit, OnDestroy {
   protected title = 'Sahar TV Remote';
+
+  // Event handlers to mirror TV behavior so Remote UI follows the same navigation model
+  onPerformerSelected(performerId: string): void {
+    console.log('📱 Remote: Performer selected:', performerId);
+    this.websocketService.sendNavigationCommand('navigate_to_performer', performerId, 'performer');
+    this.videoNavigationService.navigateToPerformer(performerId);
+  }
+
+  onVideoSelected(videoId: string): void {
+    console.log('📱 Remote: Video selected:', videoId);
+    this.websocketService.sendNavigationCommand('navigate_to_video', videoId, 'video');
+    this.videoNavigationService.navigateToVideo(videoId);
+  }
+
+  onSceneSelected(sceneId: string): void {
+    console.log('📱 Remote: Scene selected:', sceneId);
+    // Play scene via local navigation service; server will reconcile via state_sync
+    this.videoNavigationService.playScene(sceneId);
+    // Use the shared control command shim (string variant) for simple play
+    this.websocketService.sendControlCommand('play');
+  }
+
+  onBackToPerformers(): void {
+    console.log('📱 Remote: Back to performers');
+    this.websocketService.sendNavigationCommand('navigate_to_performer', 'home', 'performer');
+    this.videoNavigationService.goHome();
+  }
+
+  onBackToVideos(): void {
+    console.log('📱 Remote: Back to videos');
+    this.videoNavigationService.goBack();
+  }
+
+  onItemClick(item: { itemType: string; id: string }): void {
+    // Mirror TV's behavior for items
+    switch (item.itemType) {
+      case 'performer':
+        this.onPerformerSelected(item.id);
+        break;
+      case 'video':
+        this.onVideoSelected(item.id);
+        break;
+      case 'segment': {
+        // When a segment is clicked, attempt to find the current video and start playback
+        const nav = this.videoNavigationService.getCurrentState();
+        if (nav.currentVideo) {
+          this.currentVideo = nav.currentVideo as Video;
+          const scene: LikedScene | undefined = nav.currentVideo.likedScenes.find((s) => s.id === item.id);
+          if (scene) {
+            this.currentScene = scene;
+            this.videoNavigationService.playScene(item.id);
+          }
+        }
+        break;
+      }
+    }
+  }
   navigation$: Observable<NavigationState>;
   private subscriptions: Subscription[] = [];
   
@@ -105,8 +162,68 @@ export class App implements OnInit, OnDestroy {
   
 
   ngOnInit() {
+    // Initialize performers from the navigation service and subscribe to updates
     this.performers = this.videoNavigationService.getPerformersData();
     this.setupWebSocketListeners();
+
+    // Keep local view in sync with authoritative navigation state updates
+    const navSub = this.videoNavigationService.navigation$.subscribe(nav => {
+      // Update performers list when data changes
+      this.performers = this.videoNavigationService.getPerformersData();
+
+      // Update currentVideo/currentScene based on navigation state
+      if (nav.currentVideo) {
+        this.currentVideo = nav.currentVideo;
+      } else {
+        this.currentVideo = undefined;
+      }
+
+      // If the navigation service exposes player$ we should listen for explicit playingSceneId
+      const navAny = this.videoNavigationService as unknown as Record<string, unknown>;
+  const player$ = navAny['player$'] as Observable<unknown> | undefined;
+  const isObservableLike = (v: unknown): v is Observable<unknown> => !!v && typeof (v as { subscribe?: unknown }).subscribe === 'function';
+  if (player$ && isObservableLike(player$)) {
+        // Subscribe lazily once
+        const playerSub = (player$ as import('rxjs').Observable<unknown>).subscribe((p: unknown) => {
+          if (!p || typeof p !== 'object') {
+            this.currentScene = undefined;
+            this.isPlaying = false;
+            return;
+          }
+          const asAny = p as Record<string, unknown>;
+          const playingSceneId = typeof asAny['playingSceneId'] === 'string' ? asAny['playingSceneId'] as string : undefined;
+          const isPlayingFlag = typeof asAny['isPlaying'] === 'boolean' ? (asAny['isPlaying'] as boolean) : undefined;
+          if (!playingSceneId) {
+            this.currentScene = undefined;
+            this.isPlaying = false;
+            return;
+          }
+          // Try to resolve the scene id to a known LikedScene
+          if (this.currentVideo) {
+            const s = this.currentVideo.likedScenes.find((sc) => sc.id === playingSceneId);
+            if (s) {
+              this.currentScene = s;
+              this.isPlaying = !!isPlayingFlag;
+              return;
+            }
+          }
+          // Otherwise search performers for the scene
+          for (const perf of this.performers) {
+            for (const vid of perf.videos) {
+              const s = vid.likedScenes.find((sc) => sc.id === playingSceneId);
+              if (s) {
+                this.currentVideo = vid;
+                this.currentScene = s;
+                this.isPlaying = !!isPlayingFlag;
+                return;
+              }
+            }
+          }
+        });
+        this.subscriptions.push(playerSub);
+      }
+    });
+    this.subscriptions.push(navSub);
     // Device discovery is now handled by the WebSocket service
   }
 

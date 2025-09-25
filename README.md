@@ -68,9 +68,9 @@ cd apps/remote && ng serve
 
 Integrated validation flows: see [VALIDATION.md](./VALIDATION.md).
 
-## 📱 Applications
+##  Applications
 
-### TV Application (`apps/tv/`)
+### 📺 TV Application (`apps/tv/`)
 **Role**: Display and Video Player
 - **Technology**: Angular 20+ with Material Design
 - **Summary**:
@@ -81,7 +81,7 @@ Integrated validation flows: see [VALIDATION.md](./VALIDATION.md).
   - No on-device user controls; all control comes from the Remote
   - See details: [ARCHITECTURE.md — TV Application](./ARCHITECTURE.md#tv-application-appstv)
 
-### Remote Application (`apps/remote/`)  
+### 📱 Remote Application (`apps/remote/`)  
 **Role**: Control Interface and Data Owner
 - **Technology**: Angular 20+ with Material Design
 - **Summary**:

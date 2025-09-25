@@ -6,6 +6,7 @@ import { WebSocketServer, WebSocket, RawData } from 'ws';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import {
+  createLogger,
   WebSocketMessage,
   RegisterMessage,
   NavigationCommandMessage,
@@ -23,7 +24,6 @@ import {
 import { SaharFsm } from './fsm';
 import { performersData } from './mock-data';
 import { networkInterfaces } from 'os';
-import { createLogger } from 'shared';
 
 // --- Structured Logger (shared) ---------------------------------------------------------------
 const logger = createLogger({ component: 'server' });
@@ -140,25 +140,31 @@ let lastBroadcastVersion = 0; // last fully ACKed broadcast version
 let currentBroadcastVersion: number | null = null; // version currently awaiting ACKs
 let pendingBroadcastVersion: number | null = null; // queued latest version while waiting
 let outstandingAckClients: Set<WebSocket> | null = null; // clients yet to ACK current broadcast
+// Timer for ack timeout enforcement
+let broadcastAckTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Track client connections and their type (plus last ACKed state version and heartbeat for observability)
-const clients = new Map<WebSocket, { clientType: ClientType; deviceId: string; lastStateAckVersion?: number; lastHeartbeat?: number }>();
+const clients = new Map<WebSocket, { clientType: ClientType; deviceId: string; lastStateAckVersion?: number; lastHeartbeat?: number; missedAckVersions?: Set<number>; ackRetryCount?: number }>();
 
 // Readiness flag (infrastructure readiness: HTTP + WS initialized)
 let isReady = false;
 const markReady = () => { isReady = true; };
 
 // --- Message helpers ---
-const makeAck = (source: 'server'): AckMessage => ({ msgType: 'ack', timestamp: Date.now(), source, payload: {msgType: 'any'} });
-const makeStateSync = (source: 'server'): StateSyncMessage => ({ msgType: 'state_sync', timestamp: Date.now(), source, payload: {msgType: 'any', ...fsm.getSnapshot() }});
+const makeAck = (source: 'server'): AckMessage => ({ msgType: 'ack', timestamp: Date.now(), source, payload: {msgType: 'ack'} });
+const makeStateSync = (source: 'server'): StateSyncMessage => ({ msgType: 'state_sync', timestamp: Date.now(), source, payload: {msgType: 'ack', ...fsm.getSnapshot() }});
 const makeError = (source: 'server', code: string, message: string): ErrorMessage => ({ msgType: 'error', timestamp: Date.now(), source, payload: {msgType: 'error', code, message }});
 
 // --- Error sending helper ---
 function sendError(ws: WebSocket, code: string, message: string, opts: { close?: boolean; meta?: any } = {}) {
-  ws.send(JSON.stringify(makeError('server', code, message)));
   logWarn('invalid_message', { code, message, ...(opts.meta || {}) });
+  ws.send(JSON.stringify(makeError('server', code, message)));  
   if (opts.close) {
-    try { ws.close(); } catch {/* ignore */}
+    try { 
+      ws.close(); 
+    } catch {
+      logError('Failed to close ws');
+    }
   }
 }
 
@@ -243,7 +249,7 @@ function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebS
       const payload = (raw as any).payload;
       if (!isPlainObject(payload)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Navigation missing payload' };
       const action = asString(payload.action, 50);
-  if (!action || !NAVIGATION_ACTION_SET.has(action as any)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid navigation action' };
+      if (!action || !NAVIGATION_ACTION_SET.has(action as any)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid navigation action' };
       const targetId = payload.targetId ? asString(payload.targetId, 200) : undefined;
       base.payload = { action, ...(targetId ? { targetId } : {}) };
       return { ok: true, msg: base as WebSocketMessage };
@@ -253,7 +259,7 @@ function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebS
       const payload = (raw as any).payload;
       if (!isPlainObject(payload)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Control missing payload' };
       const action = asString(payload.action, 50);
-  if (!action || !CONTROL_ACTION_SET.has(action as any)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid control action' };
+      if (!action || !CONTROL_ACTION_SET.has(action as any)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid control action' };
       const startTime = typeof payload.startTime === 'number' ? payload.startTime : undefined;
       const seekTime = typeof payload.seekTime === 'number' ? payload.seekTime : undefined;
       const volume = typeof payload.volume === 'number' ? payload.volume : undefined;
@@ -289,9 +295,17 @@ function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebS
       return { ok: true, msg: base as WebSocketMessage };
     }
 
-    case 'state_sync':
-    case 'error':
-      return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Client cannot send server-only type' };
+    case 'state_sync': {
+      // 'state_sync' is a server-originated, authoritative snapshot and
+      // must never be sent by a client. Treat this as a protocol violation
+      // and close the connection to aid debugging and keep the FSM authoritative.
+      return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Client cannot send server-only type: state_sync', close: true };
+    }
+    case 'error': {
+      // Clients may send an 'error' payload in some diagnostic/testing flows,
+      // but in production we treat it as a protocol violation when unsolicited.
+      return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Client cannot send server-only type: error' };
+    }
 
     default:
       return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Unsupported message type' };
@@ -312,7 +326,56 @@ function performBroadcast(version: number) {
   }
   currentBroadcastVersion = version;
   logInfo('state_broadcast', { version, clients: sent });
-  if (sent === 0) {
+  // Clear any previous ACK timer
+  if (broadcastAckTimer) {
+    clearTimeout(broadcastAckTimer);
+    broadcastAckTimer = null;
+  }
+  // Start ACK timeout enforcement so a single unresponsive client doesn't stall broadcasts
+  if (sent > 0) {
+    logInfo('setting a broadcast ack timeout timer');
+    broadcastAckTimer = setTimeout(() => {
+      try {
+        // Identify stuck sockets and log for diagnostics
+        const stuckSockets = outstandingAckClients ? [...outstandingAckClients] : [];
+        const stuck = stuckSockets.map(c => clients.get(c)?.deviceId || '(unknown)');
+        logWarn('state_broadcast_ack_timeout', { version: currentBroadcastVersion, stuckClients: stuck });
+
+        // For each unresponsive client, record the missed version and attempt a targeted resend
+        for (const stuckSocket of stuckSockets) {
+          const meta = clients.get(stuckSocket);
+          if (!meta) continue;
+          const v = currentBroadcastVersion as number;
+          if (!meta.missedAckVersions) meta.missedAckVersions = new Set<number>();
+          meta.missedAckVersions.add(v);
+          meta.ackRetryCount = (meta.ackRetryCount || 0) + 1;
+          logInfo('state_broadcast_mark_missed', { to: meta.deviceId, version: v, retry: meta.ackRetryCount });
+
+          // Attempt a lightweight targeted resend to the client (best-effort)
+          if (stuckSocket.readyState === WebSocket.OPEN) {
+            try {
+              stuckSocket.send(JSON.stringify(makeStateSync('server')));
+              logInfo('state_resend_attempt', { to: meta.deviceId });
+            } catch (e) {
+              logWarn('state_resend_failed', { to: meta.deviceId, err: String(e) });
+            }
+          }
+        }
+
+        // Consider the broadcast complete despite missing acks to avoid indefinite stalls
+        lastBroadcastVersion = currentBroadcastVersion as number;
+        currentBroadcastVersion = null;
+        outstandingAckClients = null;
+        // Continue with any pending broadcasts
+        flushPending();
+      } finally {
+        if (broadcastAckTimer) { 
+          clearTimeout(broadcastAckTimer);
+          broadcastAckTimer = null; 
+        }
+      }
+    }, WEBSOCKET_CONFIG.ACK_TIMEOUT);
+  } else {
     // Nothing to wait for – mark complete immediately
     lastBroadcastVersion = version;
     currentBroadcastVersion = null;
@@ -388,9 +451,20 @@ wss.on('connection', (ws: WebSocket) => {
         sendError(ws, ERROR_CODES.CLIENT_TYPE_MISMATCH, 'A Remote client is already connected.', { close: true, meta: { attempted: 'remote' } });
         return;
       }
-      clients.set(ws, { clientType, deviceId });
+  clients.set(ws, { clientType, deviceId, missedAckVersions: new Set<number>(), ackRetryCount: 0 });
       fsm.registerClient(clientType, deviceId);
-      ws.send(JSON.stringify(makeAck('server'))); // Ack first, then broadcast new state
+      // Ack the registration and send an immediate authoritative state_sync
+      // directly to the registering client. This guarantees newly-joined
+      // clients receive the current snapshot even if a broadcast is
+      // currently in-flight or deferred by ack-gating.
+      ws.send(JSON.stringify(makeAck('server')));
+      try {
+        ws.send(JSON.stringify(makeStateSync('server')));
+        logInfo('state_sync_sent_direct', { to: deviceId, clientType });
+      } catch (e) {
+        logWarn('state_sync_direct_failed', { to: deviceId, clientType, error: String(e) });
+      }
+      // Continue with the regular broadcast pipeline for all clients
       broadcastStateIfChanged();
       logInfo('client_registered', { clientType, deviceId });
       return;
@@ -412,10 +486,62 @@ wss.on('connection', (ws: WebSocket) => {
       }
       case 'navigation_command': {
         const nav = msg as NavigationCommandMessage;
-        fsm.navigationCommand(nav.payload.action, nav.payload.targetId);
-        ws.send(JSON.stringify(makeAck('server'))); // Ack before broadcast
-        broadcastStateIfChanged();
-        logInfo('navigation_command_handled', { action: nav.payload.action });
+        logInfo('navigation_command_received', { from: clients.get(ws)?.deviceId, payload: nav.payload });
+        try {
+          // Only Remote clients should issue navigation commands
+          const meta = clients.get(ws);
+          if (!meta || meta.clientType !== 'remote') {
+            logWarn('navigation_command_from_non_remote', { from: meta?.deviceId, clientType: meta?.clientType });
+            sendError(ws, ERROR_CODES.CLIENT_TYPE_MISMATCH, 'Only remote may send navigation_command');
+            break;
+          }
+
+          const before = fsm.getSnapshot();
+          // lightweight debug
+          logInfo('fsm_before_navigation', { version: before.version, navigation: before.navigation });
+
+          // Validate target existence for authoritative navigation commands.
+          const action = nav.payload.action;
+          const targetId = nav.payload.targetId;
+          const snapshot = fsm.getSnapshot();
+          const performers: any[] = (snapshot as any).data?.performers || [];
+
+          const existsPerformer = (id?: string) => !!id && performers.some(p => p.id === id);
+          const existsVideo = (id?: string) => !!id && performers.some(p => Array.isArray(p.videos) && p.videos.some((v: any) => v.id === id));
+          const existsScene = (id?: string) => !!id && performers.some(p => Array.isArray(p.videos) && p.videos.some((v: any) => Array.isArray(v.likedScenes) && v.likedScenes.some((s: any) => s.id === id)));
+
+          let validTarget = true;
+          switch (action) {
+            case 'navigate_to_performer':
+              validTarget = existsPerformer(targetId);
+              break;
+            case 'navigate_to_video':
+              validTarget = existsVideo(targetId);
+              break;
+            case 'navigate_to_scene':
+              validTarget = existsScene(targetId);
+              break;
+            default:
+              // actions like navigate_back / navigate_home don't require a target
+              validTarget = true;
+          }
+
+          if (!validTarget) {
+            logWarn('navigation_command_invalid_target', { action, targetId });
+            sendError(ws, ERROR_CODES.INVALID_COMMAND, `Unknown or missing targetId for action ${action}`);
+            break;
+          }
+
+          fsm.navigationCommand(nav.payload.action, nav.payload.targetId);
+          const after = fsm.getSnapshot();
+          logInfo('fsm_after_navigation', { version: after.version, navigation: after.navigation });
+          ws.send(JSON.stringify(makeAck('server'))); // Ack before broadcast
+          broadcastStateIfChanged();
+          logInfo('navigation_command_handled', { action: nav.payload.action, targetId: nav.payload.targetId, newVersion: after.version });
+        } catch (e: any) {
+          logError('navigation_command_error', { error: e?.message || String(e), stack: e?.stack });
+          ws.send(JSON.stringify(makeError('server', ERROR_CODES.INVALID_MESSAGE_FORMAT, 'navigation_command_failed')));
+        }
         break;
       }
       case 'control_command': {
@@ -435,18 +561,41 @@ wss.on('connection', (ws: WebSocket) => {
         break;
       }
       case 'ack': {
-        if (currentBroadcastVersion !== null && outstandingAckClients && outstandingAckClients.has(ws)) {
-          outstandingAckClients.delete(ws);
+        // Accept optional ack payload.version for precise reconciliation
+        try {
+          const ackMsg = msg as AckMessage;
+          const ackPayloadVersion = ackMsg.payload && typeof (ackMsg.payload as any).version === 'number' ? (ackMsg.payload as any).version : null;
+          // If ack refers to a specific version, clear that version from missed set if present
           const meta = clients.get(ws);
-          if (meta) meta.lastStateAckVersion = currentBroadcastVersion;
-          logInfo('state_broadcast_ack_progress', { version: currentBroadcastVersion, remaining: outstandingAckClients.size });
-          if (outstandingAckClients.size === 0) {
-            lastBroadcastVersion = currentBroadcastVersion;
-            logInfo('state_broadcast_complete', { version: currentBroadcastVersion });
-            currentBroadcastVersion = null;
-            outstandingAckClients = null;
-            flushPending();
+          if (meta && ackPayloadVersion !== null) {
+            meta.lastStateAckVersion = ackPayloadVersion;
+            if (meta.missedAckVersions && meta.missedAckVersions.has(ackPayloadVersion)) {
+              meta.missedAckVersions.delete(ackPayloadVersion);
+              logInfo('client_ack_cleared_missed', { deviceId: meta.deviceId, version: ackPayloadVersion });
+            }
+            // Reset retry count on successful ack
+            meta.ackRetryCount = 0;
           }
+
+          if (currentBroadcastVersion !== null && outstandingAckClients && outstandingAckClients.has(ws)) {
+            outstandingAckClients.delete(ws);
+            if (meta && meta.lastStateAckVersion === null) meta.lastStateAckVersion = currentBroadcastVersion;
+            logInfo('state_broadcast_ack_progress', { version: currentBroadcastVersion, remaining: outstandingAckClients.size });
+            if (outstandingAckClients.size === 0) {
+              lastBroadcastVersion = currentBroadcastVersion;
+              logInfo('state_broadcast_complete', { version: currentBroadcastVersion });
+              currentBroadcastVersion = null;
+              outstandingAckClients = null;
+              // Clear ACK timeout timer since broadcast completed successfully
+              if (broadcastAckTimer) { 
+                clearTimeout(broadcastAckTimer);
+                broadcastAckTimer = null; 
+              }
+              flushPending();
+            }
+          }
+        } catch (e) {
+          logError('ack_handling_error', { error: String(e) });
         }
         break;
       }
@@ -454,20 +603,19 @@ wss.on('connection', (ws: WebSocket) => {
         // Should not reach here due to validation, but guard anyway
         sendError(ws, ERROR_CODES.INVALID_MESSAGE_FORMAT, 'Duplicate register attempt');
         break;
+      }    
+      case 'heartbeat': {
+        // Record last heartbeat timestamp for observability and reply with an ack
+        const meta = clients.get(ws);
+        if (meta) meta.lastHeartbeat = Date.now();
+        ws.send(JSON.stringify(makeAck('server')));
+        logInfo('heartbeat_received', { from: meta?.clientType, deviceId: meta?.deviceId });
+        break;
       }
-    
-    case 'heartbeat': {
-      // Record last heartbeat timestamp for observability and reply with an ack
-      const meta = clients.get(ws);
-      if (meta) meta.lastHeartbeat = Date.now();
-      ws.send(JSON.stringify(makeAck('server')));
-      logInfo('heartbeat_received', { from: meta?.clientType, deviceId: meta?.deviceId });
-      break;
-    }
-    default: {
-      // Should not happen (validated earlier)
-      sendError(ws, ERROR_CODES.INVALID_MESSAGE_FORMAT, 'Unhandled type after validation');
-    }
+      default: {
+        // Should not happen (validated earlier)
+        sendError(ws, ERROR_CODES.INVALID_MESSAGE_FORMAT, 'Unhandled type after validation');
+      }
     }
   });
 
@@ -484,6 +632,11 @@ wss.on('connection', (ws: WebSocket) => {
           logWarn('state_broadcast_complete_client_loss', { version: currentBroadcastVersion });
           currentBroadcastVersion = null;
           outstandingAckClients = null;
+          // Clear ACK timeout timer since broadcast completed (client loss accounted for)
+          if (broadcastAckTimer) { 
+            clearTimeout(broadcastAckTimer); 
+            broadcastAckTimer = null; 
+          }
           flushPending();
         }
       }
@@ -689,7 +842,7 @@ server.listen(WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT, () => {
 process.on('SIGINT', () => {
   logWarn('shutdown_signal', { signal: 'SIGINT' });
   server.close(() => {
-    logInfo('server_shutdown');
+    logWarn('server_shutdown');
     process.exit(0);
   });
 });

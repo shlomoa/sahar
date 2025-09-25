@@ -18,7 +18,6 @@ export type MessageType =
   | 'state_sync'
   | 'error'
   // General message types
-  | 'any'
   | 'heartbeat';
 
 export interface BasePayload {
@@ -109,7 +108,7 @@ export interface AckMessage {
   msgType: 'ack';
   timestamp: number;
   source: MessageSource;
-  payload: { msgType: 'any' };
+  payload: { msgType: 'ack' };
 }
 
 // State Sync
