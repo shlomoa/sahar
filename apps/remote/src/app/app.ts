@@ -2,6 +2,8 @@ import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatIconModule } from "@angular/material/icon";
+import { RouterOutlet } from '@angular/router';
 import { Observable, Subscription } from 'rxjs';
 import { VideoNavigationService, SharedPerformersGridComponent, SharedScenesGridComponent, SharedVideosGridComponent, ClientType, NetworkDevice, ConnectionState, NavigationState, NavigationLevel } from 'shared';
 import { Performer, Video, LikedScene } from 'shared';
@@ -9,23 +11,53 @@ import { VideoControlsComponent } from './components/video-controls/video-contro
 import { WebSocketService } from './services/websocket.service';
 
 
+
 @Component({
   selector: 'app-root',  
   imports: [
+    RouterOutlet,
     CommonModule,
     MatToolbarModule,
     MatButtonModule,
-    VideoControlsComponent,    
+    VideoControlsComponent,
     SharedPerformersGridComponent,
     SharedScenesGridComponent,
-    SharedVideosGridComponent
-  ],
+    SharedVideosGridComponent,
+    MatIconModule
+],
   templateUrl: './app.html',
   styleUrls: ['./app.scss'],
   standalone: true,
 })
 export class App implements OnInit, OnDestroy {
   protected title = 'Sahar TV Remote';
+  navigation$: Observable<NavigationState>;
+  private subscriptions: Subscription[] = [];
+
+  // Service injections
+  private readonly navigationService = inject(VideoNavigationService);
+  private readonly websocketService = inject(WebSocketService);
+  private readonly videoNavigationService = inject(VideoNavigationService);
+
+  // Video playback state
+  currentVideo: Video | undefined = undefined;
+  currentScene: LikedScene | undefined = undefined;
+  
+  // Data
+  performers: Performer[] = [];
+  clientType: ClientType = 'remote';
+    
+  // Video control states
+  isPlaying = false;
+  isMuted = false;
+  volumeLevel = 50;
+  
+  // Visibility flag: when both TV and Remote are connected according to server state
+  bothConnected = false;
+  // internal debounce timer id used to avoid flicker when connections flap
+  private _bothConnectedDebounceTimer: number | null = null;
+  // Connection management - starts disconnected
+  connectionStatus: ConnectionState = 'disconnected';
 
   // Event handlers to mirror TV behavior so Remote UI follows the same navigation model
   onPerformerSelected(performerId: string): void {
@@ -83,33 +115,8 @@ export class App implements OnInit, OnDestroy {
       }
     }
   }
-  navigation$: Observable<NavigationState>;
-  private subscriptions: Subscription[] = [];
-  
-  // Service injections
-  private readonly navigationService = inject(VideoNavigationService);
-  private readonly websocketService = inject(WebSocketService);
-  private readonly videoNavigationService = inject(VideoNavigationService);
 
-  // Video playback state
-  currentVideo: Video | undefined = undefined;
-  currentScene: LikedScene | undefined = undefined;
-
-  // Data
-  performers: Performer[] = [];
-  clientType: ClientType = 'remote';
-   
-  // Connection management - starts disconnected
-  connectionStatus: ConnectionState = 'disconnected';
-  autoConnectEnabled = true;
-  
-  // Video control states
-  isPlaying = false;
-  isMuted = false;
-  volumeLevel = 50;
-  
-
-    // Current navigation level helpers for templates
+  // Current navigation level helpers for templates
   get currentPerformers(): Performer[] {
     const nav = this.navigationService.getCurrentState();
     if (nav.breadcrumb.length === 1) { // Home level
@@ -167,7 +174,7 @@ export class App implements OnInit, OnDestroy {
     this.setupWebSocketListeners();
 
     // Keep local view in sync with authoritative navigation state updates
-    const navSub = this.videoNavigationService.navigation$.subscribe(nav => {
+    const navSub = this.navigation$.subscribe(nav => {
       // Update performers list when data changes
       this.performers = this.videoNavigationService.getPerformersData();
 
@@ -245,8 +252,6 @@ export class App implements OnInit, OnDestroy {
       console.log('🔌 Connection status:', this.connectionStatus);
     });
 
-    // Track auto-connect state
-    this.autoConnectEnabled = this.websocketService.isAutoConnectEnabled();
   }
 
   // Connected device
@@ -303,6 +308,7 @@ export class App implements OnInit, OnDestroy {
   navigateToPreviousScene() {
     throw new Error('Method not implemented.');
   }
+  
   navigateToNextScene() {
     throw new Error('Method not implemented.');
   }

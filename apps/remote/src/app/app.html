@@ -3,13 +3,28 @@
   <!-- Navigation Bar (10%) -->
   <mat-toolbar color="primary" class="remote-nav-bar">
     <span class="header-title">📱 SAHAR TV Remote</span>
-    
+    <button mat-icon-button (click)="onHomeClick()">
+      <mat-icon>home</mat-icon>
+    </button>
+
+    <div class="breadcrumb" *ngIf="navigation$ | async as nav">
+      <span *ngFor="let crumb of nav.breadcrumb; let i = index">
+        <span *ngIf="i > 0"> > </span>
+        <span [class.active]="i === nav.breadcrumb.length - 1">{{ crumb }}</span>
+      </span>
+    </div>
+
     <span class="spacer"></span>
 
     <span class="connection-status">
       {{connectionStatus === 'connected' ? '🟢 Connected' : 
         connectionStatus === 'connecting' ? '🟡 Connecting...' : '🔴 Disconnected'}}
     </span>
+
+    <button mat-icon-button (click)="onBackClick()" 
+            *ngIf="(navigation$ | async)?.canGoBack">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
   </mat-toolbar>
 
   <!-- Navigation Content (only when connected) -->
@@ -97,3 +112,5 @@
     </div>
   }
 </div>
+
+<router-outlet />

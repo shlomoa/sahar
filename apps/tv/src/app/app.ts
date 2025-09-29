@@ -52,19 +52,10 @@ export class App implements OnInit, OnDestroy {
   currentVideo: Video | null = null;
   currentScene: LikedScene | null = null;
 
-  // Derived playback bindings for the video-player component
-  get playbackVideoId(): string | null {
-    return this.currentVideo?.url ? getYoutubeVideoId(this.currentVideo.url) : null;
-  }
-  get playbackPositionSec(): number | null {
-    return this.currentScene?.startTime ?? null;
-  }
-  get playbackIsPlaying(): boolean { // basic POC default
-    return this.videoPlayer?.isPlaying ?? false;
-  }
-
-  // Local playback flag (derived from player$)
+    // Local playback flag (derived from player$)
   isPlaying = false;
+  isMuted = false;
+  volumeLevel = 50;
 
   // QR: Remote entry URL to encode
   remoteUrl = '';
@@ -75,6 +66,19 @@ export class App implements OnInit, OnDestroy {
   private _bothConnectedDebounceTimer: number | null = null;
   // Connection status text to mirror Remote's UI mapping: 'connected' | 'connecting' | 'disconnected'
   connectionStatus: ConnectionState = 'disconnected';
+
+  // Derived playback bindings for the video-player component
+  get playbackVideoId(): string | null {
+    return this.currentVideo?.url ? getYoutubeVideoId(this.currentVideo.url) : null;
+  }
+
+  get playbackPositionSec(): number | null {
+    return this.currentScene?.startTime ?? null;
+  }
+
+  get playbackIsPlaying(): boolean { // basic POC default
+    return this.videoPlayer?.isPlaying ?? false;
+  }
 
   // Current navigation level helpers for templates
   get currentPerformers(): Performer[] {
@@ -217,9 +221,10 @@ export class App implements OnInit, OnDestroy {
       this.subscriptions.push(playerSub);
     }
 
-    // Initialize WebSocket connection and wire control commands to YouTube player
+    // Initialize WebSocket connections 
     this.initializeWebSocket();
 
+    // wire control commands to YouTube player
     const controlSub = this.webSocketService.messages.subscribe((msg) => {
       if (!msg || msg.msgType !== 'control_command') return;
       const { action } = (msg as ControlCommandMessage).payload;

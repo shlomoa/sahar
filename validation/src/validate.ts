@@ -291,7 +291,7 @@ async function hookJ(): Promise<HookResult> {
   }
   await delay(Math.max(250, POLL_INTERVAL_MS));
   // Restart TV stub
-  state.processes['tvStub'] = spawnProc('tvStub', 'node', ['./dist/stubs/tv-stub.js']);
+  state.processes['tvStub'] = spawnProc('tvStub', 'node', ['./dist/src/stubs/tv-stub.js']);
   const reconnected = await waitFor(async () => {
     const h = await getTvHealth();
     return !!h && h.connected === true && h.wsReady === true;
@@ -380,8 +380,8 @@ async function startEnvironment() {
   spawnProc('server', 'node', ['../server/dist/main.js']);
   await delay(START_SERVER_WAIT_MS);
   // Start stubs
-  spawnProc('tvStub', 'node', ['./dist/stubs/tv-stub.js']);
-  spawnProc('remoteStub', 'node', ['./dist/stubs/remote-stub.js']);
+  spawnProc('tvStub', 'node', ['./dist/src/stubs/tv-stub.js']);
+  spawnProc('remoteStub', 'node', ['./dist/src/stubs/remote-stub.js']);
   await delay(START_STUBS_WAIT_MS);
 }
 
