@@ -21,96 +21,104 @@
         connectionStatus === 'connecting' ? '🟡 Connecting...' : '🔴 Disconnected'}}
     </span>
 
-    <button mat-icon-button (click)="onBackClick()" 
-            *ngIf="(navigation$ | async)?.canGoBack">
-      <mat-icon>arrow_back</mat-icon>
-    </button>
   </mat-toolbar>
 
-  <!-- Navigation Content (only when connected) -->
-  @if (connectionStatus === 'connected') {
-    <div class="navigation-content">
-      
-      <!-- Navigation Breadcrumb -->
-      <div class="breadcrumb">
-        <button mat-button (click)="navigateToPerformers()" 
-                [class.active]="currentLevel === 'performers'">
-          👥 Performers
-        </button>
+  <!-- Main Content Area (80%) -->
+  <div class="main-content">
+    @if (bothConnected) {
+      <div class="navigation-content">
         
-        @if (currentPerformer) {
-          <span class="separator">›</span>
-          <button mat-button (click)="navigateToVideos(currentPerformer.id)" 
-                  [class.active]="currentLevel === 'videos'">
-            📹 Videos
+        <!-- Navigation Breadcrumb -->
+        <div class="breadcrumb">
+          <button mat-button (click)="navigateToPerformers()" 
+                  [class.active]="currentLevel === 'performers'">
+            👥 Performers
           </button>
-        }
-        
-        @if (currentVideo) {
-          <span class="separator">›</span>
-          <button mat-button (click)="navigateToScenes(currentVideo.id)" 
-                  [class.active]="currentLevel === 'scenes'">
-            🎬 Scenes
-          </button>
-        }
-        
-        @if (currentScene) {
-          <span class="separator">›</span>
-          <span class="current-scene">🎯 Scene {{currentScene.id}}</span>
-        }
-      </div>
+          
+          @if (currentPerformer) {
+            <span class="separator">›</span>
+            <button mat-button (click)="navigateToVideos(currentPerformer.id)" 
+                    [class.active]="currentLevel === 'videos'">
+              📹 Videos
+            </button>
+          }
+          
+          @if (currentVideo) {
+            <span class="separator">›</span>
+            <button mat-button (click)="navigateToScenes(currentVideo.id)" 
+                    [class.active]="currentLevel === 'scenes'">
+              🎬 Scenes
+            </button>
+          }
+          
+          @if (currentScene) {
+            <span class="separator">›</span>
+            <span class="current-scene">🎯 Scene {{currentScene.id}}</span>
+          }
+        </div>
 
-      <!-- Component Content Areas -->
-      @switch (currentLevel) {
-        
-        @case ('performers') {
-          <shared-performers-grid
-            [performers]="currentPerformers"
-            [selectedPerformerId]="currentPerformer?.id"
-            [clientType]="'remote'"
-            (performerSelected)="navigateToPerformer($event)">
-          </shared-performers-grid>
-        }
-        
-        @case ('videos') {
-          <shared-videos-grid
-            [videos]="currentVideos"            
-            [clientType]="'remote'"
-            [showBreadcrumb]="true"
-            (videoSelected)="navigateToVideo($event)"
-            (backToPerformers)="navigateToPerformers()">
-          </shared-videos-grid>
-        }
-        
-        @case ('scenes') {
-          <shared-scenes-grid
-            [scenes]="currentScenes"
-            [selectedSceneId]="currentScene?.id"
-            [clientType]="'remote'"
-            [showBreadcrumb]="true"
-            (sceneSelected)="navigateToScene($event)"
-            (backToVideos)="navigateToVideo(currentVideo ? currentVideo.id : '')">
-          </shared-scenes-grid>
-        }
-        
-        @case ('scene-selected') {
-          <video-controls
-            [currentVideo]="getCurrentVideo()"
-            [currentScene]="getCurrentScene()"
-            [sceneId]="currentScene?.id"
-            [isPlaying]="isPlaying"
-            [isMuted]="isMuted"
-            [volumeLevel]="volumeLevel"
-            [hasPreviousScene]="hasPreviousScene()"
-            [hasNextScene]="hasNextScene()"
-            (controlCommand)="sendControlCommand($event)"
-            (volumeChange)="onVolumeChange($event)"
-            (backToScenes)="navigateToScenes(currentVideo?.id ?? '')">
-          </video-controls>
-        }
-      }
-    </div>
-  }
+        <div class="content-with-back">
+          <shared-back-card
+            [enabled]="canGoBack"
+            [widthPercent]="15"
+            (back)="onBackClick()">
+          </shared-back-card>
+
+          <div class="data-view">
+            <!-- Component Content Areas -->
+            @switch (currentLevel) {
+              
+              @case ('performers') {
+                <shared-performers-grid
+                  [performers]="currentPerformers"
+                  [selectedPerformerId]="currentPerformer?.id"
+                  [clientType]="'remote'"
+                  (performerSelected)="navigateToPerformer($event)">
+                </shared-performers-grid>
+              }
+              
+              @case ('videos') {
+                <shared-videos-grid
+                  [videos]="currentVideos"            
+                  [clientType]="'remote'"
+                  [showBreadcrumb]="true"
+                  (videoSelected)="navigateToVideo($event)"
+                  (backToPerformers)="navigateToPerformers()">
+                </shared-videos-grid>
+              }
+              
+              @case ('scenes') {
+                <shared-scenes-grid
+                  [scenes]="currentScenes"
+                  [selectedSceneId]="currentScene?.id"
+                  [clientType]="'remote'"
+                  [showBreadcrumb]="true"
+                  (sceneSelected)="navigateToScene($event)"
+                  (backToVideos)="navigateToVideo(currentVideo ? currentVideo.id : '')">
+                </shared-scenes-grid>
+              }
+              
+              @case ('scene-selected') {
+                <video-controls
+                  [currentVideo]="getCurrentVideo()"
+                  [currentScene]="getCurrentScene()"
+                  [sceneId]="currentScene?.id"
+                  [isPlaying]="isPlaying"
+                  [isMuted]="isMuted"
+                  [volumeLevel]="volumeLevel"
+                  [hasPreviousScene]="hasPreviousScene()"
+                  [hasNextScene]="hasNextScene()"
+                  (controlCommand)="sendControlCommand($event)"
+                  (volumeChange)="onVolumeChange($event)"
+                  (backToScenes)="navigateToScenes(currentVideo?.id ?? '')">
+                </video-controls>
+              }
+            }
+          </div>
+        </div>
+      </div>
+    }
+  </div>
 </div>
 
 <router-outlet />

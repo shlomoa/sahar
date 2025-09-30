@@ -5,7 +5,8 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from "@angular/material/icon";
 import { RouterOutlet } from '@angular/router';
 import { Observable, Subscription } from 'rxjs';
-import { VideoNavigationService, SharedPerformersGridComponent, SharedScenesGridComponent, SharedVideosGridComponent, ClientType, NetworkDevice, ConnectionState, NavigationState, NavigationLevel } from 'shared';
+import { VideoNavigationService, SharedPerformersGridComponent, SharedScenesGridComponent, SharedVideosGridComponent, ClientType, NetworkDevice, ConnectionState, NavigationState, NavigationLevel, ApplicationState } from 'shared';
+import { SharedBackCardComponent } from 'shared';
 import { Performer, Video, LikedScene } from 'shared';
 import { VideoControlsComponent } from './components/video-controls/video-controls.component';
 import { WebSocketService } from './services/websocket.service';
@@ -23,7 +24,8 @@ import { WebSocketService } from './services/websocket.service';
     SharedPerformersGridComponent,
     SharedScenesGridComponent,
     SharedVideosGridComponent,
-    MatIconModule
+    MatIconModule,
+    SharedBackCardComponent
 ],
   templateUrl: './app.html',
   styleUrls: ['./app.scss'],
@@ -36,7 +38,7 @@ export class App implements OnInit, OnDestroy {
 
   // Service injections
   private readonly navigationService = inject(VideoNavigationService);
-  private readonly websocketService = inject(WebSocketService);
+  private readonly webSocketService = inject(WebSocketService);
   private readonly videoNavigationService = inject(VideoNavigationService);
 
   // Video playback state
@@ -62,13 +64,13 @@ export class App implements OnInit, OnDestroy {
   // Event handlers to mirror TV behavior so Remote UI follows the same navigation model
   onPerformerSelected(performerId: string): void {
     console.log('📱 Remote: Performer selected:', performerId);
-    this.websocketService.sendNavigationCommand('navigate_to_performer', performerId, 'performer');
+    this.webSocketService.sendNavigationCommand('navigate_to_performer', performerId, 'performer');
     this.videoNavigationService.navigateToPerformer(performerId);
   }
 
   onVideoSelected(videoId: string): void {
     console.log('📱 Remote: Video selected:', videoId);
-    this.websocketService.sendNavigationCommand('navigate_to_video', videoId, 'video');
+    this.webSocketService.sendNavigationCommand('navigate_to_video', videoId, 'video');
     this.videoNavigationService.navigateToVideo(videoId);
   }
 
@@ -77,12 +79,12 @@ export class App implements OnInit, OnDestroy {
     // Play scene via local navigation service; server will reconcile via state_sync
     this.videoNavigationService.playScene(sceneId);
     // Use the shared control command shim (string variant) for simple play
-    this.websocketService.sendControlCommand('play');
+    this.webSocketService.sendControlCommand('play');
   }
 
   onBackToPerformers(): void {
     console.log('📱 Remote: Back to performers');
-    this.websocketService.sendNavigationCommand('navigate_to_performer', 'home', 'performer');
+    this.webSocketService.sendNavigationCommand('navigate_to_performer', 'home', 'performer');
     this.videoNavigationService.goHome();
   }
 
@@ -167,14 +169,16 @@ export class App implements OnInit, OnDestroy {
     this.navigation$ = this.navigationService.navigation$;
   }
   
+  // Whether going back is possible (breadcrumb length > 1)
+  get canGoBack(): boolean {
+    const nav = this.navigationService.getCurrentState();
+    return (nav?.breadcrumb?.length ?? 1) > 1;
+  } 
 
-  ngOnInit() {
-    // Initialize performers from the navigation service and subscribe to updates
-    this.performers = this.videoNavigationService.getPerformersData();
-    this.setupWebSocketListeners();
+  ngOnInit() {    
 
     // Keep local view in sync with authoritative navigation state updates
-    const navSub = this.navigation$.subscribe(nav => {
+    this.navigation$.subscribe(nav => {
       // Update performers list when data changes
       this.performers = this.videoNavigationService.getPerformersData();
 
@@ -187,51 +191,93 @@ export class App implements OnInit, OnDestroy {
 
       // If the navigation service exposes player$ we should listen for explicit playingSceneId
       const navAny = this.videoNavigationService as unknown as Record<string, unknown>;
-  const player$ = navAny['player$'] as Observable<unknown> | undefined;
-  const isObservableLike = (v: unknown): v is Observable<unknown> => !!v && typeof (v as { subscribe?: unknown }).subscribe === 'function';
+      const player$ = navAny['player$'] as Observable<unknown> | undefined;
+      const isObservableLike = (v: unknown): v is Observable<unknown> => !!v && typeof (v as { subscribe?: unknown }).subscribe === 'function';
   if (player$ && isObservableLike(player$)) {
-        // Subscribe lazily once
-        const playerSub = (player$ as import('rxjs').Observable<unknown>).subscribe((p: unknown) => {
-          if (!p || typeof p !== 'object') {
-            this.currentScene = undefined;
-            this.isPlaying = false;
+    // Subscribe lazily once
+    const playerSub = (player$ as import('rxjs').Observable<unknown>).subscribe((p: unknown) => {
+      if (!p || typeof p !== 'object') {
+        this.currentScene = undefined;
+        this.isPlaying = false;
+        return;
+      }
+      const asAny = p as Record<string, unknown>;
+      const playingSceneId = typeof asAny['playingSceneId'] === 'string' ? asAny['playingSceneId'] as string : undefined;
+      const isPlayingFlag = typeof asAny['isPlaying'] === 'boolean' ? (asAny['isPlaying'] as boolean) : undefined;
+      if (!playingSceneId) {
+        this.currentScene = undefined;
+        this.isPlaying = false;
+        return;
+      }
+      // Try to resolve the scene id to a known LikedScene
+      if (this.currentVideo) {
+        const s = this.currentVideo.likedScenes.find((sc) => sc.id === playingSceneId);
+        if (s) {
+          this.currentScene = s;
+          this.isPlaying = !!isPlayingFlag;
+          return;
+        }
+      }
+      // Otherwise search performers for the scene
+      for (const perf of this.performers) {
+        for (const vid of perf.videos) {
+          const s = vid.likedScenes.find((sc) => sc.id === playingSceneId);
+          if (s) {
+            this.currentVideo = vid;
+            this.currentScene = s;
+            this.isPlaying = !!isPlayingFlag;
             return;
           }
-          const asAny = p as Record<string, unknown>;
-          const playingSceneId = typeof asAny['playingSceneId'] === 'string' ? asAny['playingSceneId'] as string : undefined;
-          const isPlayingFlag = typeof asAny['isPlaying'] === 'boolean' ? (asAny['isPlaying'] as boolean) : undefined;
-          if (!playingSceneId) {
-            this.currentScene = undefined;
-            this.isPlaying = false;
-            return;
-          }
-          // Try to resolve the scene id to a known LikedScene
-          if (this.currentVideo) {
-            const s = this.currentVideo.likedScenes.find((sc) => sc.id === playingSceneId);
-            if (s) {
-              this.currentScene = s;
-              this.isPlaying = !!isPlayingFlag;
-              return;
-            }
-          }
-          // Otherwise search performers for the scene
-          for (const perf of this.performers) {
-            for (const vid of perf.videos) {
-              const s = vid.likedScenes.find((sc) => sc.id === playingSceneId);
-              if (s) {
-                this.currentVideo = vid;
-                this.currentScene = s;
-                this.isPlaying = !!isPlayingFlag;
-                return;
-              }
-            }
-          }
-        });
-        this.subscriptions.push(playerSub);
+        }
       }
     });
-    this.subscriptions.push(navSub);
-    // Device discovery is now handled by the WebSocket service
+    this.subscriptions.push(playerSub);
+      }
+    });
+    
+    // Initialize performers from the navigation service and subscribe to updates    
+    this.initializeWebSocket();
+
+    // Watch for authoritative state_sync messages so we can hide the QR when both clients are connected
+    const stateSub = this.webSocketService.messages.subscribe((msg) => {
+      try {
+        if (!msg || msg.msgType !== 'state_sync') return;
+        const payloadUnknown = msg.payload as unknown;
+        const state = payloadUnknown as ApplicationState | undefined;
+        const connectedClients = (state && (state as ApplicationState).connectedClients) ?? undefined;
+        const tvConn = !!connectedClients?.tv;
+        const remoteConn = !!connectedClients?.remote;
+        const shouldBeBoth = tvConn && remoteConn;
+
+        // Debounce transitions to avoid QR flicker on short connection flaps.
+        // If both become true, apply immediately. If either disconnects, wait
+        // a short grace period before hiding the QR.
+        if (shouldBeBoth) {
+          if (this._bothConnectedDebounceTimer) {
+            window.clearTimeout(this._bothConnectedDebounceTimer);
+            this._bothConnectedDebounceTimer = null;
+          }
+          this.bothConnected = true;
+        } else {
+          if (this._bothConnectedDebounceTimer) window.clearTimeout(this._bothConnectedDebounceTimer);
+          // wait 1500ms before clearing bothConnected so short flakes don't show QR
+          this._bothConnectedDebounceTimer = window.setTimeout(() => {
+            this.bothConnected = false;
+            this._bothConnectedDebounceTimer = null;
+          }, 1500);
+        }
+      } catch (e) {
+        console.warn('Failed to parse state_sync for connection info', e);
+      }
+    });
+    this.subscriptions.push(stateSub);
+
+    // Subscribe to WebSocket connection state to expose the same connection indicator as Remote
+    const connSub = this.webSocketService.connected$.subscribe((state: ConnectionState) => {
+      this.connectionStatus = state === 'connected' ? 'connected' : state === 'connecting' ? 'connecting' : 'disconnected';
+    });
+    this.subscriptions.push(connSub);
+    
   }
 
   ngOnDestroy(): void {
@@ -239,8 +285,8 @@ export class App implements OnInit, OnDestroy {
   }
 
   // WebSocket event handlers
-  private setupWebSocketListeners() {
-    this.websocketService.getConnectionState().subscribe(state => {
+  private initializeWebSocket() {
+    this.webSocketService.getConnectionState().subscribe(state => {
       this.connectionStatus = state === 'connected' ? 'connected' : 
                               state === 'connecting' ? 'connecting' : 'disconnected';
       
@@ -256,52 +302,52 @@ export class App implements OnInit, OnDestroy {
 
   // Connected device
   deviceInfo(): NetworkDevice {
-    const networkDevice = this.websocketService.deviceInfo;
+    const networkDevice = this.webSocketService.deviceInfo;
     console.log('🔌 Connecting to device:', networkDevice);
     return networkDevice
   }
 
   reconnectToDevice() {
-    const networkDevice = this.websocketService.deviceInfo;
+    const networkDevice = this.webSocketService.deviceInfo;
     console.log('🔌 Reconnecting to device:', networkDevice);
     this.connectionStatus = 'connecting';
-    this.websocketService.reconnectToDevice();
+    this.webSocketService.reconnectToDevice();
   }
 
   // Navigation methods
   navigateToPerformer(performerId: string) {
     console.log('👤 Navigate to performer:', performerId);
-    this.websocketService.sendNavigationCommand('navigate_to_performer', performerId.toString(), 'performer');
+    this.webSocketService.sendNavigationCommand('navigate_to_performer', performerId.toString(), 'performer');
     this.navigationService.navigateToPerformer(performerId);
   }
 
   navigateToPerformers() {
     console.log('🏠 Navigate to performers');
-    this.websocketService.sendNavigationCommand('navigate_to_performer', 'home', 'performer');
+    this.webSocketService.sendNavigationCommand('navigate_to_performer', 'home', 'performer');
     this.navigationService.goHome();
   }
 
   navigateToVideo(videoId: string) {
     console.log('🎬 Navigate to video:', videoId);
-    this.websocketService.sendNavigationCommand('navigate_to_video', videoId.toString(), 'video');
+    this.webSocketService.sendNavigationCommand('navigate_to_video', videoId.toString(), 'video');
     this.navigationService.navigateToVideo(videoId);
   }
 
   navigateToVideos(performerId: string) {
     console.log('📹 Navigate to videos for performer:', performerId);
-    this.websocketService.sendNavigationCommand('navigate_to_performer', performerId.toString(), 'performer');
+    this.webSocketService.sendNavigationCommand('navigate_to_performer', performerId.toString(), 'performer');
     this.navigationService.navigateToPerformer(performerId);
   }
 
   navigateToScene(sceneId: string) {
     console.log('🎯 Navigate to scene:', sceneId);
-    this.websocketService.sendNavigationCommand('navigate_to_scene', sceneId, 'scene');
+    this.webSocketService.sendNavigationCommand('navigate_to_scene', sceneId, 'scene');
     //@TODO: update the state and the GUI accordingly
   }
 
   navigateToScenes(videoId: string) {
     console.log('🎬 Navigate to scenes for video:', videoId);
-    this.websocketService.sendNavigationCommand('navigate_to_video', videoId.toString(), 'video');
+    this.webSocketService.sendNavigationCommand('navigate_to_video', videoId.toString(), 'video');
     this.navigationService.navigateToVideo(videoId);
   }
 
@@ -339,7 +385,7 @@ export class App implements OnInit, OnDestroy {
     
     switch (command) {
       case 'play-pause':
-        this.websocketService.sendControlCommand(this.isPlaying ? 'pause' : 'play');
+        this.webSocketService.sendControlCommand(this.isPlaying ? 'pause' : 'play');
         this.isPlaying = !this.isPlaying;
         break;
       case 'previous-scene':
@@ -350,23 +396,23 @@ export class App implements OnInit, OnDestroy {
         break;
       case 'rewind':
         // Use navigation back command instead of seek
-        this.websocketService.sendControlCommand('back');
+        this.webSocketService.sendControlCommand('back');
         break;
       case 'fast-forward':
         // Use resume command for forward movement
-        this.websocketService.sendControlCommand('resume');
+        this.webSocketService.sendControlCommand('resume');
         break;
       case 'toggle-fullscreen':
         // Fullscreen not available in shared protocol, use play as alternative
-        this.websocketService.sendControlCommand('play');
+        this.webSocketService.sendControlCommand('play');
         break;
       case 'toggle-mute':
         // Mute not available in shared protocol, use pause as alternative
-        this.websocketService.sendControlCommand(this.isMuted ? 'resume' : 'pause');
+        this.webSocketService.sendControlCommand(this.isMuted ? 'resume' : 'pause');
         this.isMuted = !this.isMuted;
         break;
       case 'stop':
-        this.websocketService.sendControlCommand('stop');
+        this.webSocketService.sendControlCommand('stop');
         this.isPlaying = false;
         break;
     }
@@ -375,7 +421,7 @@ export class App implements OnInit, OnDestroy {
   onVolumeChange(value: number) {
     this.volumeLevel = value;
     // Volume control not available in shared protocol, send play command with value
-    this.websocketService.sendControlCommand('play');
+    this.webSocketService.sendControlCommand('play');
     console.log('🔊 Volume changed to:', value);
   }
 

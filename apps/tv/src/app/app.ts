@@ -13,6 +13,7 @@ import { VideoNavigationService, ControlCommandMessage, getYoutubeVideoId, Netwo
 import { WEBSOCKET_CONFIG } from 'shared';
 import { SharedPerformersGridComponent, SharedVideosGridComponent, SharedScenesGridComponent } from 'shared';
 import { NavigationState, VideoItem, Video, LikedScene, Performer } from 'shared';
+import { SharedBackCardComponent } from 'shared';
 import { WebSocketService } from './services/websocket.service';
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
 
@@ -32,7 +33,8 @@ import { VideoPlayerComponent } from './components/video-player/video-player.com
     VideoPlayerComponent,
     SharedPerformersGridComponent,
     SharedVideosGridComponent,
-    SharedScenesGridComponent
+    SharedScenesGridComponent,
+    SharedBackCardComponent
   ],
   templateUrl: './app.html',
   styleUrls: ['./app.scss'],
@@ -44,15 +46,16 @@ export class App implements OnInit, OnDestroy {
   navigation$: Observable<NavigationState>;
   private subscriptions: Subscription[] = [];
 
+  // Service injections
   private readonly navigationService = inject(VideoNavigationService);
   private readonly webSocketService = inject(WebSocketService);
   private readonly snackBar = inject(MatSnackBar);  
 
   // Video playback state
-  currentVideo: Video | null = null;
-  currentScene: LikedScene | null = null;
+  currentVideo: Video | undefined = undefined;
+  currentScene: LikedScene | undefined = undefined;
 
-    // Local playback flag (derived from player$)
+  // Local playback flag (derived from player$)
   isPlaying = false;
   isMuted = false;
   volumeLevel = 50;
@@ -123,6 +126,12 @@ export class App implements OnInit, OnDestroy {
     this.navigation$ = this.navigationService.navigation$;
   }
 
+  // Whether going back is possible (breadcrumb length > 1 or explicit state)
+  get canGoBack(): boolean {
+    const nav = this.navigationService.getCurrentState();
+    return (nav?.canGoBack ?? ((nav?.breadcrumb?.length ?? 1) > 1));
+  }
+
   ngOnInit(): void {
     // Build Remote URL as protocol://FQDN:SERVER_DEFAULT_PORT (avoid localhost in QR).
     // Prefer server-provided LAN IP from /host-ip, fall back to the browser hostname.
@@ -155,7 +164,7 @@ export class App implements OnInit, OnDestroy {
       }
     })();
 
-    // Navigation service automatically initializes to home
+    // Keep local view in sync with authoritative navigation state updates
     this.navigation$.subscribe(nav => {
       console.log('Navigation state updated:', nav);
       console.log('Current level items:', nav.currentLevel.map(item => ({
@@ -177,15 +186,15 @@ export class App implements OnInit, OnDestroy {
     if (player$ && isObservable(player$)) {
       const playerSub = player$.subscribe((player: PlayerState | undefined) => {
         if (!player || !player.playingSceneId) {
-          this.currentVideo = null;
-          this.currentScene = null;
+          this.currentVideo = undefined;
+          this.currentScene = undefined;
           this.isPlaying = false;
           return;
         }
         // Try to resolve the scene id to a Video and LikedScene
         const nav = this.navigationService.getCurrentState();
         let foundScene: LikedScene | undefined;
-        let foundVideo: Video | null = null;
+        let foundVideo: Video | undefined = undefined;
         if (nav.currentVideo) {
           foundScene = nav.currentVideo.likedScenes.find((s) => s.id === player.playingSceneId);
           if (foundScene) foundVideo = nav.currentVideo;
@@ -314,6 +323,7 @@ export class App implements OnInit, OnDestroy {
         });
       }
     });
+    this.subscriptions.push(connectionSub);
 
     // Subscribe to WebSocket errors
     const errorSub = this.webSocketService.errors.subscribe(error => {
@@ -321,7 +331,7 @@ export class App implements OnInit, OnDestroy {
       this.snackBar.open(`Connection error: ${error}`, 'Close', { duration: 5000 });
     });
 
-    this.subscriptions.push(connectionSub, errorSub);
+    this.subscriptions.push(errorSub);
     
   }
 
@@ -420,8 +430,8 @@ export class App implements OnInit, OnDestroy {
   onVideoEnded(): void {
     console.log('Video playback ended');
     // Optionally return to scene list or play next scene
-    this.currentVideo = null;
-    this.currentScene = null;
+    this.currentVideo = undefined;
+    this.currentScene = undefined;
   }
 
   onTimeUpdate(currentTime: number): void {

@@ -29,6 +29,26 @@
 .navigation-content {
   flex: 1;
   padding: 1rem;
+  overflow: hidden;
+}
+/* Layout wrapper: back card on the left, data view on the right */
+.content-with-back {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 12px;
+  height: 100%;
+}
+
+/* Ensure the back card fills the available height */
+.content-with-back shared-back-card {
+  height: 100%;
+}
+
+/* Rename logical Data View container: take remaining width */
+.data-view {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow-y: auto;
 }
 
