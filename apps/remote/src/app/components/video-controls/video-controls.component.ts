@@ -43,4 +43,15 @@ export class VideoControlsComponent {
   onBackToScenes() {
     this.backToScenes.emit();
   }
+
+  // Accessibility helpers for coarse volume changes
+  incrementVolume(step = 10) {
+    const next = Math.min(100, Math.max(0, this.volumeLevel + step));
+    this.volumeChange.emit(next);
+  }
+
+  decrementVolume(step = 10) {
+    const next = Math.min(100, Math.max(0, this.volumeLevel - step));
+    this.volumeChange.emit(next);
+  }
 }

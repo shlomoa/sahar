@@ -2,6 +2,18 @@
   padding: 20px;
 }
 
+/* Screen reader only label */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
 
 .current-scene-info {
   margin-bottom: 20px;
@@ -41,6 +53,37 @@
 }
 
 .control-buttons {
+  .control-btn {
+    min-width: 140px;
+    height: 64px;
+    font-size: 18px;
+    border-radius: 12px;
+  }
+
+  .control-btn--lg {
+    min-width: 160px;
+  }
+
+  .control-btn--xl {
+    min-width: 200px;
+    height: 72px;
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  .control-icon {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+    margin-right: 8px;
+  }
+
+  .control-icon--xl {
+    font-size: 36px;
+    width: 36px;
+    height: 36px;
+  }
+
   .playback-controls {
     display: flex;
     justify-content: center;
@@ -58,14 +101,16 @@
     }
     
     .play-pause-btn {
-      min-width: 120px;
-      height: 56px;
-      font-size: 16px;
+      min-width: 200px;
+      height: 80px;
+      font-size: 20px;
+      border: 3px solid #ff9800;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
       
       mat-icon {
-        font-size: 24px;
-        width: 24px;
-        height: 24px;
+        font-size: 36px;
+        width: 36px;
+        height: 36px;
       }
     }
   }
@@ -85,8 +130,14 @@
     margin-bottom: 20px;
     
     .volume-slider {
-      width: 200px;
-      height: 6px;
+      width: 260px;
+      height: 12px;
+    }
+
+    .volume-label {
+      min-width: 64px;
+      text-align: center;
+      font-size: 18px;
     }
   }
   
@@ -95,6 +146,13 @@
     justify-content: center;
     gap: 16px;
   }
+}
+
+/* High-visibility focus styles */
+button:focus-visible,
+input[type="range"]:focus-visible {
+  outline: 4px solid #ff6b35;
+  outline-offset: 4px;
 }
 
 @keyframes rotate {

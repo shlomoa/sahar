@@ -376,11 +376,25 @@ export class App implements OnInit, OnDestroy {
   }
 
   navigateToPreviousScene() {
-    throw new Error('Method not implemented.');
+    if (!this.currentVideo || !this.currentScene) return;
+    const scenes = this.currentVideo.likedScenes || [];
+    const idx = scenes.findIndex(s => s.id === this.currentScene!.id);
+    if (idx > 0) {
+      const prev = scenes[idx - 1];
+      this.navigateToScene(prev.id);
+      this.currentScene = prev;
+    }
   }
   
   navigateToNextScene() {
-    throw new Error('Method not implemented.');
+    if (!this.currentVideo || !this.currentScene) return;
+    const scenes = this.currentVideo.likedScenes || [];
+    const idx = scenes.findIndex(s => s.id === this.currentScene!.id);
+    if (idx >= 0 && idx < scenes.length - 1) {
+      const next = scenes[idx + 1];
+      this.navigateToScene(next.id);
+      this.currentScene = next;
+    }
   }
 
   // Data access methods
@@ -456,11 +470,17 @@ export class App implements OnInit, OnDestroy {
   }
 
   hasPreviousScene(): boolean {
-    throw new Error('Method not implemented.');
+    if (!this.currentVideo || !this.currentScene) return false;
+    const scenes = this.currentVideo.likedScenes || [];
+    const idx = scenes.findIndex(s => s.id === this.currentScene!.id);
+    return idx > 0;
   }
 
   hasNextScene(): boolean {
-    throw new Error('Method not implemented.');
+    if (!this.currentVideo || !this.currentScene) return false;
+    const scenes = this.currentVideo.likedScenes || [];
+    const idx = scenes.findIndex(s => s.id === this.currentScene!.id);
+    return idx >= 0 && idx < scenes.length - 1;
   }
 
   onBackClick(): void {
