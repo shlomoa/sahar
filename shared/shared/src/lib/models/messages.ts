@@ -45,11 +45,14 @@ export interface RegisterMessage {
 }
 
 // Navigation Command
-export type NavigationAction =  'navigate_to_performer' 
-                              | 'navigate_to_video'
-                              | 'navigate_to_scene'
-                              | 'navigate_back' 
-                              | 'navigate_home';
+
+export const NAVIGATION_ACTIONS =  [
+  'navigate_to_performer',
+  'navigate_to_video',
+  'navigate_to_scene',
+  'navigate_back',
+  'navigate_home'
+] as const;
 
 export interface NavigationCommandPayload extends BasePayload {
   action: NavigationAction;
@@ -64,7 +67,19 @@ export interface NavigationCommandMessage {
 }
 
 // Control Command
-export type ControlAction = 'play' | 'pause' | 'seek' | 'set_volume' | 'mute' | 'unmute'; 
+
+
+export const CONTROL_ACTIONS = [
+  'play',
+  'pause',
+  'seek',
+  'set_volume',
+  'mute',
+  'unmute'
+] as const
+
+export type ControlAction = typeof CONTROL_ACTIONS[number];
+
 export interface ControlCommandPayload extends BasePayload {
   action: ControlAction;
   youtubeId?: string;
@@ -159,19 +174,7 @@ export type SaharMessage =
 // and ControlCommandPayload.action above. Any change here requires updating those unions.
 // =================================================================================================
 
-export const NAVIGATION_ACTION_SET: ReadonlySet<NavigationAction> = new Set([
-  'navigate_to_performer',
-  'navigate_to_video',
-  'navigate_to_scene',
-  'navigate_back',
-  'navigate_home'
-]);
+export type NavigationAction = typeof NAVIGATION_ACTIONS[number];
+export const NAVIGATION_ACTION_SET: ReadonlySet<NavigationAction> = new Set(NAVIGATION_ACTIONS);
 
-export const CONTROL_ACTION_SET: ReadonlySet<ControlAction> = new Set([
-  'play',
-  'pause',
-  'seek',
-  'set_volume',
-  'mute',
-  'unmute'
-]);
+export const CONTROL_ACTION_SET: ReadonlySet<ControlAction> = new Set(CONTROL_ACTIONS);
