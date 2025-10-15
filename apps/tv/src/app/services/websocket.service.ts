@@ -186,11 +186,7 @@ export class WebSocketService extends WebSocketBaseService {
       const state = message.payload as ApplicationState;
       // Log incoming payload for diagnosis
       this.debugLog(`Received state_sync v${state?.version}`);
-      try {
-        this.debugLog('state_sync payload:', state);
-      } catch (e) { 
-        this.debugLog('debug print failed', e); 
-      }
+      // Avoid dumping full payload to reduce log noise
 
       // If server provided performers (seeded data), apply it to the navigation service.
       // Shape is flexible in Milestone 1 so check defensively.
@@ -232,8 +228,8 @@ export class WebSocketService extends WebSocketBaseService {
             // No setPlayerState available; ere)
             this.debugLog('setPlayerState not available on VideoNavigationService (skipping)');
           }
-        } catch (e) {
-          console.warn('📺 Failed to apply player state from state_sync', e);
+        } catch {
+          console.warn('📺 Failed to apply player state from state_sync');
         }
       }
 
@@ -246,11 +242,11 @@ export class WebSocketService extends WebSocketBaseService {
           this.sendByType('ack', ackPayload);
           this.debugLog(`sent ack for state_sync v${version}`);
         }
-      } catch (e) {
-        this.debugLog('Failed to send ack for state_sync', e);
+      } catch {
+        this.debugLog('Failed to send ack for state_sync');
       }
-    } catch (err) {
-      console.error(this.logMessagePrefix, 'Failed to apply state_sync:', err);
+    } catch {
+      console.error(this.logMessagePrefix, 'Failed to apply state_sync');
     }
   }
 

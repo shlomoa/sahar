@@ -2,10 +2,11 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "./tsconfig.validation.json",
   "compilerOptions": {
+
     "outDir": "dist/config",
     "rootDir": "config"
   },
   "include": [
-    "config/**/*.ts"
+    "src/config/**/*.ts"
   ]
 }

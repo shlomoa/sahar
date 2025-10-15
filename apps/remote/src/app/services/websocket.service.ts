@@ -185,11 +185,7 @@ export class WebSocketService extends WebSocketBaseService {
       const state = message.payload as ApplicationState;
       // Log incoming payload for diagnosis
       this.debugLog(`Received state_sync v${state?.version}`);
-      try {
-        this.debugLog('state_sync payload:', state);
-      } catch (e) { 
-        this.debugLog('debug print failed', e); 
-      }
+      // Intentionally omit dumping full payload to keep logs concise
 
       // Apply seeded performers if present
       const dataUnknown: unknown = (state as unknown as { data?: unknown }).data;
@@ -242,11 +238,11 @@ export class WebSocketService extends WebSocketBaseService {
           this.sendByType('ack', ackPayload);
           this.debugLog(`sent ack for state_sync v${version}`);
         }
-      } catch (e) {
-        this.debugLog('Failed to send ack for state_sync', e);
+      } catch {
+        this.debugLog('Failed to send ack for state_sync');
       }
-    } catch (err) {
-      console.error(this.logMessagePrefix, 'failed to apply state_sync', err);
+    } catch {
+      console.error(this.logMessagePrefix, 'failed to apply state_sync');
     }
       
   }

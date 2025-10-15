@@ -7,7 +7,7 @@
 import http, { IncomingMessage, ServerResponse } from 'http';
 import WebSocket from 'ws';
 import { NavigationCommandPayload, ControlCommandPayload, createLogger, WEBSOCKET_CONFIG } from 'shared';
-import { VALIDATION_CONFIG, buildLocalServerUrl } from '../config/validation-config.js';
+import { VALIDATION_CONFIG, buildLocalServerUrl } from '../config/validation-config';
 
 interface StubState {
   connected: boolean;

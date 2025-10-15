@@ -245,7 +245,7 @@ export class App implements OnInit, OnDestroy {
         if (foundScene && foundVideo) {
           this.currentVideo = foundVideo;
           this.currentScene = foundScene;
-          this.isPlaying = !!player.isPlaying;
+          this.isPlaying = (player && player.isPlaying) || false;
           console.log('📺 Starting video playback from player$:', {
             video: this.currentVideo?.title,
             scene: this.currentScene.title,

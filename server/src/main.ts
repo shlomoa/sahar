@@ -40,7 +40,7 @@ const logError = (event: string, meta?: any, msg?: string) => logger.error(event
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 // dev dir name: "<repo_root>/server/src"
-logInfo('startup', { dir: __dirname }, 'Server starting up');
+logInfo('server_starting', { dir: __dirname }, 'Server starting up');
 
 // Create Express application
 const app = express();
@@ -717,21 +717,21 @@ app.use(express.json());
 
 // Health endpoints must be registered early so they are not captured by Angular catch-all routes
 // Liveness endpoint (process up)
-app.get('/live', (_req: Request, res: Response) => {
-  logInfo('request: /live');
+app.get('/live', (req: Request, res: Response) => {
+  logInfo('http_request', { path: req.path, method: req.method });
   res.status(200).json({ status: 'live' });
 });
 
 // Readiness endpoint (infrastructure ready to accept clients)
-app.get('/ready', (_req: Request, res: Response) => {
-  logInfo('request: /ready');
+app.get('/ready', (req: Request, res: Response) => {
+  logInfo('http_request', { path: req.path, method: req.method });
   if (isReady) return res.status(200).json({ status: 'ready' });
   return res.status(503).json({ status: 'not_ready' });
 });
 
 // Enriched health snapshot (debug / monitoring)
-app.get('/health', (_req: Request, res: Response) => {
-  logInfo('request: /health');
+app.get('/health', (req: Request, res: Response) => {
+  logInfo('http_request', { path: req.path, method: req.method });
   const wsConnections = [...wss.clients].length;
   const registered = [...clients.values()].map(c => ({ clientType: c.clientType, deviceId: c.deviceId, lastHeartbeat: c.lastHeartbeat ?? null }));
   res.json({
@@ -751,8 +751,8 @@ app.get('/health', (_req: Request, res: Response) => {
 });
 
 // Host IP endpoint for clients needing a resolvable LAN address (e.g., QR generation)
-app.get('/host-ip', (_req: Request, res: Response) => {
-  logInfo('request: /host-ip');
+app.get('/host-ip', (req: Request, res: Response) => {
+  logInfo('http_request', { path: req.path, method: req.method });
   const ip = getBestHostIP();
   res.json({ ip, port: WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT });
 });
@@ -808,7 +808,7 @@ app.use('/', express.static(path.join(tvAppPath, 'browser'), { fallthrough: true
 // Task 1.6: Dev reverse proxies for SSR HTML (when DEV_SSR=1) else fall back to built assets
 // TV base route: '/' (root) and '/tv'
 app.get(['/','/tv'], (req: Request, res: Response, next: NextFunction) => {
-  logInfo('request: / or /tv');
+  logInfo('http_request', { path: req.path, method: req.method, route: 'root_or_tv' });
   if (DEV_SSR) return devProxy(`http://${getBestHostIP()}:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}`)(req, res, next);
   // Fallback to built index.html (prod-like)
   res.sendFile(tvIndexPath);
@@ -816,14 +816,14 @@ app.get(['/','/tv'], (req: Request, res: Response, next: NextFunction) => {
 
 // Remote base route '/remote'
 app.get('/remote', (req: Request, res: Response, next: NextFunction) => {
-  logInfo('request: /remote');
+  logInfo('http_request', { path: req.path, method: req.method });
   if (DEV_SSR) return devProxy(`http://${getBestHostIP()}:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}`)(req, res, next);
   res.sendFile(remoteIndexPath);
 });
 
 // Catch-all deep links for Angular routing (non-asset) for TV
 app.get(['/tv/*splat','/*splat'], (req: Request, res: Response, next: NextFunction) => {
-  logInfo('request: /tv/* or /*');
+  logInfo('http_request', { path: req.path, method: req.method, route: 'tv_or_root_catchall' });
   // Ignore if request looks like a file (has an extension) to avoid hijacking static/health
   if (/\.[a-zA-Z0-9]+$/.test(req.path)) return next();
   if (DEV_SSR) return devProxy(`http://${getBestHostIP()}:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}`)(req, res, next);
@@ -832,7 +832,7 @@ app.get(['/tv/*splat','/*splat'], (req: Request, res: Response, next: NextFuncti
 
 // Catch-all deep links for Remote
 app.get('/remote/*splat', (req: Request, res: Response, next: NextFunction) => {
-  logInfo('request: /remote/*');
+  logInfo('http_request', { path: req.path, method: req.method, route: 'remote_catchall' });
   if (/\.[a-zA-Z0-9]+$/.test(req.path)) return next();
   if (DEV_SSR) return devProxy(`http://${getBestHostIP()}:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}`)(req, res, next);
   res.sendFile(remoteIndexPath);
@@ -888,7 +888,7 @@ server.listen(WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT, () => {
     app.post('/seed', (req: Request, res: Response) => {
       const body = req.body;
       try {
-        logInfo('post: /seed');
+        logInfo('http_request', { path: req.path, method: req.method });
         fsm.seedData(body);
         // reply then broadcast
         res.status(200).json({ ok: true });

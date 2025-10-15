@@ -6,6 +6,7 @@
     "rootDir": "src/stubs"
   },
   "include": [
-    "src/stubs/**/*.ts"
+    "src/stubs/**/*.ts",
+    "src/config/**/*.ts"
   ]
 }
