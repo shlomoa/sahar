@@ -10,7 +10,6 @@ import { ApplicationState } from '../models/application-state';
 export class VideoNavigationService {
   private navigationState: NavigationState = {
     currentLevel: [],
-    breadcrumb: [],
     canGoBack: false
   };
 
@@ -69,7 +68,6 @@ export class VideoNavigationService {
           itemType: 'category'
         }
       ],
-      breadcrumb: ['Waiting for Remote...'],
       canGoBack: false,
       currentPerformer: undefined,
       currentVideo: undefined
@@ -93,7 +91,6 @@ export class VideoNavigationService {
         thumbnail: performer.thumbnail,
         itemType: 'performer' as const
       })),
-      breadcrumb: ['Home'],
       canGoBack: false,
       currentPerformer: undefined,
       currentVideo: undefined
@@ -117,7 +114,6 @@ export class VideoNavigationService {
         itemType: 'video' as const,
         url: video.url
       })),
-      breadcrumb: ['Home', performer.name],
       canGoBack: true,
       currentPerformer: performer,
       currentVideo: undefined
@@ -149,7 +145,6 @@ export class VideoNavigationService {
         startTime: scene.startTime,
         endTime: scene.endTime
       })),
-      breadcrumb: ['Home', currentPerformer.name, video.title],
       canGoBack: true,
       currentPerformer: currentPerformer,
       currentVideo: video
@@ -163,11 +158,11 @@ export class VideoNavigationService {
       console.info('📱 Remote 📺 TV navigation: Cannot go back from current state');
       return;
     }
-    console.log('📱 Remote 📺 TV navigation: Going back from breadcrumb:', this.navigationState.breadcrumb);
-    if (this.navigationState.breadcrumb.length === 3) {
+    console.log('📱 Remote 📺 TV navigation: Going back');
+    if (this.navigationState.currentVideo) {
       // From scenes back to videos
       this.navigateToPerformer(this.navigationState.currentPerformer!.id);
-    } else if (this.navigationState.breadcrumb.length === 2) {
+    } else if (this.navigationState.currentPerformer) {
       // From videos back to performers
       this.goHome();
     }
@@ -200,8 +195,6 @@ export class VideoNavigationService {
     // Update navigation state to indicate we're playing a scene (explicit playback marker)
     this.navigationState = {
       ...this.navigationState,
-      // Keep breadcrumb semantic (no emoji markers). The player observable carries playingSceneId.
-      breadcrumb: [...this.navigationState.breadcrumb],
       canGoBack: true
     };
     this.navigationSubject.next(this.navigationState);

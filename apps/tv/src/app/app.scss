@@ -13,18 +13,7 @@
   height: 10vh;
   min-height: 64px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  
-  .breadcrumb {
-    flex: 1;
-    margin-left: 16px;
-    font-size: 16px;
-    
-    span.active {
-      font-weight: 600;
-      color: white;
-    }
-  }
-  
+
   .spacer {
     flex: 1 1 auto;
   }
@@ -217,10 +206,6 @@
     .mat-grid-list {
       --mat-grid-list-columns: 2;
     }
-  }
-  
-  .tv-nav-bar .breadcrumb {
-    font-size: 14px;
   }
   
   .content-card mat-card-content h3 {

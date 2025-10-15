@@ -96,7 +96,7 @@ test('Fsm: seedData merges and only bumps on real change', () => {
 });
 
 // Navigation: performer→video→back preserves video context (scene cleared). Duplicate commands are suppressed.
-test('Fsm: navigationCommand updates levels and breadcrumb with no-op suppression', () => {
+test('Fsm: navigationCommand updates levels with no-op suppression', () => {
     const fsm = new Fsm();
     const s0 = fsm.getSnapshot();
 

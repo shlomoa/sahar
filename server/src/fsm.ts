@@ -25,8 +25,7 @@ export class Fsm {
       connectedClients: {},
       // data field intentionally omitted until seeded (Task 1.17)
       navigation: {
-        currentLevel: 'performers',
-        breadcrumb: []
+        currentLevel: 'performers'
       },
       player: {
         isPlaying: false,
@@ -98,22 +97,19 @@ export class Fsm {
     const nav = this.state.navigation;
     switch (action) {
       case 'navigate_home': {
-        if (nav.currentLevel !== 'performers' || nav.breadcrumb.length) {
-          this.state.navigation = { currentLevel: 'performers', breadcrumb: [] };
+        if (nav.currentLevel !== 'performers' || nav.performerId || nav.videoId || nav.sceneId) {
+          this.state.navigation = { currentLevel: 'performers' } as ApplicationState['navigation'];
         }
         break;
       }
       case 'navigate_back': {
-        if (nav.breadcrumb.length) {
-          nav.breadcrumb.pop();
-          if (nav.currentLevel === 'scenes') {
-            nav.currentLevel = 'videos';
-            delete nav.sceneId;
-          } else if (nav.currentLevel === 'videos') {
-            nav.currentLevel = 'performers';
-            delete nav.videoId;
-            delete nav.performerId; // returning all the way up clears performer context
-          }
+        if (nav.currentLevel === 'scenes') {
+          nav.currentLevel = 'videos';
+          delete nav.sceneId;
+        } else if (nav.currentLevel === 'videos') {
+          nav.currentLevel = 'performers';
+          delete nav.videoId;
+          delete nav.performerId; // returning all the way up clears performer context
         }
         break;
       }
@@ -121,7 +117,6 @@ export class Fsm {
         if (targetId && nav.performerId !== targetId) {
           nav.currentLevel = 'videos';
           nav.performerId = targetId;
-          nav.breadcrumb.push(`performer:${targetId}`);
           // Clear deeper selections
           delete nav.videoId;
           delete nav.sceneId;
@@ -132,7 +127,6 @@ export class Fsm {
         if (targetId && nav.videoId !== targetId) {
           nav.currentLevel = 'scenes';
             nav.videoId = targetId;
-            nav.breadcrumb.push(`video:${targetId}`);
             delete nav.sceneId;
         }
         break;
@@ -140,7 +134,6 @@ export class Fsm {
       case 'navigate_to_scene': {
         if (targetId && nav.sceneId !== targetId) {
           nav.sceneId = targetId;
-          nav.breadcrumb.push(`scene:${targetId}`);
         }
         break;
       }

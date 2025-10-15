@@ -229,7 +229,7 @@ export class WebSocketService extends WebSocketBaseService {
           if (typeof navWithPlayer.setPlayerState === 'function') {
             navWithPlayer.setPlayerState(state.player as PlayerState);
           } else {
-            // No setPlayerState available; we keep breadcrumb-only behavior (no change here)
+            // No setPlayerState available; ere)
             this.debugLog('setPlayerState not available on VideoNavigationService (skipping)');
           }
         } catch (e) {

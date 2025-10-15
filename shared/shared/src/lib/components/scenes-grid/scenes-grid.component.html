@@ -1,11 +1,4 @@
 <div class="scenes-section">
-  <div class="breadcrumb">
-    <button mat-button (click)="onBackToVideos()">
-      <mat-icon>arrow_back</mat-icon>
-      Back to Videos
-    </button>
-  </div>
-  
   <div class="scenes-grid">
     <mat-card 
       *ngFor="let scene of scenes; trackBy: trackBySceneId"

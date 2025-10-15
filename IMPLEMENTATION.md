@@ -94,7 +94,6 @@ export interface ApplicationState {
         performerId?: string;
         videoId?: string;
         sceneId?: string;
-        breadcrumb: string[];
     };
     player: {
         isPlaying: boolean;
@@ -103,7 +102,7 @@ export interface ApplicationState {
         volume: number;
         muted: boolean;
         youtubeId?: string;
-        // Optional explicit marker for which scene is currently playing (avoid embedding emojis in breadcrumb)
+        // Optional explicit marker for which scene is currently playing
         playingSceneId?: string;
     };
     // Optional cache of content; server may echo subset for convenience

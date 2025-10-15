@@ -23,7 +23,6 @@ export class SharedVideosGridComponent {
   @Input() videos: Video[] = [];
   @Input() selectedVideoId?: string;
   @Input() clientType: ClientType = 'remote';
-  @Input() showBreadcrumb = true;
   
   @Output() videoSelected = new EventEmitter<string>();
   @Output() backToPerformers = new EventEmitter<void>();

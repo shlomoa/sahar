@@ -21,7 +21,6 @@ export class SharedScenesGridComponent {
   @Input() scenes: LikedScene[] = [];
   @Input() selectedSceneId?: string;
   @Input() clientType: 'remote' | 'tv' = 'remote';
-  @Input() showBreadcrumb = true;
   
   @Output() sceneSelected = new EventEmitter<string>();
   @Output() backToVideos = new EventEmitter<void>();

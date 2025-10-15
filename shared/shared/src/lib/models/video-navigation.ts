@@ -41,7 +41,6 @@ export interface VideoItem {
 
 export interface NavigationState {
   currentLevel: VideoItem[];
-  breadcrumb: string[];
   canGoBack: boolean;
   currentPerformer?: Performer;
   currentVideo?: Video;

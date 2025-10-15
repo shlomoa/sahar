@@ -132,7 +132,7 @@ export class App implements OnInit, OnDestroy {
   // Current navigation level helpers for templates
   get currentPerformers(): Performer[] {
     const nav = this.navigationService.getCurrentState();
-    if (nav.breadcrumb.length === 1) { // Home level
+    if (!nav.currentPerformer && !nav.currentVideo) { // Home level
       // Get the actual performers data with full video information
       return this.navigationService.getPerformersData();
     }
@@ -141,7 +141,7 @@ export class App implements OnInit, OnDestroy {
 
   get currentPerformer(): Performer | undefined {
     const nav = this.navigationService.getCurrentState();
-    if (nav.breadcrumb.length >= 2 && nav.currentPerformer) { // Videos or deeper level
+    if (nav.currentPerformer) { // Videos or deeper level
       return nav.currentPerformer;
     }
     return undefined;
@@ -149,7 +149,7 @@ export class App implements OnInit, OnDestroy {
 
   get currentVideos(): Video[] {
     const nav = this.navigationService.getCurrentState();
-    if (nav.breadcrumb.length === 2 && nav.currentPerformer) { // Videos level
+    if (nav.currentPerformer && !nav.currentVideo) { // Videos level
       return nav.currentPerformer.videos;
     }
     return [];
@@ -157,7 +157,7 @@ export class App implements OnInit, OnDestroy {
 
   get currentScenes(): LikedScene[] {
     const nav = this.navigationService.getCurrentState();
-    if (nav.breadcrumb.length === 3 && nav.currentVideo) { // Scenes level
+    if (nav.currentVideo) { // Scenes level
       return nav.currentVideo.likedScenes;
     }
     return [];
@@ -166,9 +166,9 @@ export class App implements OnInit, OnDestroy {
   get currentLevel(): NavigationLevel {
     const nav = this.navigationService.getCurrentState();
     if (this.currentVideo && this.currentScene) return 'playing';
-    if (nav.breadcrumb.length === 1) return 'performers';
-    if (nav.breadcrumb.length === 2) return 'videos';
-    if (nav.breadcrumb.length === 3) return 'scenes';
+    if (!nav.currentPerformer && !nav.currentVideo) return 'performers';
+    if (nav.currentPerformer && !nav.currentVideo) return 'videos';
+    if (nav.currentVideo) return 'scenes';
     return 'performers';
   }
 
@@ -180,7 +180,7 @@ export class App implements OnInit, OnDestroy {
     this.navigation$ = this.navigationService.navigation$;
   }
   
-  // Whether going back is possible (breadcrumb length > 1)
+  // Whether going back is possible
   get canGoBack(): boolean {
     const nav = this.navigationService.getCurrentState();
     return nav?.canGoBack;
@@ -209,9 +209,7 @@ export class App implements OnInit, OnDestroy {
 
     // Subscribe to explicit player state when available. If the shared package
     // hasn't been rebuilt for the consuming app, use a runtime guard so this
-    // code doesn't crash. Falling back to breadcrumb parsing is no longer the
-    // default, but the navigation state still contains breadcrumbs for older
-    // remotes.
+    // code doesn't crash. 
     interface PlayerState { playingSceneId?: string; isPlaying?: boolean }
 
     // If the navigation service exposes player$ we should listen for explicit playingSceneId
