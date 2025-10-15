@@ -1,0 +1,44 @@
+<div class="navigation-root">
+  <shared-back-card
+    [enabled]="!disabledBack"
+    [widthPercent]="15"
+    (back)="back.emit()">
+  </shared-back-card>
+
+  <div class="content-area">
+    <mat-toolbar color="primary" class="nav-toolbar">
+      <button mat-icon-button [disabled]="disabledHome" (click)="home.emit()" aria-label="Home">
+        <mat-icon>home</mat-icon>
+      </button>
+      <span class="spacer"></span>
+    </mat-toolbar>
+
+    <div class="data-view">
+      @switch (level) {
+        @case ('performers') {
+          <shared-performers-grid
+            [performers]="performers"
+            [selectedPerformerId]="selectedPerformerId"
+            [clientType]="clientType"
+            (performerSelected)="selectPerformer.emit($event)">
+          </shared-performers-grid>
+        }
+        @case ('videos') {
+          <shared-videos-grid
+            [videos]="videos"
+            [selectedVideoId]="selectedVideoId"
+            [clientType]="clientType"
+            (videoSelected)="selectVideo.emit($event)">
+          </shared-videos-grid>
+        }
+        @case ('scenes') {
+          <shared-scenes-grid
+            [scenes]="scenes"
+            [clientType]="clientType"
+            (sceneSelected)="selectScene.emit($event)">
+          </shared-scenes-grid>
+        }
+      }
+    </div>
+  </div>
+</div>

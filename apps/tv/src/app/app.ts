@@ -2,8 +2,6 @@ import { Component, OnInit, OnDestroy, ViewChild, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatGridListModule } from '@angular/material/grid-list';
-import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
@@ -17,12 +15,8 @@ import { VideoNavigationService,
          ConnectionState,
          WEBSOCKET_CONFIG,
          NavigationLevel,
-         SharedPerformersGridComponent,
-         SharedVideosGridComponent,
-         SharedScenesGridComponent,
-         SharedBackCardComponent,         
+         SharedNavigationRootComponent,
          NavigationState,
-         VideoItem,
          Video,
          LikedScene,
          Performer } from 'shared';
@@ -36,17 +30,12 @@ import { VideoPlayerComponent } from './components/video-player/video-player.com
     RouterOutlet,
     CommonModule,
     MatToolbarModule,
-    MatGridListModule,
-    MatCardModule,
     MatButtonModule,
     MatIconModule,
     MatSnackBarModule,
     QRCodeComponent,
     VideoPlayerComponent,
-    SharedPerformersGridComponent,
-    SharedVideosGridComponent,
-    SharedScenesGridComponent,
-    SharedBackCardComponent
+    SharedNavigationRootComponent
   ],
   templateUrl: './app.html',
   styleUrls: ['./app.scss'],
@@ -384,46 +373,7 @@ export class App implements OnInit, OnDestroy {
     this.navigationService.playScene(sceneId);
   }
 
-  onBackToPerformers(): void {
-    console.log('📺 TV: Back to performers');
-    this.navigationService.goHome();
-  }
-
-  onBackToVideos(): void {
-    console.log('📺 TV: Back to videos');
-    this.navigationService.goBack();
-  }
-
-  onItemClick(item: VideoItem): void {
-    console.log('Clicked item:', item); // Debug log
-    let nav: NavigationState;
-    switch (item.itemType) {
-      case 'performer':
-        this.navigationService.navigateToPerformer(item.id);
-        break;
-      case 'video':
-        this.navigationService.navigateToVideo(item.id);
-        break;
-      case 'segment':
-        // When a scene is clicked, find the current video and scene data
-        nav = this.navigationService.getCurrentState();
-        if (nav.currentVideo) {
-          this.currentVideo = nav.currentVideo;
-          // Find the specific scene in the current video
-          const scene = nav.currentVideo.likedScenes.find(s => s.id === item.id);
-          if (scene) {
-            this.currentScene = scene;
-            console.log('Starting video playback:', {
-              video: this.currentVideo.title,
-              scene: this.currentScene.title,
-              url: this.currentVideo.url
-            });
-          }
-        }
-        this.navigationService.playScene(item.id);
-        break;
-    }
-  }
+  
 
   // Video Player Event Handlers
   onPlayerReady(): void {
@@ -450,11 +400,7 @@ export class App implements OnInit, OnDestroy {
     console.log('Video time update:', currentTime);
   }
 
-  onImageError(event: Event): void {
-    console.log('Image failed to load:', (event.target as HTMLImageElement).src);
-    const img = event.target as HTMLImageElement;
-    img.src = 'https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg?auto=compress&cs=tinysrgb&w=300';
-  }
+  
 
   onBackClick(): void {
     this.navigationService.goBack();

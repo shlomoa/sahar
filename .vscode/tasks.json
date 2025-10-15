@@ -2,55 +2,6 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "Validation: Full System Check",
-			"type": "shell",
-			"command": ".\\sahar-validation.ps1",
-			"args": [
-				"full"
-			],
-			"group": "test",
-			"isBackground": false,
-			"problemMatcher": [],
-			"presentation": {
-				"echo": true,
-				"reveal": "always",
-				"panel": "new"
-			}
-		},
-		{
-			"label": "Validation: Environment Check",
-			"type": "shell",
-			"command": ".\\sahar-validation.ps1",
-			"args": [
-				"check"
-			],
-			"group": "test",
-			"isBackground": false,
-			"problemMatcher": []
-		},
-		{
-			"label": "Validation: Start Applications",
-			"type": "shell",
-			"command": ".\\sahar-validation.ps1",
-			"args": [
-				"start"
-			],
-			"group": "test",
-			"isBackground": false,
-			"problemMatcher": []
-		},
-		{
-			"label": "Validation: Integration Tests",
-			"type": "shell",
-			"command": ".\\sahar-validation.ps1",
-			"args": [
-				"test"
-			],
-			"group": "test",
-			"isBackground": false,
-			"problemMatcher": []
-		},
-		{
 			"label": "Start TV App",
 			"type": "shell",
 			"command": "ng",

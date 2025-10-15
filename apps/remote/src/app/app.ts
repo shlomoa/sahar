@@ -6,10 +6,7 @@ import { MatIconModule } from "@angular/material/icon";
 import { RouterOutlet } from '@angular/router';
 import { Observable, Subscription } from 'rxjs';
 import { VideoNavigationService,
-         SharedPerformersGridComponent,
-         SharedScenesGridComponent,
-         SharedVideosGridComponent,
-         SharedBackCardComponent,
+         SharedNavigationRootComponent,
          ClientType,
          NetworkDevice,
          ConnectionState,
@@ -33,10 +30,7 @@ import { WebSocketService } from './services/websocket.service';
     MatButtonModule,
     MatIconModule,
     VideoControlsComponent,
-    SharedPerformersGridComponent,
-    SharedScenesGridComponent,
-    SharedVideosGridComponent,    
-    SharedBackCardComponent    
+    SharedNavigationRootComponent   
 ],
   templateUrl: './app.html',
   styleUrls: ['./app.scss'],
@@ -470,10 +464,14 @@ export class App implements OnInit, OnDestroy {
   }
 
   onBackClick(): void {
+    // Emit canonical navigation back to server and update local UI
+    this.webSocketService.sendNavigationCommand('navigate_back');
     this.navigationService.goBack();
   }
 
   onHomeClick(): void {
+    // Emit canonical navigation home to server and update local UI
+    this.webSocketService.sendNavigationCommand('navigate_home');
     this.navigationService.goHome();
   }
 

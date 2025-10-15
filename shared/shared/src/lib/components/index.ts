@@ -4,3 +4,4 @@ export * from './videos-grid/videos-grid.component';
 export * from './scenes-grid/scenes-grid.component';
 export * from './device-connection/device-connection.component';
 export * from './back-card/back-card.component';
+export * from './navigation/navigation-root.component';
