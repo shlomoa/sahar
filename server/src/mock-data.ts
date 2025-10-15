@@ -17,31 +17,24 @@ export const performersData: Performer[] = [
         likedScenes: [
           {
             id: 'scene-1',
-            title: 'Opening & Intro',
-            startTime: 0,
-            endTime: 45,
+            title: 'בילבולים',
+            startTime: 112,
+            endTime: 145,
             description: 'Introduction and welcome'
           },
           {
             id: 'scene-2',
-            title: 'Main Song Part',
-            startTime: 45,
-            endTime: 120,
-            description: 'The main birthday song'
+            title: 'דודי-דו',
+            startTime: 1533,
+            endTime: 1613,
+            description: 'שיר עם דודי-דו'
           },
           {
             id: 'scene-3',
-            title: 'Dance Break',
-            startTime: 120,
-            endTime: 180,
-            description: 'Interactive dance section'
-          },
-          {
-            id: 'scene-4',
-            title: 'Finale & Credits',
-            startTime: 180,
-            endTime: 240,
-            description: 'Closing and credits'
+            title: 'אני יהודי',
+            startTime: 2338,
+            endTime: 2350,
+            description: 'אני יהודי'
           }
         ]
       },
@@ -54,31 +47,24 @@ export const performersData: Performer[] = [
         likedScenes: [
           {
             id: 'scene-5',
-            title: 'Farm Animals',
+            title: 'פתיחה',
             startTime: 0,
             endTime: 75,
-            description: 'Cow, pig, chicken sounds'
+            description: 'גיבור שאוהב לעזור'
           },
           {
             id: 'scene-6',
-            title: 'Wild Animals',
-            startTime: 75,
-            endTime: 150,
-            description: 'Lion, elephant, monkey sounds'
-          },
+            title: 'אמא של יובלי',
+            startTime: 285,
+            endTime: 385,
+            description: 'אמא אמריקאית'
+          },          
           {
             id: 'scene-7',
-            title: 'Ocean Animals',
-            startTime: 150,
-            endTime: 225,
-            description: 'Dolphin, whale, seal sounds'
-          },
-          {
-            id: 'scene-8',
-            title: 'Animal Quiz',
-            startTime: 225,
-            endTime: 300,
-            description: 'Interactive animal sound quiz'
+            title: 'שטויות',
+            startTime: 1228,
+            endTime: 1258,
+            description: ''
           }
         ]
       }

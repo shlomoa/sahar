@@ -22,7 +22,7 @@
       <div class="navigation-content">
         <div class="content-with-back">
           <div class="data-view">
-            @if (currentLevel !== 'scene-selected') {
+            @if (currentLevel !== 'playing') {
               <shared-navigation-root
                 [level]="currentLevel"
                 [performers]="currentPerformers"
@@ -37,7 +37,7 @@
                 (selectScene)="navigateToScene($event)">
               </shared-navigation-root>
             }
-            @if (currentLevel === 'scene-selected') {
+            @if (currentLevel === 'playing') {
               <video-controls
                 [currentVideo]="getCurrentVideo()"
                 [currentScene]="getCurrentScene()"

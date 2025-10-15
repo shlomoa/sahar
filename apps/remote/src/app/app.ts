@@ -451,7 +451,7 @@ export class App implements OnInit, OnDestroy {
 
   // Enhanced controls visibility
   showEnhancedControls(): boolean {
-    return (this.currentLevel === 'scene-selected') && 
+    return (this.currentLevel === 'playing') && 
            (this.connectionStatus === 'connected');
   }
 
