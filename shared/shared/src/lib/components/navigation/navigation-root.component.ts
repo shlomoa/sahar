@@ -16,7 +16,7 @@ import { ClientType } from '../../models';
   standalone: true,
   imports: [
     CommonModule,
-    MatToolbarModule,
+    
     MatIconModule,
     MatButtonModule,
     SharedBackCardComponent,

@@ -13,7 +13,7 @@
 - Robust recovery from disconnections
 - Real-time synchronization between TV and Remote - Navigation state and video playback synchronized via server with WebSocket
 - **Single Source of Truth** - everything is done in one place and then referenced: coding, documentation, etc
-- Remote app owns all content data
+- Server owns all content data
 - **TV as Display**: TV app receives and displays data from Remote
 - **Direct Connection**: No external servers or dependencies
 - **Real-time Sync**: 
@@ -45,7 +45,7 @@ Note: 4202/4203 are development SSR ports. In production, a single server port s
   - Handles client connections and recovers from disconnections
   - Ensures all communications strictly adhere to the FSM and protocol
   - Relays messages and synchronizes state between clients
-  - Own and manage all performers/videos/scenes data 🔧 *Refactoring Needed*
+  - Own and manage all performers/videos/scenes data
 - **Key technologies:** Node.js, TypeScript, Express, ws, state management
 
 Additional serving responsibilities (clarification):
@@ -91,17 +91,14 @@ Additional serving responsibilities (clarification):
 -   **Technology**: Angular 20+ with Material Design
 
 **Responsibilities**:
--   Own and manage all performers/videos/scenes data 🔧 *Refactoring Needed*
 -   Connect to the WebSocket Gateway on the Unified Server 🔧 *Refactoring Needed*
 -   Establish and maintain WebSocket connection to the Unified Server 🔧 *Refactoring Needed*
--   Send complete data sets to the server upon connection 🔧 *Refactoring Needed*
 -   Provide touch-optimized navigation interface 🔧 *Refactoring Needed*
 -   Dispatch navigation and control commands to the server 🔧 *Refactoring Needed*
 -   Show enhanced video controls during scene playback 🔧 *Refactoring Needed*
 -   Calculate and display YouTube thumbnails dynamically 🔧 *Refactoring Needed*
 
 **Key Features**:
--   Single source of truth for all content data 🔧 *Refactoring Needed*
 -   QR code onboarding: scan the TV-displayed QR to open the Remote URL 🔧 *Refactoring Needed*
 -   Material Design optimized for tablet/touch interfaces 🔧 *Refactoring Needed*
 -   Enhanced video controls with scene-level interaction 🔧 *Refactoring Needed*
