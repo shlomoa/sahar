@@ -16,7 +16,7 @@ This document outlines the implementation details for the SAHAR TV Remote system
 - **Frontend:** Angular 20+ with Standalone Components
 - **UI Framework:** Angular Material 20.1.3
 - **Implementation Directive: Standalone Material Components**: All Angular Material components **must** be imported as standalone components directly into the components that use them. Do not use `NgModule` for Material components. This approach improves tree-shaking and aligns with modern Angular practices.
-- **Communication:** Native WebSocket API
+- **Communication:** Native WebSocket API (Unified server `/ws`; clients send only allowed commands and MUST ack each `state_sync` with the received version)
 - **Video:** YouTube Player API (@angular/youtube-player)
 - **Reactive Programming:** RxJS
 - **Styling:** SCSS
@@ -171,7 +171,7 @@ The Unified Server exposes three HTTP endpoints with JSON payloads for preflight
 }
 ```
 
-**Note:** Health status model is not currently implemented in code. Future work may add this.
+**Note:** Health status model is not currently implemented in code. Future work may add this. Until then, align expectations to the minimal shape actually returned by the server.
 
 ---
 
@@ -372,7 +372,7 @@ Option: configurable auto-exit on critical vs continue (env: `EXIT_ON_CRITICAL=t
 ## Video Integration
 
 The video data structure is designed to support the playback and control of video content within the SAHAR system. It includes metadata for each video, such as its ID, title, YouTube ID, and scenes for scene-based seeking.
-The video data is typically seeded by the Remote application when it connects to the Unified Server, which then broadcasts the state to the TV application. The TV application uses this data to render the video player and manage playback.
+The server is authoritative for state. Data is seeded via the server’s HTTP endpoint `POST /seed`, and the server broadcasts the resulting snapshot via `state_sync`. Clients (TV/Remote) render purely from `state_sync`; they do not push unsolicited state.
 
 ### Video Data Structure
 ```typescript

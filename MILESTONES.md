@@ -48,7 +48,7 @@ Early Completed (Out-of-scope SSR prep – not required for Milestone 1 DoD)
 
  Validation/Process
 - [x] [Task 1.14 — Validation hooks (document flows in `VALIDATION.md`)](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-13)`
-- [x] [Task 4.2 — Validation quick-run workflow](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(2025-08-14)`
+- [x] [Task 4.2 — Validation quick-run workflow](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(2025-08-14)` — Note: quick-run is available but currently experimental due to module format variability; use manual/VS Code task flows as the reliable path.
 - [x] [Task 4.4 — Update/create integration tests in `/validation`](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(2025-08-18)` — Path B (doc-only: canonical quick-run)
 - [x] [Task 4.5 — Documentation sync](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(2025-08-14)`
 - [x] [Task 4.6 — Implement TV Stub](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation) `(2025-08-11)`
@@ -134,33 +134,38 @@ Goal 2: Cleanup dead code, AKA "legacy"
 Goal 3: Establish a working solution an create a process to lead to "always alive"
 
 Planned Tasks
-- [ ] Task 1.5.1 — Review architecture, User stories, UI/UX in ARCHITECTURE.md and VALIDATION.md `(YYYY-MM-DD)`
-- [ ] Task 1.5.1.1 — Move development principles and practices into README.md `(YYYY-MM-DD)`
-- [ ] Task 1.5.1.3 — Move validation principles into VALIDATION.md `(YYYY-MM-DD)`
-- [ ] Task 1.5.1.2 — Seperate ARCHITECTURE.md into comprehensive sections `(YYYY-MM-DD)`
-- [ ] Task 1.5.2 — Establish a working development process and document in README.md `(YYYY-MM-DD)`
-- [ ] Task 1.5.2.1 — Move task management from IMPLEMENTATION.md VALIDATION.md and MILESTONE.md into GitHub `(YYYY-MM-DD)`
-- [ ] Task 1.5.2.2 — Implementation details will be inlined in each package/app `(YYYY-MM-DD)`
-- [ ] Task 1.5.3 — Establish a clean solution `(YYYY-MM-DD)`
-- [ ] Task 1.5.3.1 — Create a branch in GitHub from the main branch `(YYYY-MM-DD)`
-- [ ] Task 1.5.3.2 — Move all code to backup `(YYYY-MM-DD)`
-- [ ] Task 1.5.3.3 — Define production and development environment - document in README.md `(YYYY-MM-DD)`
-- [ ] Task 1.5.4 — Establish a working highlevel validation environment `(YYYY-MM-DD)`
-- [ ] Task 1.5.4.1 — Create a skeleton validation environment: shared, tv and remote stubs apps and server `(YYYY-MM-DD)`
-- [ ] Task 1.5.5 — Review and refactor the shared folder to reflect architecture `(YYYY-MM-DD)`
-- [ ] Task 1.5.5.1 — Review and refactor the shared folder to reflect architecture `(YYYY-MM-DD)`
-- [ ] Task 1.5.6 — Establish a working highlevel production environment `(YYYY-MM-DD)`
-- [ ] Task 1.5.6.1 — Create a skeleton production environment - shared, tv and remote apps and server `(YYYY-MM-DD)`
-- [ ] Task 1.5.7 — Move relevant validation functionals from backup to validation environment `(YYYY-MM-DD)`
-- [ ] Task 1.5.8 — Move relevant production functional from backup to thier proper place `(YYYY-MM-DD)`
+- [x] Task 1.5.1 — Review architecture, User stories, UI/UX in ARCHITECTURE.md and VALIDATION.md `(2025-10-15)`
+- [x] Task 1.5.1.1 — Move development principles and practices into README.md `(2025-10-15)`
+- [x] Task 1.5.1.3 — Move validation principles into VALIDATION.md `(2025-10-15)`
+- [x] Task 1.5.1.2 — Seperate ARCHITECTURE.md into comprehensive sections `(2025-10-15)`
+- [x] Task 1.5.2 — Establish a working development process and document in README.md `(2025-10-15)`
+- [x] Task 1.5.2.1 — Move task management from IMPLEMENTATION.md VALIDATION.md and MILESTONE.md into GitHub `(2025-10-15)`
+- [x] Task 1.5.2.2 — Implementation details will be inlined in each package/app `(2025-10-15)`
+- [x] Task 1.5.3 — Establish a clean solution `(2025-10-15)`
+- [x] Task 1.5.3.1 — Create a branch in GitHub from the main branch `(2025-10-15)`
+- [x] Task 1.5.3.2 — Move all code to backup `(2025-10-15)`
+- [x] Task 1.5.3.3 — Define production and development environment - document in README.md `(2025-10-15)`
+- [x] Task 1.5.4 — Establish a working highlevel validation environment `(2025-10-15)`
+- [x] Task 1.5.4.1 — Create a skeleton validation environment: shared, tv and remote stubs apps and server `(2025-10-15)`
+- [x] Task 1.5.5 — Review and refactor the shared folder to reflect architecture `(2025-10-15)`
+- [x] Task 1.5.5.1 — Review and refactor the shared folder to reflect architecture `(2025-10-15)`
+- [x] Task 1.5.6 — Establish a working highlevel production environment `(2025-10-15)`
+- [x] Task 1.5.6.1 — Create a skeleton production environment - shared, tv and remote apps and server `(2025-10-15)`
+- [x] Task 1.5.7 — Move relevant validation functionals from backup to validation environment `(2025-10-15)`
+- [x] Task 1.5.8 — Move relevant production functional from backup to thier proper place `(2025-10-15)`
 
 Definition of Done (DoD)
-- [ ] Project is alive: all UI and and other implemented functionals are functional `(YYYY-MM-DD)`
-- [ ] A procedure to maintain alwayys alive is establised and becomes part of the development process `(YYYY-MM-DD)`
-- [ ] All code is used and verified - 100% highlevel coverage `(YYYY-MM-DD)`
+- [x] Project is alive: all UI and and other implemented functionals are functional `(2025-10-15)`
+- [x] A procedure to maintain alwayys alive is establised and becomes part of the development process `(2025-10-15)`
+- [x] All code is used and verified - 100% highlevel coverage `(2025-10-15)`
 
 Summary
-- [ ] Milestone 1.5 complete `(YYYY-MM-DD)`
+- [x] Milestone 1.5 complete `(2025-10-15)`
+
+Reservations (documented)
+- Validation quick-run is available but experimental due to module format variability; the reliable path uses manual/VS Code tasks.
+- Task management moved to GitHub; ongoing enforcement and per-package README ownership will continue as part of normal process.
+- Shared refactor aligns with architecture; deeper, incremental cleanups remain planned in future milestones (no public API changes introduced).
 
 
 ## Milestone 2 — POCs: YouTube + QR Onboarding
@@ -179,14 +184,14 @@ Server (Unified)
  
 
 TV App (Stateless rendering + YouTube)
-- [ ] Task 2.23 — YouTube integration: wire @angular/youtube-player; map control_command/state to player API (see [ARCHITECTURE.md — Video Integration](./ARCHITECTURE.md#5-video-integration)) `(YYYY-MM-DD)`
+- [ ] [Task 2.23 — YouTube integration: wire @angular/youtube-player; map control_command/state to player API (see [ARCHITECTURE.md — Video Integration])](./ARCHITECTURE.md#5-video-integration)) `(YYYY-MM-DD)`
 - [ ] [Task 2.19 — Player renders when videoId is present](./IMPLEMENTATION.md#31-tv-application-appstv) `(YYYY-MM-DD)`
 - [ ] [Task 2.20 — Playback init without errors](./IMPLEMENTATION.md#31-tv-application-appstv) `(YYYY-MM-DD)`
 - [ ] [Task 2.21 — Control toggle invokes player API or updates bound state](./IMPLEMENTATION.md#31-tv-application-appstv) `(YYYY-MM-DD)`
-- [ ] Task 2.26 — QR display: show Remote entry URL as QR using angularx-qrcode (encode `${location.origin}/remote`) (see [ARCHITECTURE.md — Discovery Flow (QR)](./ARCHITECTURE.md#discovery-flow-qr-based)) `(YYYY-MM-DD)`
-- [ ] Task 2.27 — Connected status: indicator for remote connected/disconnected from `state_sync` (see [ARCHITECTURE.md — ApplicationState](./ARCHITECTURE.md#server-owned-applicationstate-authoritative-schema)) `(YYYY-MM-DD)`
+- [ ] [Task 2.26 — QR display: show Remote entry URL as QR using angularx-qrcode (encode `${location.origin}/remote`) (see [ARCHITECTURE.md — Discovery Flow (QR)](./ARCHITECTURE.md#discovery-flow-qr-based))](./ARCHITECTURE.md#discovery-flow-qr-based) `(YYYY-MM-DD)`
+- [ ] [Task 2.27 — Connected status: indicator for remote connected/disconnected from `state_sync` (see [ARCHITECTURE.md — ApplicationState](./ARCHITECTURE.md#server-owned-applicationstate-authoritative-schema))](./ARCHITECTURE.md#server-owned-applicationstate-authoritative-schema) `(YYYY-MM-DD)`
 
-Remote App (Data owner + controls)
+Remote App (Navigation + video controls)
 - [ ] [Task 2.9 — Remove peer-discovery/direct TV sockets](./IMPLEMENTATION.md#32-remote-application-appsremote) `(YYYY-MM-DD)`
 - [ ] Task 2.28 — UI states: show connecting/connected/blocked; basic error toasts for protocol errors (see [ARCHITECTURE.md — Protocol](./ARCHITECTURE.md#4-unified-communication-protocol)) `(YYYY-MM-DD)`
 
@@ -194,16 +199,16 @@ Validation & Tests
 - [ ] [Flow 2 — Video Playback Control](./VALIDATION.md#flow-2-video-playback-control): verify end-to-end play/pause/seek/volume `(YYYY-MM-DD)`
 - [ ] [Flow 7 — QR Onboarding](./VALIDATION.md#flow-7-qr-onboarding): Android camera scan → Chrome opens `/remote`; Remote connects `(YYYY-MM-DD)`
 - [ ] Task 4.14 — Extend stubs minimally for new actions if needed (see [VALIDATION.md — Stub Specs §6](./VALIDATION.md#61-common-stub-contract)) `(YYYY-MM-DD)`
-- [ ] Task 4.15 — Validation scripts: surface POC checks in quick flow summary (see [VALIDATION.md — Flows](./VALIDATION.md#4-full-integration-testing-validation)) `(YYYY-MM-DD)`
+- [ ] [Task 4.15 — Validation scripts: surface POC checks in quick flow summary (see [VALIDATION.md — Flows]](./VALIDATION.md#4-full-integration-testing-validation)) `(YYYY-MM-DD)`
 
 Docs
 - [ ] Task 4.16 — `IMPLEMENTATION.md`: ensure tasks 2.5, 2.19–2.22, 1.19, 1.20a–c listed with acceptance criteria (see [IMPLEMENTATION.md](./IMPLEMENTATION.md)) `(YYYY-MM-DD)`
 - [ ] Task 4.17 — `MILESTONES.md`: update statuses as work progresses; keep DoD linking Flow 2 & Flow 7 (see [VALIDATION.md — Flow 2](./VALIDATION.md#flow-2-video-playback-control) and [Flow 7](./VALIDATION.md#flow-7-qr-onboarding)) `(YYYY-MM-DD)`
-- [ ] Task 4.18 — READMEs: keep schema centralized (links only); QR package links in TV/Remote READMEs (see [ARCHITECTURE.md — Diagram/Protocol/Network](./ARCHITECTURE.md#2-system-components--architecture-diagram)) `(YYYY-MM-DD)`
+- [ ] [Task 4.18 — READMEs: keep schema centralized (links only); QR package links in TV/Remote READMEs (see [ARCHITECTURE.md — Diagram/Protocol/Network]](./ARCHITECTURE.md#2-system-components--architecture-diagram)) `(YYYY-MM-DD)`
 
 Tooling/CI
-- [ ] Task 4.19 — npm scripts: add tv/remote test scripts if missing; ensure root/validation workflows run tests (see [IMPLEMENTATION.md — Validation Principles](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation)) `(YYYY-MM-DD)`
-- [ ] Task 4.20 — VS Code tasks (optional): add “Run TV tests” / “Run Remote tests” tasks (see [IMPLEMENTATION.md — Validation Principles](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation)) `(YYYY-MM-DD)`
+- [ ] [Task 4.19 — npm scripts: add tv/remote test scripts if missing; ensure root/validation workflows run tests (see [IMPLEMENTATION.md — Validation Principles]](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation)) `(YYYY-MM-DD)`
+- [ ] [Task 4.20 — VS Code tasks (optional): add “Run TV tests” / “Run Remote tests” tasks (see [IMPLEMENTATION.md — Validation Principles]](./IMPLEMENTATION.md#5-guiding-principles-for-iterative-validation)) `(YYYY-MM-DD)`
 - [ ] Task 4.21 — Pre-push hook (optional): run server FSM tests + affected app unit tests (see [VALIDATION.md — Unit Testing](./VALIDATION.md#2-unit-testing)) `(YYYY-MM-DD)`
 
 ### Optional
@@ -221,7 +226,7 @@ Summary
 
 ---
 
-## Milestone 3 — Everything Is Connected
+## Milestone 3 — Everything is Connected
 
 Goal
 - Everything is connected
