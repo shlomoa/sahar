@@ -27,43 +27,12 @@
   <div class="main-content">
     @if (bothConnected) {
       <div class="navigation-content">
-        
-        <!-- Navigation Breadcrumb -->
-        <div class="breadcrumb">
-          <button mat-button (click)="navigateToPerformers()" 
-                  [class.active]="currentLevel === 'performers'">
-            👥 Performers
-          </button>
-          
-          @if (currentPerformer) {
-            <span class="separator">›</span>
-            <button mat-button (click)="navigateToVideos(currentPerformer.id)" 
-                    [class.active]="currentLevel === 'videos'">
-              📹 Videos
-            </button>
-          }
-          
-          @if (currentVideo) {
-            <span class="separator">›</span>
-            <button mat-button (click)="navigateToScenes(currentVideo.id)" 
-                    [class.active]="currentLevel === 'scenes'">
-              🎬 Scenes
-            </button>
-          }
-          
-          @if (currentScene) {
-            <span class="separator">›</span>
-            <span class="current-scene">🎯 Scene {{currentScene.id}}</span>
-          }
-        </div>
-
         <div class="content-with-back">
           <shared-back-card
             [enabled]="canGoBack"
             [widthPercent]="15"
             (back)="onBackClick()">
           </shared-back-card>
-
           <div class="data-view">
             <!-- Component Content Areas -->
             @switch (currentLevel) {
@@ -81,7 +50,6 @@
                 <shared-videos-grid
                   [videos]="currentVideos"            
                   [clientType]="'remote'"
-                  [showBreadcrumb]="true"
                   (videoSelected)="navigateToVideo($event)"
                   (backToPerformers)="navigateToPerformers()">
                 </shared-videos-grid>
@@ -92,7 +60,6 @@
                   [scenes]="currentScenes"
                   [selectedSceneId]="currentScene?.id"
                   [clientType]="'remote'"
-                  [showBreadcrumb]="true"
                   (sceneSelected)="navigateToScene($event)"
                   (backToVideos)="navigateToVideo(currentVideo ? currentVideo.id : '')">
                 </shared-scenes-grid>

@@ -19,7 +19,8 @@ import {
   ApplicationState, 
   Performer,
   WebSocketUtils, 
-  WebSocketBaseService
+  WebSocketBaseService,
+  ItemType
 } from 'shared';
 
 @Injectable({
@@ -96,11 +97,13 @@ export class WebSocketService extends WebSocketBaseService {
   }
 
   override ngOnDestroy(): void {
+    this.debugLog('WebSocketService being destroyed, cleaning up');
     super.ngOnDestroy();
   }
 
     // Register inbound handlers and outbound generators
   private registerCallbacks(): void {
+    this.debugLog('Registering WebSocket message handlers and generators');
     // Inbound handlers
     this.registerHandlers({
       state_sync: (msg) => this.handleStateSync(msg as StateSyncMessage),
@@ -137,8 +140,9 @@ export class WebSocketService extends WebSocketBaseService {
   sendNavigationCommand(
     action: NavigationAction,
     targetId?: string,
-    _targetType?: 'performer' | 'video' | 'scene' // backward-compat param
+    _targetType?: ItemType
   ): void {
+    this.debugLog(`Sending navigation command: ${action} ${targetId ?? ''}`);
     // no-op usage to satisfy lint for legacy param
     void _targetType;
     this.sendByType('navigation_command', { action, targetId } as NavigationCommandPayload);
@@ -146,6 +150,7 @@ export class WebSocketService extends WebSocketBaseService {
 
   // Accept either canonical payload or a simple action (shim some legacy actions)
   sendControlCommand(payload: ControlCommandPayload | 'back' | 'resume' | 'stop' | 'play' | 'pause' | 'mute' | 'unmute'): void {
+    this.debugLog('Sending control command:', payload);
     if (typeof payload === 'string') {
       const action = payload === 'resume' ? 'play'
                    : payload === 'stop' ? 'pause'
@@ -178,6 +183,13 @@ export class WebSocketService extends WebSocketBaseService {
     // Apply authoritative snapshot to shared navigation service so Remote UI can reflect server state
     try {
       const state = message.payload as ApplicationState;
+      // Log incoming payload for diagnosis
+      this.debugLog(`Received state_sync v${state?.version}`);
+      try {
+        this.debugLog('state_sync payload:', state);
+      } catch (e) { 
+        this.debugLog('debug print failed', e); 
+      }
 
       // Apply seeded performers if present
       const dataUnknown: unknown = (state as unknown as { data?: unknown }).data;
@@ -219,6 +231,19 @@ export class WebSocketService extends WebSocketBaseService {
         } catch (e) {
           console.warn(this.logMessagePrefix, 'failed to apply player state', e);
         }
+      }
+
+      // After successfully applying the authoritative snapshot, acknowledge the version
+      try {
+        const version = (state as ApplicationState)?.version;
+        if (typeof version === 'number' || typeof version === 'string') {
+          // Construct a BasePayload-compatible wrapper and include version via unknown cast
+          const ackPayload = { msgType: 'ack', version } as BasePayload;
+          this.sendByType('ack', ackPayload);
+          this.debugLog(`sent ack for state_sync v${version}`);
+        }
+      } catch (e) {
+        this.debugLog('Failed to send ack for state_sync', e);
       }
     } catch (err) {
       console.error(this.logMessagePrefix, 'failed to apply state_sync', err);

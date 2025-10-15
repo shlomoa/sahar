@@ -39,7 +39,7 @@ Use this as your quick-start operating manual for this repo. Keep edits tight, r
 
 ## When changing protocol/state
 - Update only canonical shared files. Keep unions and action sets in sync with server validators in `server/src/main.ts`.
-- If you add new state fields: define in `ApplicationState`, mutate via `SaharFsm`, and ensure clients reconcile in their `handleStateSync` with defensive checks.
+- If you add new state fields: define in `ApplicationState`, mutate via `Fsm`, and ensure clients reconcile in their `handleStateSync` with defensive checks.
 
 ## Collaboration rules (repo‑specific)
 - Read `CHAT_RULES.md`. Plan first, then wait for explicit approval before performing actions that modify files, run commands, or start processes.

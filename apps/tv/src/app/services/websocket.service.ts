@@ -31,6 +31,7 @@ export class WebSocketService extends WebSocketBaseService {
     muted: false,
   };
 
+  private lastConnectedUrl: string | null = null;  // Remote-specific observables
   private navigationService = inject(VideoNavigationService);
   protected override logMessagePrefix = '📺 TV: ';
   
@@ -73,11 +74,16 @@ export class WebSocketService extends WebSocketBaseService {
   }
 
   protected override onDisconnected(): void {
-    this.debugLog('WebSocket disconnected');
+    this.debugLog('WebSocket disconnected');    
   }
 
   protected override onReconnect(): void {
     this.debugLog('WebSocket reconnect');
+    if (!this.lastConnectedUrl) {
+      this.debugLog('No previous URL to reconnect to, aborting reconnect');
+      return;
+    }
+    this.reconnect(this.lastConnectedUrl);
   }
 
   // Connect to WebSocket server
@@ -87,11 +93,13 @@ export class WebSocketService extends WebSocketBaseService {
   }  
 
   override ngOnDestroy(): void {
+    this.debugLog('WebSocketService ngOnDestroy called, cleaning up');
     super.ngOnDestroy();
   }
 
   // Registration for protocol handlers and generators
   private registerCallbacks(): void {
+    this.debugLog('Registering WebSocket protocol handlers and generators');
     // Handlers for inbound messages
     this.registerHandlers({
       navigation_command: (msg) => this.handleNavigationCommand(msg as NavigationCommandMessage),
@@ -112,6 +120,7 @@ export class WebSocketService extends WebSocketBaseService {
 
   // Handlers
   private handleNavigationCommand(message: NavigationCommandMessage): void {
+    this.debugLog('Navigation command received:', message.payload);
     const { action, targetId } = message.payload;
     try {
       switch (action) {
@@ -138,6 +147,7 @@ export class WebSocketService extends WebSocketBaseService {
   }
 
   private handleControlCommand(message: ControlCommandMessage): void {
+    this.debugLog('Control command received:', message.payload);
     const { action } = message.payload;
     try {
       switch (action) {
@@ -175,7 +185,7 @@ export class WebSocketService extends WebSocketBaseService {
     try {
       const state = message.payload as ApplicationState;
       // Log incoming payload for diagnosis
-      this.debugLog?.(`Received state_sync v${state?.version}`);
+      this.debugLog(`Received state_sync v${state?.version}`);
       try {
         this.debugLog('state_sync payload:', state);
       } catch (e) { 
@@ -254,6 +264,27 @@ export class WebSocketService extends WebSocketBaseService {
 
   private handleHeartbeat(message: HeartbeatMessage): void {
     this.debugLog('heartbeat received:', message.payload);
+  }
+
+  connectToDevice(): void {
+    if (!this.lastConnectedUrl) {
+      this.debugLog('No previous URL to connect to, aborting connectToDevice');
+      return;
+    }
+    this.debugLog('Connecting to device at', this.lastConnectedUrl);
+    this.connectionState$.next('connecting');
+    this.connect(this.lastConnectedUrl!);
+  }
+
+  reconnectToDevice(): void {
+    if (this.lastConnectedUrl) {      
+
+      this.debugLog('Device URL unchanged, reconnecting to lastConnectedUrl');
+      this.connectionState$.next('connecting');
+      this.reconnect(this.lastConnectedUrl);
+    } else {
+      this.debugLog('No previous device URL to reconnect to, connecting to specified device');
+    }
   }
 
   private sendActionConfirmation(status: 'success' | 'failure', errorMessage?: string): void {

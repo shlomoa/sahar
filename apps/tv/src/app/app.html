@@ -2,7 +2,7 @@
 <div class="tv-container">
   <!-- Navigation Bar (10%) -->
   <mat-toolbar color="primary" class="tv-nav-bar">
-    <span class="header-title">📱 SAHAR TV Remote</span>
+    <span class="header-title">📺 SAHAR TV</span>
     <button mat-icon-button (click)="onHomeClick()">
       <mat-icon>home</mat-icon>
     </button>
@@ -23,15 +23,8 @@
   </mat-toolbar>
 
   <!-- Main Content Area (80%) -->
-  <div class="main-content">
-    <!-- QR (Task 2.26): Show Remote entry URL as QR. Hidden when both TV and Remote are connected -->
-    @if (!bothConnected) {
-      <div class="qr-block" title="Scan to connect (opens /remote)">
-        <qrcode [qrdata]="remoteUrl" [width]="96" [errorCorrectionLevel]="'M'"></qrcode>
-        <div class="qr-caption">Scan to connect</div>
-      </div>
-    } @else {
-      
+  <div class="main-content">    
+    @if (bothConnected) {
       <!-- Video Player (when playing) -->
       @if (currentLevel === 'playing') {
         <div class="video-player-area" >
@@ -61,37 +54,41 @@
           <div class="data-view">
             @switch (currentLevel) {
           
-            @case ('performers') {
-              <shared-performers-grid            
-                [performers]="currentPerformers"
-                [clientType]="'tv'"
-                (performerSelected)="onPerformerSelected($event)">
-              </shared-performers-grid>
-            }
-          
-            @case ('videos') {
-              <shared-videos-grid
-                [videos]="currentVideos"
-                [clientType]="'tv'"
-                [showBreadcrumb]="true"
-                (videoSelected)="onVideoSelected($event)"
-                (backToPerformers)="onBackToPerformers()">
-              </shared-videos-grid>
-            }
-          
-            @case ('scenes') {
-              <shared-scenes-grid
-                [scenes]="currentScenes"
-                [clientType]="'tv'"
-                [showBreadcrumb]="true"
-                (sceneSelected)="onSceneSelected($event)"
-                (backToVideos)="onBackToVideos()">
-              </shared-scenes-grid>
-            }
+              @case ('performers') {
+                <shared-performers-grid            
+                  [performers]="currentPerformers"
+                  [clientType]="'tv'"
+                  (performerSelected)="onPerformerSelected($event)">
+                </shared-performers-grid>
+              }
+            
+              @case ('videos') {
+                <shared-videos-grid
+                  [videos]="currentVideos"
+                  [clientType]="'tv'"
+                  (videoSelected)="onVideoSelected($event)"
+                  (backToPerformers)="onBackToPerformers()">
+                </shared-videos-grid>
+              }
+            
+              @case ('scenes') {
+                <shared-scenes-grid
+                  [scenes]="currentScenes"
+                  [clientType]="'tv'"
+                  (sceneSelected)="onSceneSelected($event)"
+                  (backToVideos)="onBackToVideos()">
+                </shared-scenes-grid>
+              }
             }
           </div>
         </div>
       }
+    } @else {   
+      <!-- QR (Task 2.26): Show Remote entry URL as QR. Hidden when both TV and Remote are connected -->
+      <div class="qr-block" title="Scan to connect (opens /remote)">
+        <qrcode [qrdata]="remoteUrl" [width]="96" [errorCorrectionLevel]="'M'"></qrcode>
+        <div class="qr-caption">Scan to connect</div>
+      </div>      
     }
   </div>
 

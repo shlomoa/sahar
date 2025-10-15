@@ -5,9 +5,20 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from "@angular/material/icon";
 import { RouterOutlet } from '@angular/router';
 import { Observable, Subscription } from 'rxjs';
-import { VideoNavigationService, SharedPerformersGridComponent, SharedScenesGridComponent, SharedVideosGridComponent, ClientType, NetworkDevice, ConnectionState, NavigationState, NavigationLevel, ApplicationState } from 'shared';
-import { SharedBackCardComponent } from 'shared';
-import { Performer, Video, LikedScene } from 'shared';
+import { VideoNavigationService,
+         SharedPerformersGridComponent,
+         SharedScenesGridComponent,
+         SharedVideosGridComponent,
+         SharedBackCardComponent,
+         ClientType,
+         NetworkDevice,
+         ConnectionState,
+         NavigationState,
+         NavigationLevel,
+         ApplicationState,
+         Performer,
+         Video,
+         LikedScene } from 'shared';
 import { VideoControlsComponent } from './components/video-controls/video-controls.component';
 import { WebSocketService } from './services/websocket.service';
 
@@ -20,12 +31,12 @@ import { WebSocketService } from './services/websocket.service';
     CommonModule,
     MatToolbarModule,
     MatButtonModule,
+    MatIconModule,
     VideoControlsComponent,
     SharedPerformersGridComponent,
     SharedScenesGridComponent,
-    SharedVideosGridComponent,
-    MatIconModule,
-    SharedBackCardComponent
+    SharedVideosGridComponent,    
+    SharedBackCardComponent    
 ],
   templateUrl: './app.html',
   styleUrls: ['./app.scss'],
@@ -84,7 +95,7 @@ export class App implements OnInit, OnDestroy {
 
   onBackToPerformers(): void {
     console.log('📱 Remote: Back to performers');
-    this.webSocketService.sendNavigationCommand('navigate_to_performer', 'home', 'performer');
+    this.webSocketService.sendNavigationCommand('navigate_to_performer', 'Home', 'performer');
     this.videoNavigationService.goHome();
   }
 
@@ -172,7 +183,7 @@ export class App implements OnInit, OnDestroy {
   // Whether going back is possible (breadcrumb length > 1)
   get canGoBack(): boolean {
     const nav = this.navigationService.getCurrentState();
-    return (nav?.breadcrumb?.length ?? 1) > 1;
+    return nav?.canGoBack;
   } 
 
   ngOnInit() {    
@@ -188,52 +199,73 @@ export class App implements OnInit, OnDestroy {
       } else {
         this.currentVideo = undefined;
       }
+      console.log('Navigation state updated:', nav);
+      console.log('Current level items:', nav.currentLevel.map(item => ({
+        title: item.title,
+        thumbnail: item.thumbnail,
+        type: item.itemType
+      })));
+    });
 
-      // If the navigation service exposes player$ we should listen for explicit playingSceneId
-      const navAny = this.videoNavigationService as unknown as Record<string, unknown>;
-      const player$ = navAny['player$'] as Observable<unknown> | undefined;
-      const isObservableLike = (v: unknown): v is Observable<unknown> => !!v && typeof (v as { subscribe?: unknown }).subscribe === 'function';
-  if (player$ && isObservableLike(player$)) {
-    // Subscribe lazily once
-    const playerSub = (player$ as import('rxjs').Observable<unknown>).subscribe((p: unknown) => {
-      if (!p || typeof p !== 'object') {
-        this.currentScene = undefined;
-        this.isPlaying = false;
-        return;
-      }
-      const asAny = p as Record<string, unknown>;
-      const playingSceneId = typeof asAny['playingSceneId'] === 'string' ? asAny['playingSceneId'] as string : undefined;
-      const isPlayingFlag = typeof asAny['isPlaying'] === 'boolean' ? (asAny['isPlaying'] as boolean) : undefined;
-      if (!playingSceneId) {
-        this.currentScene = undefined;
-        this.isPlaying = false;
-        return;
-      }
-      // Try to resolve the scene id to a known LikedScene
-      if (this.currentVideo) {
-        const s = this.currentVideo.likedScenes.find((sc) => sc.id === playingSceneId);
-        if (s) {
-          this.currentScene = s;
-          this.isPlaying = !!isPlayingFlag;
+    // Subscribe to explicit player state when available. If the shared package
+    // hasn't been rebuilt for the consuming app, use a runtime guard so this
+    // code doesn't crash. Falling back to breadcrumb parsing is no longer the
+    // default, but the navigation state still contains breadcrumbs for older
+    // remotes.
+    interface PlayerState { playingSceneId?: string; isPlaying?: boolean }
+
+    // If the navigation service exposes player$ we should listen for explicit playingSceneId
+    const navAny = this.videoNavigationService as unknown as Record<string, unknown>;
+    const player$ = navAny['player$'] as Observable<PlayerState> | undefined;
+    const isObservableLike = (v: unknown): v is Observable<unknown> => !!v && typeof (v as { subscribe?: unknown }).subscribe === 'function';
+    if (player$ && isObservableLike(player$)) {
+      // Subscribe lazily once
+      const playerSub = player$.subscribe((player: PlayerState | undefined) => {
+        if (!player || !player.playingSceneId) {
+          this.currentVideo = undefined;
+          this.currentScene = undefined;
+          this.isPlaying = false;
           return;
         }
-      }
-      // Otherwise search performers for the scene
-      for (const perf of this.performers) {
-        for (const vid of perf.videos) {
-          const s = vid.likedScenes.find((sc) => sc.id === playingSceneId);
-          if (s) {
-            this.currentVideo = vid;
-            this.currentScene = s;
-            this.isPlaying = !!isPlayingFlag;
-            return;
+ 
+        // Try to resolve the scene id to a known LikedScene
+        const nav = this.navigationService.getCurrentState();
+        let foundScene: LikedScene | undefined;
+        let foundVideo: Video | undefined = undefined;
+        if (nav.currentVideo) {
+          foundScene = nav.currentVideo.likedScenes.find((s) => s.id === player.playingSceneId);
+          if (foundScene) foundVideo = nav.currentVideo;
+        }
+        if (!foundScene) {
+          // Search performers/videos for the scene id
+          const performers = this.navigationService.getPerformersData();
+          outer: for (const p of performers) {
+            for (const v of p.videos) {
+              const s = v.likedScenes.find((s2) => s2.id === player.playingSceneId);
+              if (s) {
+                foundScene = s;
+                foundVideo = v;
+                break outer;
+              }
+            }
           }
         }
-      }
-    });
-    this.subscriptions.push(playerSub);
-      }
-    });
+        if (foundScene && foundVideo) {
+          this.currentVideo = foundVideo;
+          this.currentScene = foundScene;
+          this.isPlaying = !!player.isPlaying;
+          console.log('📺 Starting video playback from player$:', {
+            video: this.currentVideo?.title,
+            scene: this.currentScene.title,
+            url: this.currentVideo?.url,
+            startTime: this.currentScene.startTime
+          });
+        } else {
+          console.warn('Could not resolve playingSceneId to a known scene:', player.playingSceneId);
+        }
+      });
+      this.subscriptions.push(playerSub);
+    };
     
     // Initialize performers from the navigation service and subscribe to updates    
     this.initializeWebSocket();
@@ -323,7 +355,7 @@ export class App implements OnInit, OnDestroy {
 
   navigateToPerformers() {
     console.log('🏠 Navigate to performers');
-    this.webSocketService.sendNavigationCommand('navigate_to_performer', 'home', 'performer');
+    this.webSocketService.sendNavigationCommand('navigate_to_performer', 'Home', 'performer');
     this.navigationService.goHome();
   }
 
@@ -341,7 +373,7 @@ export class App implements OnInit, OnDestroy {
 
   navigateToScene(sceneId: string) {
     console.log('🎯 Navigate to scene:', sceneId);
-    this.webSocketService.sendNavigationCommand('navigate_to_scene', sceneId, 'scene');
+    this.webSocketService.sendNavigationCommand('navigate_to_scene', sceneId, 'segment');
     //@TODO: update the state and the GUI accordingly
   }
 

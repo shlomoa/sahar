@@ -1,5 +1,10 @@
-import { ApplicationState, ActionConfirmationStatus } from 'shared';
+import { ApplicationState, ActionConfirmationStatus, createLogger, NavigationAction } from 'shared';
 import { ClientType, NavigationCommandPayload, ControlCommandPayload } from 'shared';
+
+const logger = createLogger({ component: 'server-fsm' });
+const logInfo = (event: string, meta?: any, msg?: string) => logger.info(event, meta, msg);
+const logWarn = (event: string, meta?: any, msg?: string) => logger.warn(event, meta, msg);
+const logError = (event: string, meta?: any, msg?: string) => logger.error(event, meta, msg);
 
 /**
  * Authoritative Finite State Machine (Task 1.15)
@@ -9,7 +14,7 @@ import { ClientType, NavigationCommandPayload, ControlCommandPayload } from 'sha
  * - Central place to extend future invariants (heartbeat, recovery, etc.) without leaking details
  */
 
-export class SaharFsm {
+export class Fsm {
   private state: ApplicationState;
   private dirty = false; // tracks whether a mutation occurred in current handler
 
@@ -18,7 +23,7 @@ export class SaharFsm {
       version: 1,
       fsmState: 'initializing',
       connectedClients: {},
-  // data field intentionally omitted until seeded (Task 1.17)
+      // data field intentionally omitted until seeded (Task 1.17)
       navigation: {
         currentLevel: 'performers',
         breadcrumb: []
@@ -31,18 +36,23 @@ export class SaharFsm {
         muted: false
       }
     };
+    logInfo('fsm_initialized', {}, 'Sahar FSM initialized with state: ' + JSON.stringify(this.state));
   }
 
-  /** One-shot (best effort) data seeding from Remote (Task 1.17). Subsequent calls merge shallowly. */
   seedData(payload: any) {
-    if (!payload || typeof payload !== 'object') return; // ignore invalid
+    if (!payload || typeof payload !== 'object') {
+      logError('fsm_seed_invalid', { payload }, 'Invalid seed data payload');
+      return; // ignore invalid
+    }
     if (!this.state.data) {
+      logInfo('fsm_seed_data', { payload }, 'Seeding initial data');
       this.state.data = JSON.parse(JSON.stringify(payload));
       this.dirty = true;
       this.commit();
       return;
     }
     // Shallow merge: add/overwrite top-level keys; detect real change
+    logInfo('fsm_seed_data_merge', { payload }, 'Merging seed data');
     const before = JSON.stringify(this.state.data);
     Object.assign(this.state.data, JSON.parse(JSON.stringify(payload)));
     if (JSON.stringify(this.state.data) !== before) {
@@ -55,21 +65,25 @@ export class SaharFsm {
   getSnapshot(): ApplicationState {
     // Using JSON clone is acceptable here (state is simple / purely data). If performance becomes an issue
     // we can switch to structuredClone (Node >=17.0) or a handcrafted shallow+nested copy.
+    logInfo('fsm_get_snapshot', { version: this.state.version }, 'FSM snapshot requested');
     return JSON.parse(JSON.stringify(this.state)) as ApplicationState;
   }
 
   registerClient(clientType: ClientType, deviceId: string): { ok: boolean; reason?: string } {
     if (this.state.connectedClients[clientType]) {
+      logWarn('fsm_register_duplicate', { clientType, deviceId }, 'Client type already registered');
       return { ok: false, reason: 'duplicate_client_type' };
     }
     this.state.connectedClients[clientType] = { deviceId };
     this.dirty = true;
     this.recalcFsm();
     this.commit();
+    logInfo('fsm_register_client', { clientType, deviceId }, 'Client registered');
     return { ok: true };
   }
 
   deregisterClient(clientType: ClientType) {
+    logInfo('fsm_deregister_client', { clientType }, 'Deregistering client');
     if (this.state.connectedClients[clientType]) {
       delete this.state.connectedClients[clientType];
       this.dirty = true;
@@ -78,7 +92,8 @@ export class SaharFsm {
     }
   }
 
-  navigationCommand(action: NavigationCommandPayload['action'], targetId?: string) {
+  navigationCommand(action: NavigationAction, targetId?: string) {
+    logInfo('fsm_navigation_command', { action, targetId }, 'Processing navigation command');
     const before = JSON.stringify(this.state.navigation);
     const nav = this.state.navigation;
     switch (action) {
@@ -137,6 +152,7 @@ export class SaharFsm {
   }
 
   controlCommand(payload: ControlCommandPayload) {
+    logInfo('fsm_control_command', { payload }, 'Processing control command');
     const before = JSON.stringify(this.state.player);
     const { action, youtubeId, startTime, seekTime, volume } = payload;
     switch (action) {
@@ -173,6 +189,7 @@ export class SaharFsm {
   }
 
   actionConfirmation(status: ActionConfirmationStatus, errorMessage?: string) {
+    logInfo('fsm_action_confirmation', { status, errorMessage }, 'Processing action confirmation');
     const beforeErr = this.state.error ? this.state.error.code + this.state.error.message : 'none';
     const beforeState = this.state.fsmState;
     if (status === 'failure') {
@@ -190,6 +207,7 @@ export class SaharFsm {
   }
 
   private recalcFsm() {
+    logInfo('fsm_recalc', {}, 'Recalculating FSM state based on connected clients');
     const both = !!this.state.connectedClients.tv && !!this.state.connectedClients.remote;
     if (both && this.state.fsmState === 'initializing') {
       this.state.fsmState = 'ready';

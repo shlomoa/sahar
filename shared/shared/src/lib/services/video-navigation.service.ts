@@ -28,26 +28,28 @@ export class VideoNavigationService {
   private playerSubject = new BehaviorSubject<ApplicationState['player']>(this.playerState);
   public player$ = this.playerSubject.asObservable();
   constructor() {
-    console.log('� Shared Navigation Service initialized');
+    console.log('📱 Remote 📺 TV navigation: Shared Navigation Service initialized');
     // This path is for the TV app
-    console.log('📺 Service configured with no data. Waiting for Remote.');
+    console.log('📱 Remote 📺 TV navigation: Service configured with no data. Waiting for Remote.');
     this.showWaitingState(); // Start in the waiting state
   }
 
   // Called by WebSocket service when Remote sends data
   setPerformersData(performers: Performer[]): void {
-    console.log('📺 TV received performers data from Remote:', performers);
+    console.log('📱 Remote 📺 TV navigation: Received performers data from Remote:', performers);
     this.performersData = performers;
     this.goHome(); // Show performers once data is received
   }
 
   // Add getter for performers data
   getPerformersData(): Performer[] {
+    console.log('📱 Remote 📺 TV navigation: getPerformersData called, returning', this.performersData.length, 'performers');
     return this.performersData;
   }
 
   // Helper method for getting YouTube thumbnails
   getVideoThumbnail(videoUrl: string, quality: 'default' | 'mqdefault' | 'hqdefault' | 'sddefault' | 'maxresdefault' = 'hqdefault'): string | null {
+    console.log('📱 Remote 📺 TV navigation: getVideoThumbnail called with URL:', videoUrl);
     // Extract video ID from URL and generate thumbnail
     const videoIdMatch = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
     if (videoIdMatch && videoIdMatch[1]) {
@@ -57,6 +59,7 @@ export class VideoNavigationService {
   }
 
   private showWaitingState(): void {
+    console.log('📱 Remote 📺 TV navigation: Showing waiting state');
     this.navigationState = {
       currentLevel: [
         {
@@ -75,10 +78,10 @@ export class VideoNavigationService {
   }
 
   goHome(): void {
-    console.log('📺 Going home with performers:', this.performersData.length);
+    console.log('📱 Remote 📺 TV navigation: Going home with performers:', this.performersData.length);
     
     if (this.performersData.length === 0) {
-      console.warn('📺 No performers data available');
+      console.warn('📱 Remote 📺 TV navigation: No performers data available');
       this.showWaitingState();
       return;
     }
@@ -95,13 +98,14 @@ export class VideoNavigationService {
       currentPerformer: undefined,
       currentVideo: undefined
     };
+    console.log('📱 Remote 📺 TV navigation: Home state set with', this.navigationState.currentLevel.length, 'performers' );
     this.navigationSubject.next(this.navigationState);
   }
 
   navigateToPerformer(performerId: string): void {
     const performer = this.performersData.find(p => p.id === performerId);
     if (!performer) {
-      console.error('📺 TV: Performer not found:', performerId);
+      console.error('📱 Remote 📺 TV navigation: Performer not found:', performerId);
       return;
     }
 
@@ -118,19 +122,20 @@ export class VideoNavigationService {
       currentPerformer: performer,
       currentVideo: undefined
     };
+    console.log('📱 Remote 📺 TV navigation: Navigated to performer:', performer.name, 'with', this.navigationState.currentLevel.length, 'videos');
     this.navigationSubject.next(this.navigationState);
   }
 
   navigateToVideo(videoId: string): void {
     const currentPerformer = this.navigationState.currentPerformer;
     if (!currentPerformer) {
-      console.error('📺 TV: No current performer');
+      console.error('📱 Remote 📺 TV navigation: No current performer');
       return;
     }
 
     const video = currentPerformer.videos.find(v => v.id === videoId);
     if (!video) {
-      console.error('📺 TV: Video not found:', videoId);
+      console.error('📱 Remote 📺 TV navigation: Video not found:', videoId);
       return;
     }
 
@@ -149,12 +154,16 @@ export class VideoNavigationService {
       currentPerformer: currentPerformer,
       currentVideo: video
     };
+    console.log('📱 Remote 📺 TV navigation: Navigated to video:', video.title, 'with', this.navigationState.currentLevel.length, 'scenes');
     this.navigationSubject.next(this.navigationState);
   }
 
   goBack(): void {
-    if (!this.navigationState.canGoBack) return;
-
+    if (!this.navigationState.canGoBack) {
+      console.info('📱 Remote 📺 TV navigation: Cannot go back from current state');
+      return;
+    }
+    console.log('📱 Remote 📺 TV navigation: Going back from breadcrumb:', this.navigationState.breadcrumb);
     if (this.navigationState.breadcrumb.length === 3) {
       // From scenes back to videos
       this.navigateToPerformer(this.navigationState.currentPerformer!.id);
@@ -165,28 +174,28 @@ export class VideoNavigationService {
   }
 
   playScene(sceneId: string): void {
-    console.log('📺 TV: playScene called with sceneId:', sceneId);
+    console.log('📱 Remote 📺 TV navigation: playScene called with sceneId:', sceneId);
     const currentVideo = this.navigationState.currentVideo;
     if (!currentVideo) {
-      console.warn('📺 TV: No current video to play scene in');
+      console.warn('📱 Remote 📺 TV navigation: No current video to play scene in');
       return;
     }
 
-    console.log('📺 TV: Current video:', currentVideo.title);
-    console.log('📺 TV: Available scenes:', currentVideo.likedScenes.map(s => ({ id: s.id, title: s.title, startTime: s.startTime })));
+    console.log('📱 Remote 📺 TV navigation: Current video:', currentVideo.title);
+    console.log('📱 Remote 📺 TV navigation: Available scenes:', currentVideo.likedScenes.map(s => ({ id: s.id, title: s.title, startTime: s.startTime })));
 
     const scene = currentVideo.likedScenes.find(s => s.id === sceneId);
     if (!scene) {
-      console.error('📺 TV: Scene not found with ID:', sceneId);
+      console.error('📱 Remote 📺 TV navigation: Scene not found with ID:', sceneId);
       return;
     }
 
-    console.log('📺 TV: Found scene by ID:', scene.title, 'starting at:', scene.startTime);
+    console.log('📱 Remote 📺 TV navigation: Found scene by ID:', scene.title, 'starting at:', scene.startTime);
     this.playSceneObject(scene);
   }
 
   private playSceneObject(scene: LikedScene): void {
-    console.log('📺 TV: Playing scene object:', scene.title, 'at time:', scene.startTime);
+    console.log('📱 Remote 📺 TV navigation: Playing scene object:', scene.title, 'at time:', scene.startTime);
 
     // Update navigation state to indicate we're playing a scene (explicit playback marker)
     this.navigationState = {
@@ -208,16 +217,18 @@ export class VideoNavigationService {
     } as ApplicationState['player'];
     this.playerSubject.next(this.playerState);
 
-    console.log('📺 TV: Scene playback initiated for:', scene.title, 'at time:', scene.startTime, 'sceneId:', scene.id);
+    console.log('📱 Remote 📺 TV navigation: Scene playback initiated for:', scene.title, 'at time:', scene.startTime, 'sceneId:', scene.id);
   }
 
   // Player state API used by websocket handlers to set authoritative state
   setPlayerState(player: Partial<ApplicationState['player']>): void {
+    console.log('📱 Remote 📺 TV navigation: setPlayerState called with:', player);
     this.playerState = { ...this.playerState, ...(player as ApplicationState['player']) } as ApplicationState['player'];
     this.playerSubject.next(this.playerState);
   }
 
   clearPlayingScene(): void {
+    console.log('📱 Remote 📺 TV navigation: clearPlayingScene called, stopping playback');
     this.playerState = { ...this.playerState, isPlaying: false, playingSceneId: undefined } as ApplicationState['player'];
     this.playerSubject.next(this.playerState);
   }

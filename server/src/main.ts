@@ -21,7 +21,7 @@ import {
   CONTROL_ACTION_SET,
   ClientType
 } from 'shared';
-import { SaharFsm } from './fsm';
+import { Fsm } from './fsm';
 import { performersData } from './mock-data';
 import { networkInterfaces } from 'os';
 
@@ -39,6 +39,7 @@ const logError = (event: string, meta?: any, msg?: string) => logger.error(event
 // ESM-safe __dirname/__filename
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+// dev dir name: "<repo_root>/server/src"
 logInfo('startup', { dir: __dirname }, 'Server starting up');
 
 // Create Express application
@@ -116,6 +117,7 @@ proxy.on('error', (err: Error, _req: any, res: any) => {
 });
 
 function devProxy(target: string) {
+  logInfo('devProxy created', { target });
   return (req: Request, res: Response, next: NextFunction) => {
     if (!DEV_SSR) return next();
     proxy.web(req, res, { target });
@@ -126,15 +128,16 @@ function devProxy(target: string) {
 const server = createServer(app);
 
 // Create and attach WebSocket server on configured path
+logInfo('websocket_config', { config: WEBSOCKET_CONFIG });
 const wss = new WebSocketServer({ server, path: WEBSOCKET_CONFIG.WS_PATH });
-logInfo('websocket_path_bound', { path: WEBSOCKET_CONFIG.WS_PATH });
+logInfo('websocket_server', { server: server.address(), path: WEBSOCKET_CONFIG.WS_PATH });
 
 // --- Finite State Machine (FSM) ---
 
 // ClientType now imported from protocol single-source-of-truth
 
 // FSM encapsulating authoritative state (now versioned)
-const fsm = new SaharFsm();
+const fsm = new Fsm();
 // Broadcast discipline tracking (Task 1.16)
 let lastBroadcastVersion = 0; // last fully ACKed broadcast version
 let currentBroadcastVersion: number | null = null; // version currently awaiting ACKs
@@ -157,7 +160,7 @@ const makeError = (source: 'server', code: string, message: string): ErrorMessag
 
 // --- Error sending helper ---
 function sendError(ws: WebSocket, code: string, message: string, opts: { close?: boolean; meta?: any } = {}) {
-  logWarn('invalid_message', { code, message, ...(opts.meta || {}) });
+  logError('invalid_message', { code, message, ...(opts.meta || {}) });
   ws.send(JSON.stringify(makeError('server', code, message)));  
   if (opts.close) {
     try { 
@@ -173,10 +176,12 @@ function sendError(ws: WebSocket, code: string, message: string, opts: { close?:
 function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebSocketMessage } | { ok: false; code: string; reason: string; close?: boolean } {
   // Basic shape checks
   if (typeof raw !== 'object' || raw === null) {
+    logError('invalid_message', { code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Non-object message', close: !isRegistered });
     return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Non-object message', close: !isRegistered };
   }
   const { msgType } = raw as { msgType?: unknown };
   if (typeof msgType !== 'string') {
+    logError('invalid_message', { code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Missing type', close: !isRegistered });
     return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Missing type', close: !isRegistered };
   }
 
@@ -199,6 +204,7 @@ function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebS
       return obj.slice(0, 200).map(i => sanitizeAny(i, depth + 1)).filter(() => true);
     }
     if (isPlainObject(obj)) {
+      logInfo('sanitizeAny: object', { depth, keys: Object.keys(obj).length });
       const out: any = {};
       const keys = Object.keys(obj).slice(0, 200);
       for (const k of keys) {
@@ -208,6 +214,7 @@ function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebS
       }
       return out;
     }
+    logWarn('sanitizeAny: unsupported type', { type: typeof obj });
     return undefined;
   }
 
@@ -220,64 +227,104 @@ function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebS
   // Registration must be the first message for unregistered clients
   if (!isRegistered) {
     if (msgType !== 'register') {
+      logError('invalid_message', { code: ERROR_CODES.INVALID_REGISTRATION, reason: 'First message not register', close: true });
       return { ok: false, code: ERROR_CODES.INVALID_REGISTRATION, reason: 'First message must be register', close: true };
     }
     const payload = (raw as any).payload;
-    if (!isPlainObject(payload)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Register missing payload', close: true };
+    if (!isPlainObject(payload)) {
+      logError('invalid_message', { code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Register missing payload', close: true });
+      return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Register missing payload', close: true };
+    }
     const clientType = asString(payload.clientType, 10);
-    if (clientType !== 'tv' && clientType !== 'remote') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid clientType', close: true };
+    if (clientType !== 'tv' && clientType !== 'remote') {
+      logError('invalid_message', { code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid clientType', close: true });
+      return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid clientType', close: true };
+    }
     const deviceId = asString(payload.deviceId, 200);
-    if (!deviceId) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid deviceId', close: true };
+    if (!deviceId) {
+      logError('invalid_message', { code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid deviceId', close: true });
+      return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid deviceId', close: true };
+    }
     const deviceName = asString(payload.deviceName, 200) || '';
     base.payload = { clientType, deviceId, deviceName };
+    logInfo('register_message', { clientType, deviceId, deviceName: deviceName || '(unnamed)' });
     return { ok: true, msg: base as WebSocketMessage };
   }
 
   // For registered clients, accept and sanitize known types only
   switch (msgType) {
     case 'register':
+      logError('invalid_message', { code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Duplicate register' });
       return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Duplicate register' };
 
     case 'data': {
       const payload = (raw as any).payload;
-      if (!isPlainObject(payload)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Data missing payload' };
+      if (!isPlainObject(payload)) {
+        logError('invalid_message', { code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Data missing payload' });
+        return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Data missing payload' };
+      }
       base.payload = sanitizeAny(payload, 0);
+      logInfo('data_message', { keys: Object.keys(base.payload || {}).length });
       return { ok: true, msg: base as WebSocketMessage };
     }
 
     case 'navigation_command': {
       const payload = (raw as any).payload;
-      if (!isPlainObject(payload)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Navigation missing payload' };
+      if (!isPlainObject(payload)) {
+        logError('invalid_message', { code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Navigation missing payload' });
+        return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Navigation missing payload' };
+      }
       const action = asString(payload.action, 50);
-      if (!action || !NAVIGATION_ACTION_SET.has(action as any)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid navigation action' };
+      if (!action || !NAVIGATION_ACTION_SET.has(action as any)) {
+        logError('invalid_message', { code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid navigation action'});
+        return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid navigation action' };
+      }
       const targetId = payload.targetId ? asString(payload.targetId, 200) : undefined;
       base.payload = { action, ...(targetId ? { targetId } : {}) };
+      logInfo('navigation_command', { action, targetId });
       return { ok: true, msg: base as WebSocketMessage };
     }
 
     case 'control_command': {
       const payload = (raw as any).payload;
-      if (!isPlainObject(payload)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Control missing payload' };
+      if (!isPlainObject(payload)) {
+        logError('invalid_message', { code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Control missing payload' });
+        return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Control missing payload' };
+      }
       const action = asString(payload.action, 50);
-      if (!action || !CONTROL_ACTION_SET.has(action as any)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid control action' };
+      if (!action || !CONTROL_ACTION_SET.has(action as any)) {
+        logError('invalid_message', { code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid control action' });
+        return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid control action' };
+      }
       const startTime = typeof payload.startTime === 'number' ? payload.startTime : undefined;
       const seekTime = typeof payload.seekTime === 'number' ? payload.seekTime : undefined;
       const volume = typeof payload.volume === 'number' ? payload.volume : undefined;
-      if (volume !== undefined && (volume < 0 || volume > 1)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid volume' };
+      if (volume !== undefined && (volume < 0 || volume > 1)) {
+        logError('invalid_message', { code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid volume' });
+        return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid volume' };
+      }
       const safePayload: any = { action };
       if (startTime !== undefined) safePayload.startTime = startTime;
       if (seekTime !== undefined) safePayload.seekTime = seekTime;
       if (volume !== undefined) safePayload.volume = volume;
+      logInfo('control_command', { action, ...(startTime !== undefined ? { startTime } : {}), ...(seekTime !== undefined ? { seekTime } : {}), ...(volume !== undefined ? { volume } : {}) });
       return { ok: true, msg: { ...base, payload: safePayload } as WebSocketMessage };
     }
 
     case 'action_confirmation': {
       const payload = (raw as any).payload;
-      if (!isPlainObject(payload)) return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Confirmation missing payload' };
+      if (!isPlainObject(payload)) {
+        logError('invalid_message', { code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Confirmation missing payload' });
+        return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Confirmation missing payload' };
+      }
       const status = asString(payload.status, 20);
-      if (status !== 'success' && status !== 'failure') return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid confirmation status' };
+      if (status !== 'success' && status !== 'failure') {
+        logError('invalid_message', { code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid confirmation status' });
+        return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid confirmation status' };
+      }
       const errorMessage = payload.errorMessage ? asString(payload.errorMessage, 1000) : undefined;
       base.payload = { status, ...(errorMessage ? { errorMessage } : {}) };
+      logInfo('action_confirmation', { status, ...(errorMessage ? { errorMessage } : {}) });
       return { ok: true, msg: base as WebSocketMessage };
     }
 
@@ -285,6 +332,7 @@ function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebS
       // Allow small heartbeat payloads (sanitized) for liveness checks
       const payload = (raw as any).payload;
       base.payload = isPlainObject(payload) ? sanitizeAny(payload, 0) : undefined;
+      logInfo('heartbeat', { ...(base.payload ? { payload: base.payload } : {}) });
       return { ok: true, msg: base as WebSocketMessage };
     }
 
@@ -292,6 +340,7 @@ function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebS
       // Allow ack with optional small payload (sanitized)
       const payload = (raw as any).payload;
       base.payload = isPlainObject(payload) ? sanitizeAny(payload, 0) : undefined;
+      logInfo('ack', { ...(base.payload ? { payload: base.payload } : {}) });
       return { ok: true, msg: base as WebSocketMessage };
     }
 
@@ -299,21 +348,25 @@ function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebS
       // 'state_sync' is a server-originated, authoritative snapshot and
       // must never be sent by a client. Treat this as a protocol violation
       // and close the connection to aid debugging and keep the FSM authoritative.
+      logError('invalid_message', { code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Client cannot send server-only type: state_sync', close: true });
       return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Client cannot send server-only type: state_sync', close: true };
     }
     case 'error': {
       // Clients may send an 'error' payload in some diagnostic/testing flows,
       // but in production we treat it as a protocol violation when unsolicited.
+      logError('invalid_message', { code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Client cannot send server-only type: error' });
       return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Client cannot send server-only type: error' };
     }
 
     default:
+      logError('invalid_message', { code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Unsupported message type' });
       return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Unsupported message type' };
   }
 }
 
 // ---- Ack‑gated broadcast queue (Task 1.16) -----------------------------------------------
 function performBroadcast(version: number) {
+  logInfo('perform_broadcast', { version });
   const stateMsg = JSON.stringify(makeStateSync('server'));
   outstandingAckClients = new Set();
   let sent = 0;
@@ -385,8 +438,12 @@ function performBroadcast(version: number) {
 }
 
 function flushPending() {
-  if (currentBroadcastVersion !== null) return; // busy
+  if (currentBroadcastVersion !== null) {
+    logInfo('flush_pending', {}, 'Current broadcast in flight, cannot flush yet');
+    return; // busy
+  }
   if (pendingBroadcastVersion && pendingBroadcastVersion > lastBroadcastVersion) {
+    logInfo('flush_pending', { pending: pendingBroadcastVersion, last: lastBroadcastVersion }, 'Flushing pending broadcast');
     const snap = fsm.getSnapshot();
     // Use latest snapshot version (could have advanced further than pending) to collapse bursts
     const latest = snap.version;
@@ -396,6 +453,7 @@ function flushPending() {
 }
 
 const broadcastStateIfChanged = (force = false) => {
+  logInfo('broadcast_state_if_changed', { force });
   const snap = fsm.getSnapshot();
   const v = snap.version;
   if (!force && v === lastBroadcastVersion) {
@@ -660,17 +718,20 @@ app.use(express.json());
 // Health endpoints must be registered early so they are not captured by Angular catch-all routes
 // Liveness endpoint (process up)
 app.get('/live', (_req: Request, res: Response) => {
+  logInfo('request: /live');
   res.status(200).json({ status: 'live' });
 });
 
 // Readiness endpoint (infrastructure ready to accept clients)
 app.get('/ready', (_req: Request, res: Response) => {
+  logInfo('request: /ready');
   if (isReady) return res.status(200).json({ status: 'ready' });
   return res.status(503).json({ status: 'not_ready' });
 });
 
 // Enriched health snapshot (debug / monitoring)
 app.get('/health', (_req: Request, res: Response) => {
+  logInfo('request: /health');
   const wsConnections = [...wss.clients].length;
   const registered = [...clients.values()].map(c => ({ clientType: c.clientType, deviceId: c.deviceId, lastHeartbeat: c.lastHeartbeat ?? null }));
   res.json({
@@ -691,6 +752,7 @@ app.get('/health', (_req: Request, res: Response) => {
 
 // Host IP endpoint for clients needing a resolvable LAN address (e.g., QR generation)
 app.get('/host-ip', (_req: Request, res: Response) => {
+  logInfo('request: /host-ip');
   const ip = getBestHostIP();
   res.json({ ip, port: WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT });
 });
@@ -746,6 +808,7 @@ app.use('/', express.static(path.join(tvAppPath, 'browser'), { fallthrough: true
 // Task 1.6: Dev reverse proxies for SSR HTML (when DEV_SSR=1) else fall back to built assets
 // TV base route: '/' (root) and '/tv'
 app.get(['/','/tv'], (req: Request, res: Response, next: NextFunction) => {
+  logInfo('request: / or /tv');
   if (DEV_SSR) return devProxy(`http://${getBestHostIP()}:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}`)(req, res, next);
   // Fallback to built index.html (prod-like)
   res.sendFile(tvIndexPath);
@@ -753,12 +816,14 @@ app.get(['/','/tv'], (req: Request, res: Response, next: NextFunction) => {
 
 // Remote base route '/remote'
 app.get('/remote', (req: Request, res: Response, next: NextFunction) => {
+  logInfo('request: /remote');
   if (DEV_SSR) return devProxy(`http://${getBestHostIP()}:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}`)(req, res, next);
   res.sendFile(remoteIndexPath);
 });
 
 // Catch-all deep links for Angular routing (non-asset) for TV
 app.get(['/tv/*splat','/*splat'], (req: Request, res: Response, next: NextFunction) => {
+  logInfo('request: /tv/* or /*');
   // Ignore if request looks like a file (has an extension) to avoid hijacking static/health
   if (/\.[a-zA-Z0-9]+$/.test(req.path)) return next();
   if (DEV_SSR) return devProxy(`http://${getBestHostIP()}:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}`)(req, res, next);
@@ -767,6 +832,7 @@ app.get(['/tv/*splat','/*splat'], (req: Request, res: Response, next: NextFuncti
 
 // Catch-all deep links for Remote
 app.get('/remote/*splat', (req: Request, res: Response, next: NextFunction) => {
+  logInfo('request: /remote/*');
   if (/\.[a-zA-Z0-9]+$/.test(req.path)) return next();
   if (DEV_SSR) return devProxy(`http://${getBestHostIP()}:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}`)(req, res, next);
   res.sendFile(remoteIndexPath);
@@ -822,6 +888,7 @@ server.listen(WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT, () => {
     app.post('/seed', (req: Request, res: Response) => {
       const body = req.body;
       try {
+        logInfo('post: /seed');
         fsm.seedData(body);
         // reply then broadcast
         res.status(200).json({ ok: true });

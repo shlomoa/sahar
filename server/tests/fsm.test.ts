@@ -10,7 +10,7 @@
 
 import test from 'node:test';
 import { strict as assert } from 'node:assert';
-import { SaharFsm } from '../src/fsm';
+import { Fsm } from '../src/fsm';
 import { ApplicationState } from 'shared';
 import { ControlCommandPayload } from 'shared';
 
@@ -27,8 +27,8 @@ function expectNoVersionChange(prev: Snapshot, next: Snapshot) {
 }
 
 // Smoke check: default initial conditions align with architecture (Section: ApplicationState)
-test('SaharFsm: initializes with version >= 1 and default state', () => {
-    const fsm = new SaharFsm();
+test('Fsm: initializes with version >= 1 and default state', () => {
+    const fsm = new Fsm();
     const s = fsm.getSnapshot();
     assert.ok(s.version >= 1);
     assert.equal(s.fsmState, 'initializing');
@@ -37,8 +37,8 @@ test('SaharFsm: initializes with version >= 1 and default state', () => {
 });
 
 // Register flow: one client → initializing; both clients → ready; duplicate type rejected (no version bump)
-test('SaharFsm: registers tv and remote, transitions to ready once both present', () => {
-    const fsm = new SaharFsm();
+test('Fsm: registers tv and remote, transitions to ready once both present', () => {
+    const fsm = new Fsm();
     const s0 = fsm.getSnapshot();
     let res = fsm.registerClient('tv', 'tv-1');
     assert.ok(res.ok);
@@ -61,8 +61,8 @@ test('SaharFsm: registers tv and remote, transitions to ready once both present'
 });
 
 // Deregister flow: losing either client regresses back to 'initializing'
-test('SaharFsm: deregisters a client and regresses to initializing', () => {
-    const fsm = new SaharFsm();
+test('Fsm: deregisters a client and regresses to initializing', () => {
+    const fsm = new Fsm();
     fsm.registerClient('tv', 'tv-1');
     fsm.registerClient('remote', 'remote-1');
     const sReady = fsm.getSnapshot();
@@ -75,8 +75,8 @@ test('SaharFsm: deregisters a client and regresses to initializing', () => {
 });
 
 // Data seeding: first seed inserts data; identical re-seed is a no-op; real change bumps version
-test('SaharFsm: seedData merges and only bumps on real change', () => {
-    const fsm = new SaharFsm();
+test('Fsm: seedData merges and only bumps on real change', () => {
+    const fsm = new Fsm();
     const s0 = fsm.getSnapshot();
 
     fsm.seedData({ videos: [{ id: 'v1' }] });
@@ -96,8 +96,8 @@ test('SaharFsm: seedData merges and only bumps on real change', () => {
 });
 
 // Navigation: performer→video→back preserves video context (scene cleared). Duplicate commands are suppressed.
-test('SaharFsm: navigationCommand updates levels and breadcrumb with no-op suppression', () => {
-    const fsm = new SaharFsm();
+test('Fsm: navigationCommand updates levels and breadcrumb with no-op suppression', () => {
+    const fsm = new Fsm();
     const s0 = fsm.getSnapshot();
 
     fsm.navigationCommand('navigate_to_performer', 'p1');
@@ -126,8 +126,8 @@ test('SaharFsm: navigationCommand updates levels and breadcrumb with no-op suppr
 });
 
 // Control: play/pause/seek/volume/mute update only on actual change; repeated same-op is suppressed
-test('SaharFsm: controlCommand play/pause/seek/volume/mute toggles with no-op suppression', () => {
-    const fsm = new SaharFsm();
+test('Fsm: controlCommand play/pause/seek/volume/mute toggles with no-op suppression', () => {
+    const fsm = new Fsm();
     const s0 = fsm.getSnapshot();
 
     fsm.controlCommand({ action: 'play', youtubeId: 'yt1', startTime: 10 } as ControlCommandPayload);
@@ -169,8 +169,8 @@ test('SaharFsm: controlCommand play/pause/seek/volume/mute toggles with no-op su
 });
 
 // action_confirmation: failure drives error state; repeated same failure is no-op; success clears error and returns to ready
-test('SaharFsm: actionConfirmation toggles error/ready state and only bumps on change', () => {
-    const fsm = new SaharFsm();
+test('Fsm: actionConfirmation toggles error/ready state and only bumps on change', () => {
+    const fsm = new Fsm();
     fsm.registerClient('tv', 'tv-1');
     fsm.registerClient('remote', 'remote-1');
     const sReady = fsm.getSnapshot();

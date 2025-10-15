@@ -8,12 +8,24 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { QRCodeComponent } from 'angularx-qrcode';
-import { Observable, Subscription, isObservable } from 'rxjs';
-import { VideoNavigationService, ControlCommandMessage, getYoutubeVideoId, NetworkDevice, ApplicationState, ConnectionState, NavigationLevel } from 'shared';
-import { WEBSOCKET_CONFIG } from 'shared';
-import { SharedPerformersGridComponent, SharedVideosGridComponent, SharedScenesGridComponent } from 'shared';
-import { NavigationState, VideoItem, Video, LikedScene, Performer } from 'shared';
-import { SharedBackCardComponent } from 'shared';
+import { Observable, Subscription } from 'rxjs';
+import { VideoNavigationService,
+         ControlCommandMessage,
+         getYoutubeVideoId,
+         NetworkDevice,
+         ApplicationState,
+         ConnectionState,
+         WEBSOCKET_CONFIG,
+         NavigationLevel,
+         SharedPerformersGridComponent,
+         SharedVideosGridComponent,
+         SharedScenesGridComponent,
+         SharedBackCardComponent,         
+         NavigationState,
+         VideoItem,
+         Video,
+         LikedScene,
+         Performer } from 'shared';
 import { WebSocketService } from './services/websocket.service';
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
 
@@ -129,7 +141,7 @@ export class App implements OnInit, OnDestroy {
   // Whether going back is possible (breadcrumb length > 1 or explicit state)
   get canGoBack(): boolean {
     const nav = this.navigationService.getCurrentState();
-    return (nav?.canGoBack ?? ((nav?.breadcrumb?.length ?? 1) > 1));
+    return (nav?.canGoBack);
   }
 
   ngOnInit(): void {
@@ -181,9 +193,11 @@ export class App implements OnInit, OnDestroy {
     // remotes.
     interface PlayerState { playingSceneId?: string; isPlaying?: boolean }
 
+    // If the navigation service exposes player$ we should listen for explicit playingSceneId
     const navAny = this.navigationService as unknown as Record<string, unknown>;
     const player$ = navAny['player$'] as Observable<PlayerState> | undefined;
-    if (player$ && isObservable(player$)) {
+    const isObservableLike = (v: unknown): v is Observable<unknown> => !!v && typeof (v as { subscribe?: unknown }).subscribe === 'function';
+    if (player$ && isObservableLike(player$)) {
       const playerSub = player$.subscribe((player: PlayerState | undefined) => {
         if (!player || !player.playingSceneId) {
           this.currentVideo = undefined;
