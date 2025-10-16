@@ -392,3 +392,17 @@ interface Scene {
 ```
 
 ---
+
+## Graphics & Controls Implementation (Remote)
+
+The Remote video controls use a standardized icon set and layout optimized for accessibility. The authoritative spec is in `GRAPHICS.md`.
+
+Practical notes:
+- Place SVG assets under the Remote app's `assets/icons/` directory (for example, `apps/remote/src/assets/icons/`).
+- Reference icons in templates via `<img src="assets/icons/play.svg" alt="Play">` or via `mat-icon` with an SVG registry if desired.
+- Ensure ARIA attributes and roles match the semantics: `role="button"`, `aria-label="Play"`, `aria-pressed` for toggle states.
+- Enforce large hit targets (~64px+) and high-contrast colors per the spec; keep focus outlines visible.
+- Backward/Forward buttons should be disabled when there is no previous/next scene.
+- Keep Play/Pause in the same slot and toggle based on the current player state.
+
+For visual layout and the list of required icons, see `GRAPHICS.md`.

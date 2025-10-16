@@ -179,6 +179,7 @@ Reconnect/backoff parameters centralized in validation config.
 - **Unified Communication Protocol (in ARCHITECTURE.md)**: [Protocol v3.0 — Stop-and-Wait](./ARCHITECTURE.md#4-unified-communication-protocol)  
 - **[DEPLOYMENT.md](./DEPLOYMENT.md)**: Deployment guide, testing procedures, and troubleshooting
 - **[VALIDATION.md](./VALIDATION.md)**: Validation flows, checks, and testing guidance
+ - **[GRAPHICS.md](./GRAPHICS.md)**: Authoritative UI graphics and layout spec for the Remote video controls
 
 ## 🛠️ Development
 

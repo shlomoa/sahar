@@ -214,6 +214,25 @@ Authoritative types and data structures are defined in [IMPLEMENTATION.md — Vi
 - Responsive design for TV
 - Error handling for unavailable videos
 
+### Remote Video Controls UX & Graphics (Authoritative UI spec)
+For the Remote's control surface, the graphics and layout are designed for a child with hearing, mobility, and vision impairments. Controls must be simple, colorful, intuitive, and highly accessible.
+
+Authoritative details live in GRAPHICS.md. Summary:
+
+- Icons (SVGs under `assets/icons/`):
+    - play.svg, pause.svg, forward.svg, backward.svg, volume-up.svg, volume-down.svg, mute.svg, exit.svg, fullscreen.svg
+- Control Areas:
+    1. Video Navigation Panel (horizontal): backward | play/pause | forward
+    2. Volume Control Panel (vertical): volume up | mute | volume down
+    3. Global Buttons: home, fullscreen, exit
+
+Implementation notes:
+- Remote app should render large, high-contrast buttons with clear labels and ARIA attributes.
+- Play/Pause share the same button location and toggle based on playback state.
+- Backward/Forward should be disabled at boundaries (no previous/next scene).
+- Prefer focus-visible styles, large hit areas, and readable labels.
+- See GRAPHICS.md for the canonical list of icons and intended placement.
+
 ## Network Architecture & Discovery
 
 ### Development Network Solution

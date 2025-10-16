@@ -156,19 +156,19 @@ export class App implements OnInit, OnDestroy {
         }
       } catch (err) {
         // Fail silently and keep using the browser hostname as a fallback.
-        console.warn('Failed to fetch /host-ip, falling back to browser hostname for QR.', err);
+        console.warn('📺 TV: Failed to fetch /host-ip, falling back to browser hostname for QR.', err);
       }
 
       // Warn if the QR still encodes localhost so developers notice the issue.
       if (this.remoteUrl.includes('localhost') || this.remoteUrl.includes('127.0.0.1')) {
-        console.warn('QR is using localhost. Access the TV via its FQDN or IP so the QR encodes a scannable host.');
+        console.warn('📺 TV: QR is using localhost. Access the TV via its FQDN or IP so the QR encodes a scannable host.');
       }
     })();
 
     // Keep local view in sync with authoritative navigation state updates
     this.navigation$.subscribe(nav => {
-      console.log('Navigation state updated:', nav);
-      console.log('Current level items:', nav.currentLevel.map(item => ({
+      console.log('📺 Navigation state updated:', nav);
+      console.log('📺 Current level items:', nav.currentLevel.map(item => ({
         title: item.title,
         thumbnail: item.thumbnail,
         type: item.itemType
@@ -217,14 +217,14 @@ export class App implements OnInit, OnDestroy {
           this.currentVideo = foundVideo;
           this.currentScene = foundScene;
           this.isPlaying = (player && player.isPlaying) || false;
-          console.log('📺 Starting video playback from player$:', {
+          console.log('📺 TV: Starting video playback from player$:', {
             video: this.currentVideo?.title,
             scene: this.currentScene.title,
             url: this.currentVideo?.url,
             startTime: this.currentScene.startTime
           });
         } else {
-          console.warn('Could not resolve playingSceneId to a known scene:', player.playingSceneId);
+          console.warn('📺 TV: Could not resolve playingSceneId to a known scene:', player.playingSceneId);
         }
       });
       this.subscriptions.push(playerSub);
@@ -238,6 +238,7 @@ export class App implements OnInit, OnDestroy {
       if (!msg || msg.msgType !== 'control_command') return;
       const { action } = (msg as ControlCommandMessage).payload;
       const payload = (msg as ControlCommandMessage).payload;
+      console.log('📺 TV: Received control command via WebSocket:', action, payload);
       switch (action) {
         case 'play':
           this.videoPlayer?.play();
@@ -251,7 +252,9 @@ export class App implements OnInit, OnDestroy {
           break;
         }
         case 'set_volume': {
-          if (typeof payload.volume === 'number') this.videoPlayer?.setVolume(payload.volume);
+          if (typeof payload.volume === 'number') {
+            this.videoPlayer?.setVolume(payload.volume);
+          }
           break;
         }
         case 'mute':
@@ -268,6 +271,7 @@ export class App implements OnInit, OnDestroy {
     const stateSub = this.webSocketService.messages.subscribe((msg) => {
       try {
         if (!msg || msg.msgType !== 'state_sync') return;
+        console.log('📺 TV: Received state_sync message via WebSocket:', msg);
         const payloadUnknown = msg.payload as unknown;
         const state = payloadUnknown as ApplicationState | undefined;
         const connectedClients = (state && (state as ApplicationState).connectedClients) ?? undefined;
@@ -293,7 +297,7 @@ export class App implements OnInit, OnDestroy {
           }, 1500);
         }
       } catch (e) {
-        console.warn('Failed to parse state_sync for connection info', e);
+        console.warn('📺 TV: Failed to parse state_sync for connection info', e);
       }
     });
     this.subscriptions.push(stateSub);
@@ -319,7 +323,7 @@ export class App implements OnInit, OnDestroy {
           duration: 5000
         });
         snackBarRef.onAction().subscribe(() => {
-          console.info('Network disconnected:');          
+          console.info('📺 TV: Network disconnected:');          
         });
       }
     });
@@ -327,7 +331,7 @@ export class App implements OnInit, OnDestroy {
 
     // Subscribe to WebSocket errors
     const errorSub = this.webSocketService.errors.subscribe(error => {
-      console.error('WebSocket error:', error);
+      console.error('📺 TV: WebSocket error:', error);
       this.snackBar.open(`Connection error: ${error}`, 'Close', { duration: 5000 });
     });
 
@@ -373,23 +377,22 @@ export class App implements OnInit, OnDestroy {
     this.navigationService.playScene(sceneId);
   }
 
-  
-
   // Video Player Event Handlers
   onPlayerReady(): void {
-    console.log('Video player is ready');
+    console.log('📺 TV: Video player is ready');
   }
 
   onVideoStarted(): void {
-    console.log('Video playback started');
+    console.log('📺 TV: Video playback started, setting volume to', this.volumeLevel);
+    this.videoPlayer?.setVolume(this.volumeLevel);
   }
 
   onVideoPaused(): void {
-    console.log('Video playback paused');
+    console.log('📺 TV: Video playback paused');
   }
 
   onVideoEnded(): void {
-    console.log('Video playback ended');
+    console.log('📺 TV: Video playback ended');
     // Optionally return to scene list or play next scene
     this.currentVideo = undefined;
     this.currentScene = undefined;
@@ -397,16 +400,16 @@ export class App implements OnInit, OnDestroy {
 
   onTimeUpdate(currentTime: number): void {
     // Handle time updates if needed for progress tracking
-    console.log('Video time update:', currentTime);
+    console.log('📺 TV: Video time update:', currentTime);
   }
 
-  
-
   onBackClick(): void {
+    console.log('📺 TV: Back button clicked');
     this.navigationService.goBack();
   }
 
   onHomeClick(): void {
+    console.log('📺 TV: Home button clicked');
     this.navigationService.goHome();
   }
 }

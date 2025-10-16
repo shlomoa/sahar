@@ -42,6 +42,8 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   isPlayerReady = false;
   currentTime = 0;
   duration = 0;
+  // Inform YouTube IFrame API about our hosting origin to avoid postMessage targetOrigin warnings
+  origin = typeof window !== 'undefined' ? window.location.origin : '';
 
   ngOnInit(): void {
     // Angular YouTubePlayerModule handles API loading automatically
@@ -49,6 +51,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges) {
+    console.log('📺 Video player component on change callback', changes);
     // Handle video source change via either explicit videoId or currentVideo.url
     if ((changes['videoId'] || changes['currentVideo']) && (this.videoId || this.currentVideo?.url)) {
       this.loadVideo();
@@ -99,7 +102,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   }
 
   onPlayerReady(event: YT.PlayerEvent): void {
-    console.log('📺 YouTube player ready');
+    console.log('📺 YouTube player ready recieved event', event);
     this.isPlayerReady = true;
     this.playerReady.emit(event.target);
     
@@ -109,14 +112,23 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
         this.seekToScene();
       }, 1000); // Wait for video to load
     }
+
+    // If autoplay or isPlaying is desired, attempt to start playback once ready
+    if (this.autoplay || this.isPlaying) {
+      setTimeout(() => this.tryAutoplay(), 0);
+    }
   }
 
   onStateChange(event: YT.OnStateChangeEvent) {
     const playerState = event.data;
     
     // Use YouTube API constants for player states
-    // YT.PlayerState.PLAYING = 1, PAUSED = 2, ENDED = 0
+    // YT.PlayerState: UNSTARTED = -1, ENDED = 0, PLAYING = 1, PAUSED = 2, BUFFERING = 3, CUED = 5
     switch (playerState) {
+      case -1: // YT.PlayerState.UNSTARTED
+        console.log('⏳ Video unstarted');
+        break;
+
       case 1: // YT.PlayerState.PLAYING
         console.log('▶️ Video started playing');
         this.videoStarted.emit();
@@ -134,6 +146,47 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
         this.videoEnded.emit();
         this.stopTimeTracking();
         break;
+
+      case 3: // YT.PlayerState.BUFFERING
+        console.log('🔄 Video buffering');
+        // If buffering persists while we intend to play, retry a nudge after a short delay
+        if (this.autoplay || this.isPlaying) {
+          setTimeout(() => {
+            try {
+              if (this.youtubePlayer && this.youtubePlayer.getPlayerState && this.youtubePlayer.getPlayerState() === 3) {
+                this.tryAutoplay();
+              }
+            } catch (e) {
+              console.error('❌ Error during buffering retry:', e);
+            }
+          }, 1500);
+        }
+        break;
+
+      case 5: // YT.PlayerState.CUED
+        console.log('🎬 Video cued and ready');
+        // If we intend to play, attempt to start playback
+        if (this.autoplay || this.isPlaying) {
+          this.tryAutoplay();
+        }
+        break;
+    }
+  }
+
+  /**
+   * Attempt to start playback in a way that works with browser autoplay policies.
+   * If autoplay is desired, try muted start first; Remote can adjust volume afterwards.
+   */
+  private tryAutoplay() {
+    if (!this.isPlayerReady || !this.youtubePlayer) return;
+    try {
+      // Muted start can help with autoplay restrictions
+      if (this.autoplay) {
+        this.setVolume(0);
+      }
+      this.youtubePlayer.playVideo();
+    } catch (error) {
+      console.error('❌ Error attempting autoplay:', error);
     }
   }
 
