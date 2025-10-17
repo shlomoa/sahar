@@ -260,9 +260,19 @@ export class App implements OnInit, OnDestroy {
         }
         case 'mute':
           this.videoPlayer?.setVolume(0);
+          this.isMuted = true;
           break;
         case 'unmute':
           this.videoPlayer?.setVolume(100);
+          this.isMuted = false;
+          break;
+        case 'enter_fullscreen':
+        case 'exit_fullscreen':
+          this.videoPlayer?.toggleFullscreen();
+          this.isFullscreen = !this.isFullscreen;
+          break;
+        default:
+          console.error('📺 TV: Unknown control command action:', action);
           break;
       }
     });
@@ -384,8 +394,12 @@ export class App implements OnInit, OnDestroy {
   }
 
   onVideoStarted(): void {
-    console.log('📺 TV: Video playback started, setting volume to', this.volumeLevel);
-    this.videoPlayer?.setVolume(this.volumeLevel);
+    console.log('📺 TV: Video playback started');
+    // Don't immediately set volume to avoid autoplay policy conflicts
+    // Volume will be controlled by Remote commands or user interaction
+    // setTimeout(() => {
+    //   this.videoPlayer?.setVolume(this.volumeLevel);
+    // }, 1000);
   }
 
   onVideoPaused(): void {

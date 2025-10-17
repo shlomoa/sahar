@@ -40,8 +40,10 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   playerWidth = 1280;
   playerHeight = 720;
   isPlayerReady = false;
+  isFullscreen = false;
   currentTime = 0;
   duration = 0;
+
   // Inform YouTube IFrame API about our hosting origin to avoid postMessage targetOrigin warnings
   origin = typeof window !== 'undefined' ? window.location.origin : '';
 
@@ -81,6 +83,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
       }
     }
   }
+
   private extractYouTubeId(url: string): string | null {
     // Use shared utility function
     return getYoutubeVideoId(url);
@@ -175,15 +178,15 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
 
   /**
    * Attempt to start playback in a way that works with browser autoplay policies.
-   * If autoplay is desired, try muted start first; Remote can adjust volume afterwards.
+   * For autoplay (no user interaction), start muted to comply with browser policies.
+   * For user-initiated play commands, attempt unmuted playback.
    */
   private tryAutoplay() {
     if (!this.isPlayerReady || !this.youtubePlayer) return;
     try {
-      // Muted start can help with autoplay restrictions
-      if (this.autoplay) {
-        this.setVolume(0);
-      }
+      // Always start muted for autoplay to comply with browser policies
+      console.log('🔇 Starting muted autoplay to comply with browser policies');
+      this.setVolume(0);
       this.youtubePlayer.playVideo();
     } catch (error) {
       console.error('❌ Error attempting autoplay:', error);
@@ -263,6 +266,9 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   play() {
     if (this.isPlayerReady && this.youtubePlayer) {
       try {
+        // For user-initiated play commands, don't force mute
+        // Let the Remote control volume separately
+        console.log('▶️ Playing video (user-initiated)');
         this.youtubePlayer.playVideo();
       } catch (error) {
         console.error('❌ Error playing video:', error);
@@ -333,4 +339,47 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
     }
     return 0;
   }
+
+  toggleFullscreen() {
+    console.log('📺 Toggling fullscreen mode');
+    if (!this.isFullscreen) {
+      this.openFullscreen();
+    } else {
+      this.closeFullscreen();
+    }
+    this.youtubePlayer?.requestFullscreen();
+  }   
+
+  closeFullscreen() {
+    const doc = document as Document & {
+      webkitExitFullscreen?: () => Promise<void>;
+      msExitFullscreen?: () => Promise<void>;
+    };
+
+    if (doc.exitFullscreen) {
+      doc.exitFullscreen();
+    } else if (doc.webkitExitFullscreen) { // Safari
+      doc.webkitExitFullscreen();
+    } else if (doc.msExitFullscreen) { // IE11
+      doc.msExitFullscreen();
+    }
+
+    this.isFullscreen = false;
+  }
+
+  openFullscreen() {
+    const elem = document.documentElement as HTMLElement & {
+      webkitRequestFullscreen?: () => Promise<void>;
+      msRequestFullscreen?: () => Promise<void>;
+    };
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen();
+    } else if (elem.webkitRequestFullscreen) { /* Safari */
+      elem.webkitRequestFullscreen();
+    } else if (elem.msRequestFullscreen) { /* IE11 */
+      elem.msRequestFullscreen();
+    }
+    this.isFullscreen = true;
+  }
+
 }
