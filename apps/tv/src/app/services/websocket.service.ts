@@ -283,7 +283,7 @@ export class WebSocketService extends WebSocketBaseService {
     }
   }
 
-  private sendActionConfirmation(status: 'success' | 'failure', errorMessage?: string): void {
+  public sendActionConfirmation(status: 'success' | 'failure', errorMessage?: string): void {
     this.sendByType('action_confirmation', { status, ...(errorMessage ? { errorMessage } : {}) } as ActionConfirmationPayload);
   }
 }

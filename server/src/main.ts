@@ -299,7 +299,7 @@ function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebS
       const startTime = typeof payload.startTime === 'number' ? payload.startTime : undefined;
       const seekTime = typeof payload.seekTime === 'number' ? payload.seekTime : undefined;
       const volume = typeof payload.volume === 'number' ? payload.volume : undefined;
-      if (volume !== undefined && (volume < 0 || volume > 1)) {
+      if (volume !== undefined && (volume < 0 || volume > 100)) {
         logError('invalid_message', { code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid volume' });
         return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid volume' };
       }

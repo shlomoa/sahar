@@ -77,9 +77,8 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
       }
 
       if ('volume' in changes && typeof this.volume === 'number' && !Number.isNaN(this.volume)) {
-        // YouTube API expects 0..100; our schema uses 0..1. Support both.
-        const v = this.volume <= 1 ? Math.round(this.volume * 100) : Math.round(this.volume);
-        this.setVolume(v);
+        // Server now sends 0-100 range directly, which matches YouTube API expectations
+        this.setVolume(this.volume);
       }
     }
   }

@@ -31,7 +31,7 @@ export class Fsm {
         isPlaying: false,
         currentTime: 0,
         duration: 0,
-        volume: 1,
+        volume: 50,  // Use 0-100 range to match Remote UI and YouTube API
         muted: false
       }
     };
@@ -164,8 +164,9 @@ export class Fsm {
         break; }
       case 'set_volume': {
         if (typeof volume === 'number') {
-          const v = Math.max(0, Math.min(1, volume));
-          if (this.state.player.volume !== v) this.state.player.volume = v;
+          if (this.state.player.volume !== volume) {
+            this.state.player.volume = volume;
+          }
         }
         break; }
       case 'mute': {

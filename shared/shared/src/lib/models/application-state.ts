@@ -26,7 +26,7 @@ export interface ApplicationState {
     isPlaying: boolean;
     currentTime: number;
     duration: number;
-    volume: number;
+    volume: number;      // 0-100 range (matches YouTube API and UI)
     muted: boolean;
     youtubeId?: string;
     // Optional explicit marker for which scene is currently playing )

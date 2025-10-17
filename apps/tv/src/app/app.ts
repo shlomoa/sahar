@@ -395,19 +395,25 @@ export class App implements OnInit, OnDestroy {
 
   onVideoStarted(): void {
     console.log('📺 TV: Video playback started');
+    this.isPlaying = true;
+    // Send action confirmation to update server state
+    this.webSocketService.sendActionConfirmation('success');
     // Don't immediately set volume to avoid autoplay policy conflicts
     // Volume will be controlled by Remote commands or user interaction
-    // setTimeout(() => {
-    //   this.videoPlayer?.setVolume(this.volumeLevel);
-    // }, 1000);
   }
 
   onVideoPaused(): void {
     console.log('📺 TV: Video playback paused');
+    this.isPlaying = false;
+    // Send action confirmation to update server state
+    this.webSocketService.sendActionConfirmation('success');
   }
 
   onVideoEnded(): void {
     console.log('📺 TV: Video playback ended');
+    this.isPlaying = false;
+    // Send action confirmation to update server state
+    this.webSocketService.sendActionConfirmation('success');
     // Optionally return to scene list or play next scene
     this.currentVideo = undefined;
     this.currentScene = undefined;

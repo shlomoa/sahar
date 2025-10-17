@@ -272,8 +272,25 @@ export class App implements OnInit, OnDestroy {
     const stateSub = this.webSocketService.messages.subscribe((msg) => {
       try {
         if (!msg || msg.msgType !== 'state_sync') return;
+        console.log('📱 Remote: Received state_sync message:', msg);
         const payloadUnknown = msg.payload as unknown;
         const state = payloadUnknown as ApplicationState | undefined;
+        
+        // Handle player state updates from server
+        if (state?.player) {
+          this.isPlaying = state.player.isPlaying ?? false;
+          this.isMuted = state.player.muted ?? false;
+          this.volumeLevel = state.player.volume ?? 50;  // Server now uses 0-100 range directly
+          console.log('📱 Remote: Player state updated from server:', {
+            isPlaying: this.isPlaying,
+            isMuted: this.isMuted,
+            volumeLevel: this.volumeLevel
+          });
+        } else {
+          console.log('📱 Remote: No player state in state_sync message');
+        }
+        
+        // Handle connection state for QR visibility
         const connectedClients = (state && (state as ApplicationState).connectedClients) ?? undefined;
         const tvConn = !!connectedClients?.tv;
         const remoteConn = !!connectedClients?.remote;
@@ -431,13 +448,17 @@ export class App implements OnInit, OnDestroy {
       throw new Error('Cannot control playback - no video/scene context');
     }
     switch (command) {
-      case 'play-pause':
+      case 'play-pause': {
+        console.log('📱 Remote: Play-pause button clicked, current isPlaying:', this.isPlaying);
+        const actionToSend = this.isPlaying ? 'pause' : 'play';
+        console.log('📱 Remote: Sending action:', actionToSend);
         this.webSocketService.sendControlCommand({
           msgType: 'control_command',
-          action: this.isPlaying ? 'pause' : 'play'
+          action: actionToSend
         });
-        this.isPlaying = !this.isPlaying;
+        // Don't optimistically update isPlaying - wait for server state_sync
         break;
+      }
       case 'go-home':
         this.onHomeClick();
         break;
