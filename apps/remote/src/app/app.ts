@@ -435,14 +435,6 @@ export class App implements OnInit, OnDestroy {
       case 'next-scene':
         this.navigateToNextScene();
         break;
-      case 'rewind':
-        // Use navigation back command instead of seek
-        this.webSocketService.sendControlCommand('back');
-        break;
-      case 'fast-forward':
-        // Use resume command for forward movement
-        this.webSocketService.sendControlCommand('resume');
-        break;
       case 'toggle-fullscreen':
         // Fullscreen not available in shared protocol, use play as alternative
         this.webSocketService.sendControlCommand('play');
@@ -452,14 +444,18 @@ export class App implements OnInit, OnDestroy {
         this.webSocketService.sendControlCommand(this.isMuted ? 'resume' : 'pause');
         this.isMuted = !this.isMuted;
         break;
-      case 'stop':
-        this.webSocketService.sendControlCommand('stop');
-        this.isPlaying = false;
+      default:
+        console.error('Unknown control command:', command);
         break;
     }
   }
 
-  onVolumeChange(value: number) {
+  onVolumeChange(value: number) {    
+    if (value < 0  || value > 100) {
+      console.error('Volume value out of range (0-100):', value);
+      return;
+    }
+    this.isMuted = (value === 0);
     this.volumeLevel = value;
     // Volume control not available in shared protocol, send play command with value
     this.webSocketService.sendControlCommand('play');

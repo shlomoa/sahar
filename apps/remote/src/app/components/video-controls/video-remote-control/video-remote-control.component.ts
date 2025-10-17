@@ -40,22 +40,24 @@ export class VideoRemoteControlComponent {
     this.backToScenes.emit();
   }
   
-  volumeDown(): void {    
-    if (this.volumeLevel > 0) {
-      this.volumeChange.emit(this.volumeLevel - 10);
-      if (this.volumeLevel - 10 <= 0) {
-        this.isMuted = true;
-      }
-      console.log('Volume:', this.volumeLevel);
-    }
+  volumeDown(): void {  
+    console.log('Volume down pressed');
+    if (this.volumeLevel == 0) {
+      console.warn('Volume is already at minimum');
+      return;
+    }    
+    this.volumeChange.emit(this.volumeLevel - 10);
+    console.log('Volume went down one notch');
   }
 
   volumeUp(): void {    
-    if (this.volumeLevel < 100) {
-      this.volumeChange.emit(this.volumeLevel + 10);
-      this.isMuted = false;
-      console.log('Volume:', this.volumeLevel);
-    }
+    console.log('Volume up pressed');
+    if (this.volumeLevel == 100) {
+        console.warn('Volume is already at maximum');
+        return;    
+    }    
+    this.volumeChange.emit(this.volumeLevel + 10);    
+    console.log('Volume going up one notch');    
   }
 
 }

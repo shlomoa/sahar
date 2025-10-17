@@ -18,9 +18,8 @@
     [hasPreviousScene]="hasPreviousScene"
     [hasNextScene]="hasNextScene"
     (controlCommand)="onControlCommand($event)"
-    (volumeChange)="onVolumeChange($event)">
+    (volumeChange)="onVolumeChange($event)"
+    (backToScenes)="onBackToScenes()">
   </video-remote-control>
-
-  <div class="spacer"></div>
 
 </div>

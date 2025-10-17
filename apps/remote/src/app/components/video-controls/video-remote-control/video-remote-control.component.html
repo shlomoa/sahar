@@ -46,10 +46,8 @@
             <button
               mat-fab
               class="vrc-control-button vrc-play-pause-button"
-              (click)="onControlCommand('play-pause')"
-              [disabled]="!isPlaying"
-              [attr.aria-label]="isPlaying ? 'Pause' : 'Play'"
-              [attr.aria-pressed]="!isPlaying">
+              (click)="onControlCommand('play-pause')"              
+              [attr.aria-label]="isPlaying ? 'Pause' : 'Play'">
               <mat-icon>{{ isPlaying ? 'pause' : 'play_arrow' }}</mat-icon>
             </button>
             <button
