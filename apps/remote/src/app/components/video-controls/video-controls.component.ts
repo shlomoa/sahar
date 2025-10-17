@@ -1,9 +1,9 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { LikedScene, Video } from 'shared';
+import { VideoControlNavigationComponent } from './video-control-navigation/video-control-navigation.component';
+import { CurrentVideoSceneInfoComponent } from './current-video-scene-info/current-video-scene-info.component';
+import { VideoRemoteControlComponent } from './video-remote-control/video-remote-control.component';
 
 @Component({
   // eslint-disable-next-line @angular-eslint/component-selector
@@ -11,9 +11,9 @@ import { LikedScene, Video } from 'shared';
   standalone: true,
   imports: [
     CommonModule,
-    MatCardModule,
-    MatButtonModule,
-    MatIconModule
+    VideoControlNavigationComponent,
+    CurrentVideoSceneInfoComponent,
+    VideoRemoteControlComponent
   ],
   templateUrl: './video-controls.component.html',
   styleUrls: ['./video-controls.component.scss']
@@ -42,16 +42,5 @@ export class VideoControlsComponent {
 
   onBackToScenes() {
     this.backToScenes.emit();
-  }
-
-  // Accessibility helpers for coarse volume changes
-  incrementVolume(step = 10) {
-    const next = Math.min(100, Math.max(0, this.volumeLevel + step));
-    this.volumeChange.emit(next);
-  }
-
-  decrementVolume(step = 10) {
-    const next = Math.min(100, Math.max(0, this.volumeLevel - step));
-    this.volumeChange.emit(next);
   }
 }

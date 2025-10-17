@@ -1,0 +1,135 @@
+/* Screen reader only label */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.control-buttons {
+  .control-btn {
+    min-width: 140px;
+    height: 64px;
+    font-size: 18px;
+    border-radius: 12px;
+  }
+
+  .control-btn--lg {
+    min-width: 160px;
+  }
+
+  .control-btn--xl {
+    min-width: 200px;
+    height: 72px;
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  .control-icon {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+    margin-right: 8px;
+  }
+
+  .control-icon--xl {
+    font-size: 36px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .playback-controls {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    
+    .scene-nav-btn {
+      min-width: 140px;
+      height: 48px;
+      
+      &:disabled {
+        background-color: #f5f5f5 !important;
+        color: #bdbdbd !important;
+      }
+    }
+    
+    .play-pause-btn {
+      min-width: 200px;
+      height: 80px;
+      font-size: 20px;
+      border: 3px solid #ff9800;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      
+      mat-icon {
+        font-size: 36px;
+        width: 36px;
+        height: 36px;
+      }
+    }
+  }
+  
+  .seek-controls {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  
+  .volume-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    
+    .volume-slider {
+      width: 260px;
+      height: 12px;
+    }
+
+    .volume-label {
+      min-width: 64px;
+      text-align: center;
+      font-size: 18px;
+    }
+  }
+  
+  .additional-controls {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+  }
+}
+
+/* High-visibility focus styles */
+button:focus-visible,
+input[type="range"]:focus-visible {
+  outline: 4px solid #ff6b35;
+  outline-offset: 4px;
+}
+
+@media (max-width: 768px) {
+  .control-buttons {
+    .playback-controls {
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+    }
+    
+    .seek-controls,
+    .additional-controls {
+      gap: 12px;
+    }
+    
+    .volume-controls {
+      .volume-slider {
+        width: 150px;
+      }
+    }
+  }
+}

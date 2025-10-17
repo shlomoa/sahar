@@ -1,0 +1,41 @@
+.current-scene-info {
+  margin-bottom: 20px;
+  
+  h3 {
+    margin: 0 0 8px 0;
+    color: #333;
+    font-size: 18px;
+    font-weight: 600;
+  }
+  
+  p {
+    margin: 0 0 4px 0;
+    color: #666;
+    font-size: 14px;
+  }
+}
+
+.sync-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background-color: #e8f5e8;
+  color: #2e7d32;
+  font-size: 14px;
+  margin-top: 12px;
+  
+  mat-icon {
+    color: #4caf50;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    animation: rotate 2s linear infinite;
+  }
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
