@@ -10,7 +10,6 @@ import {
   RegisterPayload,
   NavigationAction,
   NavigationCommandPayload,
-  ControlAction,
   SaharMessage,  
   ConnectionState,
   HeartbeatMessage,
@@ -148,18 +147,9 @@ export class WebSocketService extends WebSocketBaseService {
     this.sendByType('navigation_command', { action, targetId } as NavigationCommandPayload);
   }
 
-  // Accept either canonical payload or a simple action (shim some legacy actions)
-  sendControlCommand(payload: ControlCommandPayload | 'back' | 'resume' | 'stop' | 'play' | 'pause' | 'mute' | 'unmute'): void {
+  // Accept only ControlCommandPayload objects for full parameter support
+  sendControlCommand(payload: ControlCommandPayload): void {
     this.debugLog('Sending control command:', payload);
-    if (typeof payload === 'string') {
-      const action = payload === 'resume' ? 'play'
-                   : payload === 'stop' ? 'pause'
-                   : payload === 'back' ? 'seek'
-                   : (payload as ControlAction);
-      const control: ControlCommandPayload = action === 'seek' ? { action: 'seek', seekTime: -5 }  as ControlCommandPayload: { action }  as ControlCommandPayload;
-      this.sendByType('control_command', control);
-      return;
-    }
     this.sendByType('control_command', payload);
   }
 

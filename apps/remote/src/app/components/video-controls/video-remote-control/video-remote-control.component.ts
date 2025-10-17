@@ -20,6 +20,7 @@ import { MatCardModule } from "@angular/material/card";
 export class VideoRemoteControlComponent {
   @Input() isPlaying = false;
   @Input() isMuted = false;
+  @Input() isFullscreen = false;
   @Input() volumeLevel = 50;
   @Input() hasPreviousScene = false;
   @Input() hasNextScene = false;

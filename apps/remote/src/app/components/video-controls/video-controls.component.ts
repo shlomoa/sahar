@@ -24,6 +24,7 @@ export class VideoControlsComponent {
   @Input() sceneId?: string;
   @Input() isPlaying = false;
   @Input() isMuted = false;
+  @Input() isFullscreen = false;
   @Input() volumeLevel = 50;
   @Input() hasPreviousScene = false;
   @Input() hasNextScene = false;

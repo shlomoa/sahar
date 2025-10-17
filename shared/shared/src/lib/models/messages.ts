@@ -75,7 +75,9 @@ export const CONTROL_ACTIONS = [
   'seek',
   'set_volume',
   'mute',
-  'unmute'
+  'unmute',
+  'enter_fullscreen',
+  'exit_fullscreen'
 ] as const
 
 export type ControlAction = typeof CONTROL_ACTIONS[number];

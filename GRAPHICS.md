@@ -15,7 +15,7 @@ The following icons are used for video control functionalities:
 - **Forward Icon**: Represents the action to forward to the next scene in the video.
   - File: `assets/icons/forward.svg`
   - Usage: Displayed on the forward button in the video control panel.
-- **Backward Icon**: Represents the action to rewind to the previous scene in the video, highlighted when applicable.
+- **Backward Icon**: Represents the action to get back to the previous scene in the video, highlighted when applicable.
   - File: `assets/icons/backward.svg`
   - Usage: Displayed on the backward button in the video control panel, highlighted when applicable.
 - **Volume Increase Icon**: Represents the action to increase the volume of the video playback.

@@ -59,6 +59,7 @@ export class App implements OnInit, OnDestroy {
   // Local playback flag (derived from player$)
   isPlaying = false;
   isMuted = false;
+  isFullscreen = false;
   volumeLevel = 50;
 
   // QR: Remote entry URL to encode

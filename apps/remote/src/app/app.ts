@@ -58,6 +58,7 @@ export class App implements OnInit, OnDestroy {
   isPlaying = false;
   isMuted = false;
   volumeLevel = 50;
+  isFullscreen = false;
   
   // Visibility flag: when both TV and Remote are connected according to server state
   bothConnected = false;
@@ -83,8 +84,13 @@ export class App implements OnInit, OnDestroy {
     console.log('📱 Remote: Scene selected:', sceneId);
     // Play scene via local navigation service; server will reconcile via state_sync
     this.videoNavigationService.playScene(sceneId);
-    // Use the shared control command shim (string variant) for simple play
-    this.webSocketService.sendControlCommand('play');
+    // Send play command with scene context
+    this.webSocketService.sendControlCommand({
+      msgType: 'control_command',
+      action: 'play',
+      youtubeId: this.currentVideo?.url,
+      startTime: this.currentScene?.startTime
+    });
   }
 
   onBackToPerformers(): void {
@@ -420,10 +426,16 @@ export class App implements OnInit, OnDestroy {
   // Video control methods
   sendControlCommand(command: string) {
     console.log('🎮 Control command:', command);
-    
+    // ✅ INFORMED: Remote knows exactly what it's controlling
+    if (!this.currentVideo || !this.currentScene) {
+      throw new Error('Cannot control playback - no video/scene context');
+    }
     switch (command) {
       case 'play-pause':
-        this.webSocketService.sendControlCommand(this.isPlaying ? 'pause' : 'play');
+        this.webSocketService.sendControlCommand({
+          msgType: 'control_command',
+          action: this.isPlaying ? 'pause' : 'play'
+        });
         this.isPlaying = !this.isPlaying;
         break;
       case 'go-home':
@@ -435,13 +447,19 @@ export class App implements OnInit, OnDestroy {
       case 'next-scene':
         this.navigateToNextScene();
         break;
-      case 'toggle-fullscreen':
-        // Fullscreen not available in shared protocol, use play as alternative
-        this.webSocketService.sendControlCommand('play');
+      case 'toggle-fullscreen':        
+        this.webSocketService.sendControlCommand({
+          msgType: 'control_command',
+          action: this.isFullscreen ? 'exit_fullscreen' : 'enter_fullscreen'
+        });
+        this.isFullscreen = !this.isFullscreen;
         break;
       case 'toggle-mute':
-        // Mute not available in shared protocol, use pause as alternative
-        this.webSocketService.sendControlCommand(this.isMuted ? 'resume' : 'pause');
+        // Use proper mute/unmute actions
+        this.webSocketService.sendControlCommand({
+          msgType: 'control_command',
+          action: this.isMuted ? 'unmute' : 'mute'
+        });
         this.isMuted = !this.isMuted;
         break;
       default:
@@ -457,8 +475,12 @@ export class App implements OnInit, OnDestroy {
     }
     this.isMuted = (value === 0);
     this.volumeLevel = value;
-    // Volume control not available in shared protocol, send play command with value
-    this.webSocketService.sendControlCommand('play');
+    // Send proper volume control command with actual volume data
+    this.webSocketService.sendControlCommand({
+      msgType: 'control_command',
+      action: 'set_volume',
+      volume: value
+    });
     console.log('🔊 Volume changed to:', value);
   }
 
