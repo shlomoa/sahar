@@ -1,115 +1,96 @@
-<div class="control-buttons" role="group" aria-label="Playback controls">
-  <div class="playback-controls">
-    <button
-      mat-raised-button
-      color="primary"
-      class="control-btn scene-nav-btn"
-      (click)="onControlCommand('previous-scene')"
-      [disabled]="!hasPreviousScene"
-      aria-label="Previous scene"
-      [attr.aria-disabled]="!hasPreviousScene">
-      <mat-icon class="control-icon">skip_previous</mat-icon>
-      Previous
-    </button>
-
-    <button
-      mat-raised-button
-      color="accent"
-      class="control-btn control-btn--xl play-pause-btn"
-      (click)="onControlCommand('play-pause')"
-      [attr.aria-pressed]="isPlaying"
-      [attr.aria-label]="isPlaying ? 'Pause' : 'Play'">
-      <mat-icon class="control-icon control-icon--xl">{{ isPlaying ? 'pause' : 'play_arrow' }}</mat-icon>
-      {{ isPlaying ? 'Pause' : 'Play' }}
-    </button>
-
-    <button
-      mat-raised-button
-      color="primary"
-      class="control-btn scene-nav-btn"
-      (click)="onControlCommand('next-scene')"
-      [disabled]="!hasNextScene"
-      aria-label="Next scene"
-      [attr.aria-disabled]="!hasNextScene">
-      <mat-icon class="control-icon">skip_next</mat-icon>
-      Next
-    </button>
-  </div>
-
-  <div class="seek-controls" role="group" aria-label="Seek controls">
-    <button
-      mat-raised-button
-      class="control-btn"
-      (click)="onControlCommand('rewind')"
-      aria-label="Rewind ten seconds">
-      <mat-icon class="control-icon">replay_10</mat-icon>
-      -10s
-    </button>
-
-    <button
-      mat-raised-button
-      class="control-btn"
-      (click)="onControlCommand('fast-forward')"
-      aria-label="Fast forward ten seconds">
-      <mat-icon class="control-icon">forward_10</mat-icon>
-      +10s
-    </button>
-  </div>
-
-  <div class="volume-controls" role="group" aria-label="Volume controls">
-    <button
-      mat-raised-button
-      class="control-btn"
-      (click)="decrementVolume(10)"
-      aria-label="Decrease volume">
-      <mat-icon class="control-icon">volume_down</mat-icon>
-      -
-    </button>
-
-    <label class="sr-only" for="volumeSlider">Volume</label>
-    <input
-      id="volumeSlider"
-      type="range"
-      min="0"
-      max="100"
-      step="1"
-      [value]="volumeLevel"
-      (input)="onVolumeChange(+($any($event).target.value))"
-      class="volume-slider"
-      aria-valuemin="0"
-      aria-valuemax="100"
-      [attr.aria-valuenow]="volumeLevel"
-      aria-label="Volume slider">
-    <span class="volume-label">{{ volumeLevel }}%</span>
-
-    <button
-      mat-raised-button
-      class="control-btn"
-      (click)="incrementVolume(10)"
-      aria-label="Increase volume">
-      <mat-icon class="control-icon">volume_up</mat-icon>
-      +
-    </button>
-  </div>
-
-  <div class="additional-controls" role="group" aria-label="Additional controls">
-    <button
-      mat-raised-button
-      class="control-btn"
-      (click)="onControlCommand('toggle-mute')"
-      [attr.aria-pressed]="isMuted"
-      [attr.aria-label]="isMuted ? 'Unmute' : 'Mute'">
-      <mat-icon class="control-icon">{{ isMuted ? 'volume_off' : 'volume_up' }}</mat-icon>
-      {{ isMuted ? 'Unmute' : 'Mute' }}
-    </button>
-
-    <button
-      mat-raised-button
-      class="control-btn"
-      (click)="onControlCommand('toggle-fullscreen')"
-      aria-label="Fullscreen">
-      <mat-icon class="control-icon">fullscreen</mat-icon>
-      Fullscreen
-    </button>
-  </div>
+<div class="vrc-buttons">
+  <mat-card class="vrc-card">
+    <mat-card-content>
+      <div class="vrc-container">
+        <div class="vrc-section">
+          <div class="vrc-button-group vrc-navigation-controls">
+            <button
+              mat-fab
+              class="vrc-control-button vrc-nav-button vrc-home-button"
+              (click)="onControlCommand('go-home')"
+              aria-label="Home">
+              <mat-icon>home</mat-icon>
+              <span class="vrc-button-label">בית</span>
+            </button>
+            <button
+              mat-fab
+              class="vrc-control-button vrc-nav-button vrc-fullscreen-button"
+              (click)="onControlCommand('toggle-fullscreen')"
+              [disabled]="!isPlaying"              
+              aria-label="Fullscreen"
+              [attr.aria-disabled]="!isPlaying">
+              <mat-icon>fullscreen</mat-icon>
+              <span class="vrc-button-label">מסך מלא</span>
+            </button>
+            <button
+              mat-fab
+              class="vrc-control-button vrc-nav-button vrc-exit-button"
+              (click)="exitPlayer()"
+              aria-label="Exit">
+              <mat-icon>exit_to_app</mat-icon>
+              <span class="vrc-button-label">יציאה</span>
+            </button>
+          </div>
+        </div>
+        <div class="vrc-section">
+          <div class="vrc-button-group vrc-playback-controls">
+            <button
+              mat-fab
+              class="vrc-control-button vrc-previous-button"
+              (click)="onControlCommand('previous-scene')"
+              [disabled]="!hasPreviousScene"              
+              aria-label="Previous clip"
+              [attr.aria-disabled]="!hasPreviousScene">
+              <mat-icon>skip_previous</mat-icon>
+            </button>
+            <button
+              mat-fab
+              class="vrc-control-button vrc-play-pause-button"
+              (click)="onControlCommand('play-pause')"
+              [disabled]="!isPlaying"
+              [attr.aria-label]="isPlaying ? 'Pause' : 'Play'"
+              [attr.aria-pressed]="!isPlaying">
+              <mat-icon>{{ isPlaying ? 'pause' : 'play_arrow' }}</mat-icon>
+            </button>
+            <button
+              mat-fab
+              class="vrc-control-button vrc-next-button"
+              (click)="onControlCommand('next-scene')"
+              [disabled]="!hasNextScene"
+              aria-label="Next clip"
+              [attr.aria-disabled]="!hasNextScene">
+              <mat-icon>skip_next</mat-icon>
+            </button>
+          </div>
+        </div>
+        <div class="vrc-section">
+          <div class="vrc-button-group vrc-volume-controls">
+            <button
+              mat-fab
+              class="vrc-control-button vrc-volume-button vrc-volume-down-button"
+              (click)="volumeDown()"
+              aria-label="Volume down">
+              <mat-icon>remove</mat-icon>
+            </button>
+            <button
+              mat-fab
+              class="vrc-control-button vrc-mute-button"
+              [class.muted]="isMuted"
+              (click)="onControlCommand('toggle-mute')"
+              [attr.aria-label]="isMuted ? 'Unmute' : 'Mute'">
+              <mat-icon>{{ isMuted ? 'volume_off' : 'volume_up' }}</mat-icon>
+              <span class="volume-display">{{ isMuted ? 'OFF' : volumeLevel }}</span>
+            </button>
+            <button
+              mat-fab
+              class="vrc-control-button vrc-volume-button vrc-volume-up-button"
+              (click)="volumeUp()"
+              aria-label="Volume up">
+              <mat-icon>add</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
 </div>

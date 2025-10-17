@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatCardModule } from "@angular/material/card";
 
 @Component({
   // eslint-disable-next-line @angular-eslint/component-selector
@@ -10,8 +11,9 @@ import { MatIconModule } from '@angular/material/icon';
   imports: [
     CommonModule,
     MatButtonModule,
-    MatIconModule
-  ],
+    MatIconModule,
+    MatCardModule
+],
   templateUrl: './video-remote-control.component.html',
   styleUrls: ['./video-remote-control.component.scss']
 })
@@ -26,21 +28,32 @@ export class VideoRemoteControlComponent {
   @Output() volumeChange = new EventEmitter<number>();
 
   onControlCommand(command: string) {
+    console.log('Emitting control command:', command);
     this.controlCommand.emit(command);
   }
 
-  onVolumeChange(value: number) {
-    this.volumeChange.emit(value);
+  // General control methods
+
+  exitPlayer(): void {
+    console.log('Exiting player');
+  }
+  
+  volumeDown(): void {    
+    if (this.volumeLevel > 0) {
+      this.volumeChange.emit(this.volumeLevel - 10);
+      if (this.volumeLevel - 10 <= 0) {
+        this.isMuted = true;
+      }
+      console.log('Volume:', this.volumeLevel);
+    }
   }
 
-  // Accessibility helpers for coarse volume changes
-  incrementVolume(step = 10) {
-    const next = Math.min(100, Math.max(0, this.volumeLevel + step));
-    this.volumeChange.emit(next);
+  volumeUp(): void {    
+    if (this.volumeLevel < 100) {
+      this.volumeChange.emit(this.volumeLevel + 10);
+      this.isMuted = false;
+      console.log('Volume:', this.volumeLevel);
+    }
   }
 
-  decrementVolume(step = 10) {
-    const next = Math.min(100, Math.max(0, this.volumeLevel - step));
-    this.volumeChange.emit(next);
-  }
 }

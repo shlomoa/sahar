@@ -426,6 +426,9 @@ export class App implements OnInit, OnDestroy {
         this.webSocketService.sendControlCommand(this.isPlaying ? 'pause' : 'play');
         this.isPlaying = !this.isPlaying;
         break;
+      case 'go-home':
+        this.onHomeClick();
+        break;
       case 'previous-scene':
         this.navigateToPreviousScene();
         break;
