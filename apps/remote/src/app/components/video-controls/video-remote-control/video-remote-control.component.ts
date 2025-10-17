@@ -26,6 +26,7 @@ export class VideoRemoteControlComponent {
   
   @Output() controlCommand = new EventEmitter<string>();
   @Output() volumeChange = new EventEmitter<number>();
+  @Output() backToScenes = new EventEmitter<void>();
 
   onControlCommand(command: string) {
     console.log('Emitting control command:', command);
@@ -34,8 +35,9 @@ export class VideoRemoteControlComponent {
 
   // General control methods
 
-  exitPlayer(): void {
-    console.log('Exiting player');
+  onBackToScenes(): void {
+    console.log('Emitting back to scenes');
+    this.backToScenes.emit();
   }
   
   volumeDown(): void {    
