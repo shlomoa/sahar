@@ -21,15 +21,17 @@ export interface PlayerState {
     playingSceneId?: string;
 }
 
+export interface ClientsConnectionState {
+    tv?: ConnectionState;
+    remote?: ConnectionState;
+}
+
 // Shared authoritative ApplicationState model (with versioning)
 // Version increments on every committed mutation so clients can reconcile ordering.
 export interface ApplicationState {
   version: number; // monotonically increasing
   fsmState: FsmState;
-  connectedClients: {
-    tv?: ClientInfo;
-    remote?: ClientInfo;
-  };
+  clientsConnectionState: ClientsConnectionState; // Synchronized connection status
   // Domain data seeded by Remote (Task 1.17). Shape intentionally loose for Milestone 1.
   data?: {
     videos?: { id: string }[];

@@ -209,7 +209,6 @@ export class App implements OnInit, OnDestroy {
     });
 
     // @TODO: verify if this is still needed
-    // Subscribe to explicit player state when available. If the shared package
     // hasn't been rebuilt for the consuming app, use a runtime guard so this
     // code doesn't crash. 
     
@@ -295,29 +294,9 @@ export class App implements OnInit, OnDestroy {
           console.log('📱 Remote: No player state in state_sync message');
         }
         
-        // Handle connection state for QR visibility
-        const connectedClients = (state && (state as ApplicationState).connectedClients) ?? undefined;
-        const tvConn = !!connectedClients?.tv;
-        const remoteConn = !!connectedClients?.remote;
-        const shouldBeBoth = tvConn && remoteConn;
+        this.bothConnected = ((state?.clientsConnectionState['tv'] && state?.clientsConnectionState['remote']) && 
+        state?.clientsConnectionState['tv'] === 'connected' && state?.clientsConnectionState['remote'] === 'connected') || false;
 
-        // Debounce transitions to avoid QR flicker on short connection flaps.
-        // If both become true, apply immediately. If either disconnects, wait
-        // a short grace period before hiding the QR.
-        if (shouldBeBoth) {
-          if (this._bothConnectedDebounceTimer) {
-            window.clearTimeout(this._bothConnectedDebounceTimer);
-            this._bothConnectedDebounceTimer = null;
-          }
-          this.bothConnected = true;
-        } else {
-          if (this._bothConnectedDebounceTimer) window.clearTimeout(this._bothConnectedDebounceTimer);
-          // wait 1500ms before clearing bothConnected so short flakes don't show QR
-          this._bothConnectedDebounceTimer = window.setTimeout(() => {
-            this.bothConnected = false;
-            this._bothConnectedDebounceTimer = null;
-          }, 1500);
-        }
       } catch (e) {
         console.warn('Failed to parse state_sync for connection info', e);
       }

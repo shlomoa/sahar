@@ -1,5 +1,5 @@
-import { ApplicationState, ActionConfirmationStatus, createLogger, NavigationAction } from 'shared';
-import { ClientType, NavigationCommandPayload, ControlCommandPayload } from 'shared';
+import { ApplicationState, ActionConfirmationStatus, createLogger, NavigationAction, ClientInfo } from 'shared';
+import { ClientType, ClientsConnectionState, ControlCommandPayload } from 'shared';
 
 const logger = createLogger({ component: 'server-fsm' });
 const logInfo = (event: string, meta?: any, msg?: string) => logger.info(event, meta, msg);
@@ -14,15 +14,21 @@ const logError = (event: string, meta?: any, msg?: string) => logger.error(event
  * - Central place to extend future invariants (heartbeat, recovery, etc.) without leaking details
  */
 
+interface ConnectedClients {
+  tv?: ClientInfo;
+  remote?: ClientInfo;
+}
+
 export class Fsm {
   private state: ApplicationState;
   private dirty = false; // tracks whether a mutation occurred in current handler
+  private connectedClients: ConnectedClients = {};
 
   constructor() {
     this.state = {
       version: 1,
       fsmState: 'initializing',
-      connectedClients: {},
+      clientsConnectionState: { tv: 'disconnected', remote: 'disconnected' } as ClientsConnectionState, // Synchronized connection status
       // data field intentionally omitted until seeded (Task 1.17)
       navigation: {
         currentLevel: 'performers'
@@ -70,11 +76,12 @@ export class Fsm {
   }
 
   registerClient(clientType: ClientType, deviceId: string): { ok: boolean; reason?: string } {
-    if (this.state.connectedClients[clientType]) {
+    if (this.connectedClients[clientType]) {
       logWarn('fsm_register_duplicate', { clientType, deviceId }, 'Client type already registered');
       return { ok: false, reason: 'duplicate_client_type' };
     }
-    this.state.connectedClients[clientType] = { deviceId };
+    this.connectedClients[clientType] = { deviceId };
+    this.state.clientsConnectionState[clientType] = 'connected';
     this.dirty = true;
     this.recalcFsm();
     this.commit();
@@ -84,8 +91,9 @@ export class Fsm {
 
   deregisterClient(clientType: ClientType) {
     logInfo('fsm_deregister_client', { clientType }, 'Deregistering client');
-    if (this.state.connectedClients[clientType]) {
-      delete this.state.connectedClients[clientType];
+    if (this.connectedClients[clientType]) {
+      delete this.connectedClients[clientType];
+      this.state.clientsConnectionState[clientType] = 'disconnected';
       this.dirty = true;
       this.recalcFsm();
       this.commit();
@@ -213,7 +221,8 @@ export class Fsm {
 
   private recalcFsm() {
     logInfo('fsm_recalc', {}, 'Recalculating FSM state based on connected clients');
-    const both = !!this.state.connectedClients.tv && !!this.state.connectedClients.remote;
+    const both = this.state.clientsConnectionState.tv === 'connected' && 
+                 this.state.clientsConnectionState.remote === 'connected';
     if (both && this.state.fsmState === 'initializing') {
       this.state.fsmState = 'ready';
     } else if (!both && this.state.fsmState !== 'initializing' && this.state.fsmState !== 'error') {

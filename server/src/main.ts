@@ -501,11 +501,11 @@ wss.on('connection', (ws: WebSocket) => {
       const { clientType, deviceId } = reg.payload;
       // Enforce single TV / Remote uniqueness
       const snapshot = fsm.getSnapshot();
-      if (clientType === 'tv' && snapshot.connectedClients.tv) {
+      if (clientType === 'tv' && snapshot.clientsConnectionState.tv === 'connected') {
         sendError(ws, ERROR_CODES.CLIENT_TYPE_MISMATCH, 'A TV client is already connected.', { close: true, meta: { attempted: 'tv' } });
         return;
       }
-      if (clientType === 'remote' && snapshot.connectedClients.remote) {
+      if (clientType === 'remote' && snapshot.clientsConnectionState.remote === 'connected') {
         sendError(ws, ERROR_CODES.CLIENT_TYPE_MISMATCH, 'A Remote client is already connected.', { close: true, meta: { attempted: 'remote' } });
         return;
       }

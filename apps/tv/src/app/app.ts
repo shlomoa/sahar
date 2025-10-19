@@ -286,28 +286,8 @@ export class App implements OnInit, OnDestroy {
         console.log('📺 TV: Received state_sync message via WebSocket:', msg);
         const payloadUnknown = msg.payload as unknown;
         const state = payloadUnknown as ApplicationState | undefined;
-        const connectedClients = (state && (state as ApplicationState).connectedClients) ?? undefined;
-        const tvConn = !!connectedClients?.tv;
-        const remoteConn = !!connectedClients?.remote;
-        const shouldBeBoth = tvConn && remoteConn;
-
-        // Debounce transitions to avoid QR flicker on short connection flaps.
-        // If both become true, apply immediately. If either disconnects, wait
-        // a short grace period before hiding the QR.
-        if (shouldBeBoth) {
-          if (this._bothConnectedDebounceTimer) {
-            window.clearTimeout(this._bothConnectedDebounceTimer);
-            this._bothConnectedDebounceTimer = null;
-          }
-          this.bothConnected = true;
-        } else {
-          if (this._bothConnectedDebounceTimer) window.clearTimeout(this._bothConnectedDebounceTimer);
-          // wait 1500ms before clearing bothConnected so short flakes don't show QR
-          this._bothConnectedDebounceTimer = window.setTimeout(() => {
-            this.bothConnected = false;
-            this._bothConnectedDebounceTimer = null;
-          }, 1500);
-        }
+        this.bothConnected = ((state?.clientsConnectionState['tv'] && state?.clientsConnectionState['remote']) && 
+        state?.clientsConnectionState['tv'] === 'connected' && state?.clientsConnectionState['remote'] === 'connected') || false;        
       } catch (e) {
         console.warn('📺 TV: Failed to parse state_sync for connection info', e);
       }
