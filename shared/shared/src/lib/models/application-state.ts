@@ -30,7 +30,6 @@ export interface ClientsConnectionState {
 // Version increments on every committed mutation so clients can reconcile ordering.
 export interface ApplicationState {
   version: number; // monotonically increasing
-  fsmState: FsmState;
   clientsConnectionState: ClientsConnectionState; // Synchronized connection status
   // Domain data seeded by Remote (Task 1.17). Shape intentionally loose for Milestone 1.
   data?: {

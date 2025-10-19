@@ -1,4 +1,4 @@
-import { ApplicationState, ActionConfirmationStatus, createLogger, NavigationAction, ClientInfo } from 'shared';
+import { ApplicationState, ActionConfirmationStatus, createLogger, NavigationAction, ClientInfo, FsmState } from 'shared';
 import { ClientType, ClientsConnectionState, ControlCommandPayload } from 'shared';
 
 const logger = createLogger({ component: 'server-fsm' });
@@ -23,11 +23,11 @@ export class Fsm {
   private state: ApplicationState;
   private dirty = false; // tracks whether a mutation occurred in current handler
   private connectedClients: ConnectedClients = {};
+  fsmState: FsmState = 'initializing';
 
   constructor() {
     this.state = {
-      version: 1,
-      fsmState: 'initializing',
+      version: 1,      
       clientsConnectionState: { tv: 'disconnected', remote: 'disconnected' } as ClientsConnectionState, // Synchronized connection status
       // data field intentionally omitted until seeded (Task 1.17)
       navigation: {
@@ -162,11 +162,11 @@ export class Fsm {
         if (youtubeId && this.state.player.youtubeId !== youtubeId) this.state.player.youtubeId = youtubeId;
         if (!this.state.player.isPlaying) this.state.player.isPlaying = true;
         if (typeof startTime === 'number' && this.state.player.currentTime !== startTime) this.state.player.currentTime = startTime;
-        if (this.state.fsmState !== 'playing') this.state.fsmState = 'playing';
+        if (this.fsmState !== 'playing') this.fsmState = 'playing';
         break; }
       case 'pause': {
         if (this.state.player.isPlaying) this.state.player.isPlaying = false;
-        if (this.state.fsmState !== 'paused') this.state.fsmState = 'paused';
+        if (this.fsmState !== 'paused') this.fsmState = 'paused';
         break; }
       case 'seek': {
         if (typeof seekTime === 'number' && this.state.player.currentTime !== seekTime) this.state.player.currentTime = seekTime;
@@ -204,16 +204,16 @@ export class Fsm {
   actionConfirmation(status: ActionConfirmationStatus, errorMessage?: string) {
     logInfo('fsm_action_confirmation', { status, errorMessage }, 'Processing action confirmation');
     const beforeErr = this.state.error ? this.state.error.code + this.state.error.message : 'none';
-    const beforeState = this.state.fsmState;
+    const beforeState = this.fsmState;
     if (status === 'failure') {
       this.state.error = { code: 'COMMAND_FAILED', message: errorMessage || 'Unknown failure' };
-      this.state.fsmState = 'error';
+      this.fsmState = 'error';
     } else if (status === 'success' && this.state.error) {
       delete this.state.error;
-      if (this.state.fsmState === 'error') this.state.fsmState = 'ready'; // revert to ready if both clients present
+      if (this.fsmState === 'error') this.fsmState = 'ready'; // revert to ready if both clients present
       this.recalcFsm();
     }
-    if ((this.state.error ? this.state.error.code + this.state.error.message : 'none') !== beforeErr || beforeState !== this.state.fsmState) {
+    if ((this.state.error ? this.state.error.code + this.state.error.message : 'none') !== beforeErr || beforeState !== this.fsmState) {
       this.dirty = true;
       this.commit();
     }
@@ -223,11 +223,11 @@ export class Fsm {
     logInfo('fsm_recalc', {}, 'Recalculating FSM state based on connected clients');
     const both = this.state.clientsConnectionState.tv === 'connected' && 
                  this.state.clientsConnectionState.remote === 'connected';
-    if (both && this.state.fsmState === 'initializing') {
-      this.state.fsmState = 'ready';
-    } else if (!both && this.state.fsmState !== 'initializing' && this.state.fsmState !== 'error') {
+    if (both && this.fsmState === 'initializing') {
+      this.fsmState = 'ready';
+    } else if (!both && this.fsmState !== 'initializing' && this.fsmState !== 'error') {
       // Only regress to initializing if not in an error state (preserve error until cleared)
-      this.state.fsmState = 'initializing';
+      this.fsmState = 'initializing';
     }
   }
 

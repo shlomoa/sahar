@@ -738,8 +738,7 @@ app.get('/health', (req: Request, res: Response) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    uptimeSeconds: process.uptime(),
-    fsmState: fsmSnap.fsmState,
+    uptimeSeconds: process.uptime(),    
     wsConnections,
     registeredClients: registered,
     navigationLevel: fsmSnap.navigation.currentLevel,
