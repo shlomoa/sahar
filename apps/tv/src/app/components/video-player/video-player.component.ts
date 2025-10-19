@@ -2,7 +2,7 @@ import { Component, Input, Output, EventEmitter, OnInit, ViewChild, OnChanges, S
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { YouTubePlayerModule, YouTubePlayer } from '@angular/youtube-player';
-import { Video, LikedScene } from 'shared';
+import { Video, LikedScene, YouTubeThumbnailImageQuality } from 'shared';
 import { getYoutubeVideoId, getYoutubeThumbnailUrl } from 'shared';
 
 @Component({
@@ -96,9 +96,9 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
     }
     return this.currentVideo?.url ? this.extractYouTubeId(this.currentVideo.url) : null;
   }
-
+  
   // Get YouTube thumbnail for current video
-  getVideoThumbnail(quality: 'default' | 'mqdefault' | 'hqdefault' | 'sddefault' | 'maxresdefault' = 'hqdefault'): string | null {
+  getVideoThumbnail(quality: YouTubeThumbnailImageQuality = 'hqdefault'): string | null {
     const videoId = this.getYouTubeId();
     return videoId ? getYoutubeThumbnailUrl(videoId, quality) : null;
   }

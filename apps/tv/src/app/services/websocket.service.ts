@@ -13,7 +13,8 @@ import {
   ActionConfirmationPayload,
   BasePayload,
   WebSocketBaseService, 
-  WebSocketUtils
+  WebSocketUtils,
+  ActionConfirmationStatus
 } from 'shared';
 
 @Injectable({
@@ -273,8 +274,7 @@ export class WebSocketService extends WebSocketBaseService {
   }
 
   reconnectToDevice(): void {
-    if (this.lastConnectedUrl) {      
-
+    if (this.lastConnectedUrl) {
       this.debugLog('Device URL unchanged, reconnecting to lastConnectedUrl');
       this.connectionState$.next('connecting');
       this.reconnect(this.lastConnectedUrl);
@@ -283,7 +283,7 @@ export class WebSocketService extends WebSocketBaseService {
     }
   }
 
-  public sendActionConfirmation(status: 'success' | 'failure', errorMessage?: string): void {
+  public sendActionConfirmation(status: ActionConfirmationStatus, errorMessage?: string): void {
     this.sendByType('action_confirmation', { status, ...(errorMessage ? { errorMessage } : {}) } as ActionConfirmationPayload);
   }
 }

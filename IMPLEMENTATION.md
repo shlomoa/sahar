@@ -31,6 +31,7 @@ This document outlines the implementation details for the SAHAR TV Remote system
 ### Models and services shared between TV, Remote, and Server.
 - **Models**: TypeScript interfaces and types for messages, application state, navigation levels, and commands.
     - **ApplicationState**: Central state structure shared between server and clients.
+    - **PlayerState**: Consolidated player state interface with standardized 0-100 volume range. Eliminates duplicate implementations across TV and Remote apps.
     - **Messages**: Message types and interfaces.
         - Message Format
             All messages adhere to the `WebSocketMessage` interface defined in `shared/models/messages.ts`.
@@ -43,6 +44,14 @@ This document outlines the implementation details for the SAHAR TV Remote system
                     payload: BasePayload;
                 }
             ```
+        - Control Commands
+            Supported control actions handled by the server FSM:
+            - `play`, `pause`: Video playback control
+            - `seek`: Jump to specific time position
+            - `set_volume`: Set volume (0-100 range)
+            - `mute`, `unmute`: Audio control
+            - `enter_fullscreen`, `exit_fullscreen`: Fullscreen mode control
+
     - **webSocket-protocol**: Connection states, utilities, and base classes.
         - Protocol constants (defaults)
 
@@ -68,6 +77,7 @@ This document outlines the implementation details for the SAHAR TV Remote system
 
 ### utilities
 - **WebSocketUtils**: Utility functions for WebSocket message handling and validation.
+- **YouTube Helpers**: YouTube-specific utilities including `YouTubeThumbnailImageQuality` type system for standardized thumbnail quality handling.
 
 ## Server-Side - Unified Server + SSR Host
 
@@ -81,6 +91,19 @@ Prerequisites
 The state is maintained and managed in the server FSM. Clients receive authoritative state snapshots via `state_sync` messages after each committed change.
 
 ```typescript
+// Shared PlayerState interface (consolidated from duplicate implementations)
+export interface PlayerState {
+    isPlaying: boolean;
+    isFullscreen: boolean;
+    currentTime: number;
+    duration: number;
+    volume: number;      // 0-100 range (standardized across YouTube API and UI)
+    muted: boolean;
+    youtubeId?: string;
+    // Optional explicit marker for which scene is currently playing
+    playingSceneId?: string;
+}
+
 // Monotonic version increases on each committed state change
 export interface ApplicationState {
     version: number;
@@ -95,16 +118,7 @@ export interface ApplicationState {
         videoId?: string;
         sceneId?: string;
     };
-    player: {
-        isPlaying: boolean;
-        currentTime: number;
-        duration: number;
-        volume: number;
-        muted: boolean;
-        youtubeId?: string;
-        // Optional explicit marker for which scene is currently playing
-        playingSceneId?: string;
-    };
+    player: PlayerState;  // Uses shared PlayerState interface
     // Optional cache of content; server may echo subset for convenience
     data?: {
         performers?: any[];

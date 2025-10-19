@@ -15,7 +15,8 @@ import { VideoNavigationService,
          ApplicationState,
          Performer,
          Video,
-         LikedScene } from 'shared';
+         LikedScene, 
+         PlayerState} from 'shared';
 import { VideoControlsComponent } from './components/video-controls/video-controls.component';
 import { WebSocketService } from './services/websocket.service';
 
@@ -207,10 +208,11 @@ export class App implements OnInit, OnDestroy {
       })));
     });
 
+    // @TODO: verify if this is still needed
     // Subscribe to explicit player state when available. If the shared package
     // hasn't been rebuilt for the consuming app, use a runtime guard so this
     // code doesn't crash. 
-    interface PlayerState { playingSceneId?: string; isPlaying?: boolean }
+    
 
     // If the navigation service exposes player$ we should listen for explicit playingSceneId
     const navAny = this.videoNavigationService as unknown as Record<string, unknown>;
@@ -223,6 +225,7 @@ export class App implements OnInit, OnDestroy {
           this.currentVideo = undefined;
           this.currentScene = undefined;
           this.isPlaying = false;
+          this.isFullscreen = false;
           return;
         }
  
@@ -252,6 +255,7 @@ export class App implements OnInit, OnDestroy {
           this.currentVideo = foundVideo;
           this.currentScene = foundScene;
           this.isPlaying = (player && player.isPlaying) || false;
+          this.isFullscreen = (player && player.isFullscreen) || false;
           console.log('📺 Starting video playback from player$:', {
             video: this.currentVideo?.title,
             scene: this.currentScene.title,
@@ -278,8 +282,9 @@ export class App implements OnInit, OnDestroy {
         
         // Handle player state updates from server
         if (state?.player) {
-          this.isPlaying = state.player.isPlaying ?? false;
-          this.isMuted = state.player.muted ?? false;
+          this.isPlaying = state.player.isPlaying;
+          this.isMuted = state.player.muted;
+          this.isFullscreen = state.player.isFullscreen ;
           this.volumeLevel = state.player.volume ?? 50;  // Server now uses 0-100 range directly
           console.log('📱 Remote: Player state updated from server:', {
             isPlaying: this.isPlaying,

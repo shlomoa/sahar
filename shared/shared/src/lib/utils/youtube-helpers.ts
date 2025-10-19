@@ -1,3 +1,7 @@
+// Utility functions for YouTube video handling
+
+export type YouTubeThumbnailImageQuality = 'default' | 'mqdefault' | 'hqdefault' | 'sddefault' | 'maxresdefault';
+
 /**
  * Extracts the YouTube video ID from various YouTube URL formats.
  * @param url The YouTube URL.
@@ -28,6 +32,6 @@ export function getYoutubeVideoId(url: string): string | null {
  * @param quality The desired thumbnail quality.
  * @returns The full URL for the thumbnail image.
  */
-export function getYoutubeThumbnailUrl(videoId: string, quality: 'default' | 'mqdefault' | 'hqdefault' | 'sddefault' | 'maxresdefault' = 'hqdefault'): string {
+export function getYoutubeThumbnailUrl(videoId: string, quality: YouTubeThumbnailImageQuality = 'hqdefault'): string {
   return `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
 }

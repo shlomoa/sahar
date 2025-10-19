@@ -29,6 +29,7 @@ export class Fsm {
       },
       player: {
         isPlaying: false,
+        isFullscreen: false,
         currentTime: 0,
         duration: 0,
         volume: 50,  // Use 0-100 range to match Remote UI and YouTube API
@@ -174,6 +175,16 @@ export class Fsm {
         break; }
       case 'unmute': {
         if (this.state.player.muted) this.state.player.muted = false;
+        break; }
+      case 'enter_fullscreen': {
+        // Note: Fullscreen state is managed by the TV client, but we can track it for consistency
+        this.state.player.isFullscreen = true;
+        logInfo('fsm_fullscreen_enter', {}, 'Entering fullscreen mode');
+        break; }
+      case 'exit_fullscreen': {
+        // Note: Fullscreen state is managed by the TV client, but we can track it for consistency
+        this.state.player.isFullscreen = false;
+        logInfo('fsm_fullscreen_exit', {}, 'Exiting fullscreen mode');
         break; }
     }
     if (JSON.stringify(this.state.player) !== before) {

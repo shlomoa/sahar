@@ -19,7 +19,8 @@ import { VideoNavigationService,
          NavigationState,
          Video,
          LikedScene,
-         Performer } from 'shared';
+         Performer, 
+         PlayerState} from 'shared';
 import { WebSocketService } from './services/websocket.service';
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
 
@@ -176,9 +177,8 @@ export class App implements OnInit, OnDestroy {
       })));
     });
 
-    // Subscribe to explicit player state when available. If the shared package
-    // hasn't been rebuilt for the consuming app, use a runtime guard so this    // default, s.
-    interface PlayerState { playingSceneId?: string; isPlaying?: boolean }
+    // @TODO: verify if this is still needed
+    // Subscribe to explicit player state when available.
 
     // If the navigation service exposes player$ we should listen for explicit playingSceneId
     const navAny = this.navigationService as unknown as Record<string, unknown>;
@@ -218,6 +218,7 @@ export class App implements OnInit, OnDestroy {
           this.currentVideo = foundVideo;
           this.currentScene = foundScene;
           this.isPlaying = (player && player.isPlaying) || false;
+          this.isFullscreen = (player && player.isFullscreen) || false;
           console.log('📺 TV: Starting video playback from player$:', {
             video: this.currentVideo?.title,
             scene: this.currentScene.title,

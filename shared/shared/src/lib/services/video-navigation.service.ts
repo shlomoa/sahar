@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { Performer, LikedScene, NavigationState } from '../models/video-navigation';
 import { getYoutubeThumbnailUrl } from '../utils/youtube-helpers';
-import { ApplicationState } from '../models/application-state';
+import { PlayerState } from '../models/application-state';
 
 @Injectable({
   providedIn: 'root'
@@ -17,14 +17,15 @@ export class VideoNavigationService {
   private navigationSubject = new BehaviorSubject<NavigationState>(this.navigationState);
   public navigation$ = this.navigationSubject.asObservable();
   // Player state observable exposed to TV app
-  private playerState: ApplicationState['player'] = {
+  private playerState: PlayerState = {
     isPlaying: false,
+    isFullscreen: false,
     currentTime: 0,
     duration: 0,
     volume: 100,
     muted: false,
   };
-  private playerSubject = new BehaviorSubject<ApplicationState['player']>(this.playerState);
+  private playerSubject = new BehaviorSubject<PlayerState>(this.playerState);
   public player$ = this.playerSubject.asObservable();
   constructor() {
     console.log('📱 Remote 📺 TV navigation: Shared Navigation Service initialized');
@@ -203,26 +204,27 @@ export class VideoNavigationService {
     this.playerState = {
       ...this.playerState,
       isPlaying: true,
+      isFullscreen: false,
       currentTime: scene.startTime,
       // duration left undefined if unknown
       youtubeId: undefined,
       playingSceneId: scene.id
-    } as ApplicationState['player'];
+    } as PlayerState;
     this.playerSubject.next(this.playerState);
 
     console.log('📱 Remote 📺 TV navigation: Scene playback initiated for:', scene.title, 'at time:', scene.startTime, 'sceneId:', scene.id);
   }
 
   // Player state API used by websocket handlers to set authoritative state
-  setPlayerState(player: Partial<ApplicationState['player']>): void {
+  setPlayerState(player: Partial<PlayerState>): void {
     console.log('📱 Remote 📺 TV navigation: setPlayerState called with:', player);
-    this.playerState = { ...this.playerState, ...(player as ApplicationState['player']) } as ApplicationState['player'];
+    this.playerState = { ...this.playerState, ...(player as PlayerState) } as PlayerState;
     this.playerSubject.next(this.playerState);
   }
 
   clearPlayingScene(): void {
     console.log('📱 Remote 📺 TV navigation: clearPlayingScene called, stopping playback');
-    this.playerState = { ...this.playerState, isPlaying: false, playingSceneId: undefined } as ApplicationState['player'];
+    this.playerState = { ...this.playerState, isPlaying: false, playingSceneId: undefined } as PlayerState;
     this.playerSubject.next(this.playerState);
   }
 

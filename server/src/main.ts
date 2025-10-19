@@ -734,18 +734,20 @@ app.get('/health', (req: Request, res: Response) => {
   logInfo('http_request', { path: req.path, method: req.method });
   const wsConnections = [...wss.clients].length;
   const registered = [...clients.values()].map(c => ({ clientType: c.clientType, deviceId: c.deviceId, lastHeartbeat: c.lastHeartbeat ?? null }));
+  const fsmSnap = fsm.getSnapshot();
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     uptimeSeconds: process.uptime(),
-    fsmState: fsm.getSnapshot().fsmState,
+    fsmState: fsmSnap.fsmState,
     wsConnections,
     registeredClients: registered,
-    navigationLevel: fsm.getSnapshot().navigation.currentLevel,
+    navigationLevel: fsmSnap.navigation.currentLevel,
     playerState: {
-      isPlaying: fsm.getSnapshot().player.isPlaying,
-      currentTime: fsm.getSnapshot().player.currentTime,
-      version: fsm.getSnapshot().version
+      isPlaying: fsmSnap.player.isPlaying,
+      isFullscreen: fsmSnap.player.isFullscreen,
+      currentTime: fsmSnap.player.currentTime,
+      version: fsmSnap.version
     }
   });
 });
