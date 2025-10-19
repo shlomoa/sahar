@@ -5,7 +5,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { ConnectionState, NetworkDevice } from '../../models/websocket-protocol';
+import { NetworkDevice } from '../../models/websocket-protocol';
+import { ConnectionState } from '../../models/application-state';
 
 @Component({
   selector: 'device-connection',

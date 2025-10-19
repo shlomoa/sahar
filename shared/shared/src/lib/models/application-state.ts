@@ -5,6 +5,8 @@
 
 export type FsmState = 'initializing' | 'ready' | 'playing' | 'paused' | 'error';
 
+export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
+
 export type NavigationLevel = 'performers' | 'videos' | 'scenes' | 'playing' | 'scene-selected';
 
 export interface PlayerState {

@@ -26,8 +26,6 @@ export const ERROR_CODES = {
   ACK_TIMEOUT: 'ACK_TIMEOUT', // Receiver did not acknowledge in time
 } as const;
 
-export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
-
 export type NetworkDevice = { deviceId: string; clientType: ClientType; ip: string | null; port: string; lastSeen: number; capabilities?: string[] };
 
 // Local lightweight error shape used by legacy helpers (not part of protocol types)
