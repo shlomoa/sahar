@@ -136,6 +136,36 @@ The entire system operates on a strictly synchronous, server-centric communicati
 - No local state duplication - apps use lookup utilities to resolve IDs to objects
 - See IMPLEMENTATION.md for technical details on `WebSocketBaseService` utilities
 
+### Hybrid Architecture: Protocol Selection by Data Characteristics
+
+**Architectural Principle**: Use the right protocol for the right data type.
+
+**WebSocket**: Real-time operational state synchronization
+- **Purpose**: Push dynamic state changes with minimal latency
+- **Data Characteristics**: Frequently changing (navigation, player state)
+- **Message Size**: Small (5-10KB operational state updates)
+- **Caching**: Not applicable (state is ephemeral and changes constantly)
+- **Examples**: `state_sync` with navigation/player updates, control commands
+
+**HTTP REST API**: Static content delivery
+- **Purpose**: On-demand content retrieval with built-in caching
+- **Data Characteristics**: Infrequently changing (content catalog updates)
+- **Message Size**: Large (catalog data can be 1MB+)
+- **Caching**: Essential (browser cache, HTTP 304 Not Modified, CDN)
+- **Examples**: `/api/content/performers`, `/api/content/videos/:id`
+
+**Rationale for Separation**:
+```
+Current (inefficient): 1MB catalog × 100 state updates = 100MB bandwidth waste
+Hybrid (optimized):    1MB catalog (once) + 5KB × 100 updates = 1.5MB total
+```
+
+**Industry Pattern**: Discord, Slack, GitHub all use this hybrid approach
+- HTTP for message history/channel data (cacheable, on-demand)
+- WebSocket for real-time notifications/updates (push, low-latency)
+
+**Implementation Status**: See ANALYSIS.md "Content Data Architecture" for migration strategy from current monolithic `ApplicationState.data` to separated HTTP Content API.
+
 ### Protocol constants (defaults)
 
 [See IMEPLEMENTATION.md for authoritative runtime constants.](./IMPLEMENTATION.md#models-and-constants---protocol-constants)
