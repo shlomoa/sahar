@@ -64,24 +64,29 @@ This document outlines the implementation details for the SAHAR TV Remote system
             - SERVER_PORT: 8080
             - HEALTH_STATUS: "ok" | "degraded" | "error" (not currently implemented in code; future work)
 
-- **Services**: Shared services for WebSocket handling and utilities.
-    - **WebSocketBaseService**: Base class for WebSocket services in TV and Remote. Handles connection, reconnection, heartbeats, message parsing, and provides lookup utilities for the **flat normalized catalog structure**:
-        - **Catalog Storage**: Maintains three flat arrays extracted from `ApplicationState.data`
-          - `performersData: Performer[]` - Flat array of performers
-          - `videosData: Video[]` - Flat array with `performerId` foreign keys
-          - `scenesData: Scene[]` - Flat array with `videoId` foreign keys
+- **Services**: Shared services for WebSocket handling, content delivery, and utilities.
+    - **ContentService** (Added 2025-10-21): HTTP-based catalog delivery with caching
+        - **Purpose**: Fetch static content catalog once via HTTP instead of receiving it in every WebSocket state_sync message
+        - **HTTP Endpoint**: `GET /api/content/catalog` returns `{ performers[], videos[], scenes[] }`
+        - **Caching**: In-memory cache prevents duplicate fetches
         - **Public Accessors**:
-          - `getPerformersData()`: Returns flat performers array
-          - `getVideosData()`: Returns flat videos array  
-          - `getScenesData()`: Returns flat scenes array
-        - **Lookup Utilities** (O(1) performance):
-          - `getCurrentPerformer()`: Finds performer by ID from navigation state
-          - `getCurrentVideo()`: Finds video by ID from navigation state
-          - `getCurrentScene()`: Finds scene by ID from navigation state
-        - **Foreign Key Queries**:
+          - `getPerformers()`: Returns flat performers array
+          - `getPerformer(id)`: Finds performer by ID (O(n))
           - `getVideosForPerformer(performerId)`: Filters videos by `performerId` FK
+          - `getVideo(id)`: Finds video by ID (O(n))
           - `getScenesForVideo(videoId)`: Filters scenes by `videoId` FK
-        - These utilities enable apps to derive display objects from server's flat catalog structure without local state duplication or nested traversals
+          - `getScene(id)`: Finds scene by ID (O(n))
+        - **Usage**: Apps call `await contentService.fetchCatalog()` on startup before connecting WebSocket
+    - **WebSocketBaseService**: Base class for WebSocket services in TV and Remote. Handles connection, reconnection, heartbeats, message parsing, and delegates catalog queries to ContentService:
+        - **Catalog Delegation** (Updated 2025-10-21): No longer stores catalog data internally; all lookup methods delegate to ContentService
+        - **Navigation State**: Maintains `applicationState$` BehaviorSubject with operational state only (no catalog)
+        - **Lookup Utilities** (delegates to ContentService):
+          - `getCurrentPerformer()`: Gets performerId from state, queries ContentService
+          - `getCurrentVideo()`: Gets videoId from state, queries ContentService
+          - `getCurrentScene()`: Gets sceneId from state, queries ContentService
+          - `getVideosForPerformer(performerId)`: Delegates to ContentService
+          - `getScenesForVideo(videoId)`: Delegates to ContentService
+        - These utilities enable apps to derive display objects from HTTP-fetched catalog structure without local state duplication
 
 ### shared componenets
 - **DeviceConnectionComponent**: Device connection indications and information.
@@ -104,7 +109,7 @@ Prerequisites
 ### ApplicationState definition and implementation
 The state is maintained and managed in the server FSM. Clients receive authoritative state snapshots via `state_sync` messages after each committed change.
 
-**Navigation State Management** (Updated 2025-10-20):
+**Navigation State Management** (Updated 2025-10-21):
 - Server FSM owns navigation state as IDs only: `{ currentLevel, performerId?, videoId?, sceneId? }`
 - FSM transitions on navigation commands:
   - `navigate_to_performer`: sets `currentLevel='videos'`, `performerId`
@@ -112,16 +117,23 @@ The state is maintained and managed in the server FSM. Clients receive authorita
   - `navigate_to_scene`: sets `currentLevel='playing'`, `sceneId` ⭐ triggers video playback
   - `navigate_back`: steps back one level (playing→scenes→videos→performers)
   - `navigate_home`: resets to `currentLevel='performers'`
-- **Flat Normalized Catalog Structure** (Migrated 2025-10-20):
-  - `ApplicationState.data` contains `CatalogData` with three flat arrays
-  - Foreign key references enable O(1) lookups: `Video.performerId`, `Scene.videoId`
+- **HTTP Content Delivery** (Migrated 2025-10-21):
+  - Catalog delivered via `GET /api/content/catalog` (not in WebSocket state)
+  - `ApplicationState` no longer has `data` field - operational state only
+  - Clients fetch catalog once on startup via ContentService
+  - Server FSM stores catalog in private `catalogData` field (initialized from mock-data.ts)
+- **Flat Normalized Catalog Structure** (Implemented 2025-10-20):
+  - `CatalogData { performers[], videos[], scenes[] }` with flat arrays
+  - Foreign key references enable O(n) lookups: `Video.performerId`, `Scene.videoId`
   - No nested data structures - each entity stored once in its own array
-- Clients derive display objects via `WebSocketBaseService` utilities:
-  - `getCurrentPerformer()`: Looks up performer in flat `performersData` array by ID
-  - `getCurrentVideo()`: Looks up video in flat `videosData` array by ID
-  - `getCurrentScene()`: Looks up scene in flat `scenesData` array by ID
-  - `getVideosForPerformer(performerId)`: Filters videos by FK reference
-  - `getScenesForVideo(videoId)`: Filters scenes by FK reference
+- Clients derive display objects via ContentService and WebSocketBaseService:
+  - ContentService: Fetches and caches catalog, provides lookup methods
+  - WebSocketBaseService: Delegates catalog queries to ContentService
+  - `getCurrentPerformer()`: Gets performerId from state, queries ContentService
+  - `getCurrentVideo()`: Gets videoId from state, queries ContentService
+  - `getCurrentScene()`: Gets sceneId from state, queries ContentService
+  - `getVideosForPerformer(performerId)`: Delegates to ContentService
+  - `getScenesForVideo(videoId)`: Delegates to ContentService
 - TV app: checks `currentLevel === 'playing'` to show video player vs navigation grids
 
 ```typescript
@@ -423,7 +435,10 @@ Option: configurable auto-exit on critical vs continue (env: `EXIT_ON_CRITICAL=t
 ## Video Integration
 
 The video data structure is designed to support the playback and control of video content within the SAHAR system. It includes metadata for each video, such as its ID, title, YouTube ID, and scenes for scene-based seeking.
-The server is authoritative for state. Data is seeded via the server’s HTTP endpoint `POST /seed`, and the server broadcasts the resulting snapshot via `state_sync`. Clients (TV/Remote) render purely from `state_sync`; they do not push unsolicited state.
+
+**Content Delivery** (Updated 2025-10-21): Catalog data is served via HTTP `GET /api/content/catalog` instead of WebSocket. The server is authoritative for catalog (initialized from `server/src/mock-data.ts`). Clients fetch catalog once on startup via ContentService, then receive only operational state updates via `state_sync` WebSocket messages.
+
+**Deprecated Endpoints**: `POST /seed` returns 410 Gone (catalog is now read-only and initialized from mock-data.ts).
 
 ### Video Data Structure
 ```typescript
