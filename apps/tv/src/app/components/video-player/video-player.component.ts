@@ -108,10 +108,10 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
     this.isPlayerReady = true;
     this.playerReady.emit(event.target);
     
-    // If we have a current scene, seek to it after the player is ready
-    if (this.currentScene) {
+    // If we have a position or scene, seek to it after the player is ready
+    if (this.positionSec !== null && this.positionSec !== undefined || this.currentScene) {
       setTimeout(() => {
-        this.seekToScene();
+        this.seekToPosition();
       }, 1000); // Wait for video to load
     }
 
@@ -229,11 +229,13 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
     console.log('📺 Loading YouTube video:', youtubeId);
     
     // Angular YouTube player handles video loading automatically via videoId binding
-    // If we have a specific scene, seek to it after the video loads
-    if (this.currentScene && this.isPlayerReady) {
-      setTimeout(() => {
-        this.seekToScene();
-      }, 2000); // Wait for video to load
+    // If we have a specific position (positionSec) or scene, seek to it after the video loads
+    if ((this.positionSec !== null && this.positionSec !== undefined) || this.currentScene) {
+      if (this.isPlayerReady) {
+        setTimeout(() => {
+          this.seekToPosition();
+        }, 2000); // Wait for video to load
+      }
     }
   }
 
@@ -251,6 +253,30 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
       console.log('✅ Successfully seeked to scene:', this.currentScene.title);
     } catch (error) {
       console.error('❌ Error seeking to scene:', error);
+    }
+  }
+
+  private seekToPosition() {
+    if (!this.isPlayerReady || !this.youtubePlayer) {
+      console.warn('⚠️ Cannot seek to position: player not ready');
+      return;
+    }
+
+    // Prefer explicit positionSec input, fallback to currentScene.startTime
+    const position = this.positionSec ?? this.currentScene?.startTime;
+    
+    if (position === null || position === undefined) {
+      console.warn('⚠️ No position to seek to');
+      return;
+    }
+
+    console.log('🎯 Seeking to position:', position);
+    
+    try {
+      this.youtubePlayer.seekTo(position, true);
+      console.log('✅ Successfully seeked to position:', position);
+    } catch (error) {
+      console.error('❌ Error seeking to position:', error);
     }
   }
 

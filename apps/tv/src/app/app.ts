@@ -6,9 +6,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { QRCodeComponent } from 'angularx-qrcode';
-import { Observable, Subscription } from 'rxjs';
-import { VideoNavigationService,
-         ControlCommandMessage,
+import { Subscription } from 'rxjs';
+import { ControlCommandMessage,
          getYoutubeVideoId,
          NetworkDevice,
          ApplicationState,
@@ -16,11 +15,9 @@ import { VideoNavigationService,
          WEBSOCKET_CONFIG,
          NavigationLevel,
          SharedNavigationRootComponent,
-         NavigationState,
          Video,
          LikedScene,
-         Performer, 
-         PlayerState} from 'shared';
+         Performer} from 'shared';
 import { WebSocketService } from './services/websocket.service';
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
 
@@ -45,19 +42,16 @@ import { VideoPlayerComponent } from './components/video-player/video-player.com
 export class App implements OnInit, OnDestroy {
   @ViewChild(VideoPlayerComponent) private videoPlayer?: VideoPlayerComponent;
   protected title = 'Sahar TV';
-  navigation$: Observable<NavigationState>;
+  
+  // Server state - single source of truth
+  private applicationState: ApplicationState | null = null;
   private subscriptions: Subscription[] = [];
 
   // Service injections
-  private readonly navigationService = inject(VideoNavigationService);
   private readonly webSocketService = inject(WebSocketService);
   private readonly snackBar = inject(MatSnackBar);  
 
-  // Video playback state
-  currentVideo: Video | undefined = undefined;
-  currentScene: LikedScene | undefined = undefined;
-
-  // Local playback flag (derived from player$)
+  // Local playback flags (derived from player state)
   isPlaying = false;
   isMuted = false;
   isFullscreen = false;
@@ -68,78 +62,82 @@ export class App implements OnInit, OnDestroy {
 
   // Visibility flag: when both TV and Remote are connected according to server state
   bothConnected = false;
-  // internal debounce timer id used to avoid flicker when connections flap
-  private _bothConnectedDebounceTimer: number | null = null;
   // Connection status text to mirror Remote's UI mapping: 'connected' | 'connecting' | 'disconnected'
   connectionStatus: ConnectionState = 'disconnected';
 
   // Derived playback bindings for the video-player component
   get playbackVideoId(): string | null {
-    return this.currentVideo?.url ? getYoutubeVideoId(this.currentVideo.url) : null;
+    const currentVideo = this.webSocketService.getCurrentVideo();
+    return currentVideo?.url ? getYoutubeVideoId(currentVideo.url) : null;
   }
 
   get playbackPositionSec(): number | null {
-    return this.currentScene?.startTime ?? null;
+    const currentScene = this.webSocketService.getCurrentScene();
+    return currentScene?.startTime ?? null;
   }
 
-  get playbackIsPlaying(): boolean { // basic POC default
+  get playbackIsPlaying(): boolean {
     return this.videoPlayer?.isPlaying ?? false;
   }
 
-  // Current navigation level helpers for templates
+  // Current navigation level helpers for templates - derive from server state
   get currentPerformers(): Performer[] {
-    const nav = this.navigationService.getCurrentState();
-    if (!nav.currentPerformer && !nav.currentVideo) { // Home level
-      // Get the actual performers data with full video information
-      return this.navigationService.getPerformersData();
+    const state = this.applicationState;
+    if (!state) return [];
+    
+    // At performers level (no IDs set)
+    if (!state.navigation.performerId) {
+      return this.webSocketService.getPerformersData();
     }
     return [];
   }
 
   get currentVideos(): Video[] {
-    const nav = this.navigationService.getCurrentState();
-    if (!!nav.currentPerformer && !nav.currentVideo) { // Videos level
-      return nav.currentPerformer.videos;
+    const state = this.applicationState;
+    if (!state) return [];
+    
+    // At videos level (performer set, no video)
+    if (state.navigation.performerId && !state.navigation.videoId) {
+      const performer = this.webSocketService.getCurrentPerformer();
+      return performer?.videos || [];
     }
     return [];
   }
 
   get currentScenes(): LikedScene[] {
-    const nav = this.navigationService.getCurrentState();
-    if (nav.currentVideo) { // Scenes level
-      return nav.currentVideo.likedScenes;
+    const state = this.applicationState;
+    if (!state) return [];
+    
+    // At scenes level (video set)
+    if (state.navigation.videoId) {
+      const video = this.webSocketService.getCurrentVideo();
+      return video?.likedScenes || [];
     }
     return [];
   }
 
   get currentLevel(): NavigationLevel {
-    const nav = this.navigationService.getCurrentState();
-    if (this.currentVideo && this.currentScene) return 'playing';
-    if (!nav.currentPerformer && !nav.currentVideo) return 'performers';
-    if (!!nav.currentPerformer && !nav.currentVideo) return 'videos';
-    if (nav.currentVideo) return 'scenes';
-    return 'performers';
+    const state = this.applicationState;
+    if (!state) return 'performers';
+    
+    return state.navigation.currentLevel;
   }
 
-  constructor(
-    //private navigationService: VideoNavigationService,
-    //private webSocketService: WebSocketService,
-    //private snackBar: MatSnackBar
-  ) {
-    this.navigation$ = this.navigationService.navigation$;
+  get currentPerformer(): Performer | undefined {
+    return this.webSocketService.getCurrentPerformer();
   }
 
-  // Whether going back is possible
+  // Whether going back is possible - derive from current level
   get canGoBack(): boolean {
-    const nav = this.navigationService.getCurrentState();
-    return (nav?.canGoBack);
+    const level = this.currentLevel;
+    return level !== 'performers';
   }
 
   ngOnInit(): void {
     // Build Remote URL as protocol://FQDN:SERVER_DEFAULT_PORT (avoid localhost in QR).
     // Prefer server-provided LAN IP from /host-ip, fall back to the browser hostname.
     const protocol = window.location.protocol;
-    const defaultHost = window.location.hostname; // If the TV is accessed via FQDN, this will be the FQDN
+    const defaultHost = window.location.hostname;
     const buildRemoteUrl = (host: string) => `${protocol}//${host}:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}/remote`;
 
     // Start with a provisional URL based on the browser hostname.
@@ -157,80 +155,41 @@ export class App implements OnInit, OnDestroy {
           }
         }
       } catch (err) {
-        // Fail silently and keep using the browser hostname as a fallback.
         console.warn('📺 TV: Failed to fetch /host-ip, falling back to browser hostname for QR.', err);
       }
 
-      // Warn if the QR still encodes localhost so developers notice the issue.
       if (this.remoteUrl.includes('localhost') || this.remoteUrl.includes('127.0.0.1')) {
         console.warn('📺 TV: QR is using localhost. Access the TV via its FQDN or IP so the QR encodes a scannable host.');
       }
     })();
 
-    // Keep local view in sync with authoritative navigation state updates
-    this.navigation$.subscribe(nav => {
-      console.log('📺 Navigation state updated:', nav);
-      console.log('📺 Current level items:', nav.currentLevel.map(item => ({
-        title: item.title,
-        thumbnail: item.thumbnail,
-        type: item.itemType
-      })));
-    });
+    // Subscribe to application state from server - single source of truth
+    const mainStateSub = this.webSocketService.state$.subscribe(state => {
+      this.applicationState = state;
+      
+      if (!state) {
+        this.connectionStatus = 'disconnected';
+        return;
+      }
 
-    // @TODO: verify if this is still needed
-    // Subscribe to explicit player state when available.
-
-    // If the navigation service exposes player$ we should listen for explicit playingSceneId
-    const navAny = this.navigationService as unknown as Record<string, unknown>;
-    const player$ = navAny['player$'] as Observable<PlayerState> | undefined;
-    const isObservableLike = (v: unknown): v is Observable<unknown> => !!v && typeof (v as { subscribe?: unknown }).subscribe === 'function';
-    if (player$ && isObservableLike(player$)) {
-      const playerSub = player$.subscribe((player: PlayerState | undefined) => {
-        if (!player || !player.playingSceneId) {
-          this.currentVideo = undefined;
-          this.currentScene = undefined;
-          this.isPlaying = false;
-          return;
-        }
-        // Try to resolve the scene id to a Video and LikedScene
-        const nav = this.navigationService.getCurrentState();
-        let foundScene: LikedScene | undefined;
-        let foundVideo: Video | undefined = undefined;
-        if (nav.currentVideo) {
-          foundScene = nav.currentVideo.likedScenes.find((s) => s.id === player.playingSceneId);
-          if (foundScene) foundVideo = nav.currentVideo;
-        }
-        if (!foundScene) {
-          // Search performers/videos for the scene id
-          const performers = this.navigationService.getPerformersData();
-          outer: for (const p of performers) {
-            for (const v of p.videos) {
-              const s = v.likedScenes.find((s2) => s2.id === player.playingSceneId);
-              if (s) {
-                foundScene = s;
-                foundVideo = v;
-                break outer;
-              }
-            }
-          }
-        }
-        if (foundScene && foundVideo) {
-          this.currentVideo = foundVideo;
-          this.currentScene = foundScene;
-          this.isPlaying = (player && player.isPlaying) || false;
-          this.isFullscreen = (player && player.isFullscreen) || false;
-          console.log('📺 TV: Starting video playback from player$:', {
-            video: this.currentVideo?.title,
-            scene: this.currentScene.title,
-            url: this.currentVideo?.url,
-            startTime: this.currentScene.startTime
-          });
-        } else {
-          console.warn('📺 TV: Could not resolve playingSceneId to a known scene:', player.playingSceneId);
-        }
+      // Update connection status
+      this.connectionStatus = state.clientsConnectionState.tv || 'disconnected';
+      
+      // Update both connected flag
+      this.bothConnected = (
+        state.clientsConnectionState.tv === 'connected' && 
+        state.clientsConnectionState.remote === 'connected'
+      );
+      
+      console.log('📺 TV: Application state updated:', {
+        level: state.navigation.currentLevel,
+        performerId: state.navigation.performerId,
+        videoId: state.navigation.videoId,
+        sceneId: state.navigation.sceneId,
+        bothConnected: this.bothConnected
       });
-      this.subscriptions.push(playerSub);
-    }
+    });
+    this.subscriptions.push(mainStateSub);
 
     // Initialize WebSocket connections 
     this.initializeWebSocket();
@@ -294,9 +253,13 @@ export class App implements OnInit, OnDestroy {
     });
     this.subscriptions.push(stateSub);
 
-    // Subscribe to WebSocket connection state to expose the same connection indicator as Remote
-    const connSub = this.webSocketService.connected$.subscribe((state: ConnectionState) => {
-      this.connectionStatus = state === 'connected' ? 'connected' : state === 'connecting' ? 'connecting' : 'disconnected';
+    // Subscribe to application state to get server's authoritative connection status
+    const connSub = this.webSocketService.state$.subscribe(appState => {
+      if (appState) {
+        this.connectionStatus = appState.clientsConnectionState.tv || 'disconnected';
+      } else {
+        this.connectionStatus = 'disconnected';
+      }
     });
     this.subscriptions.push(connSub);
   }
@@ -306,11 +269,14 @@ export class App implements OnInit, OnDestroy {
   }
 
   private initializeWebSocket(): void {
-    // Subscribe to WebSocket connection status from base class
-    const connectionSub = this.webSocketService.connected$.subscribe(state => {
-      if (state === 'connected') {
+    // Subscribe to application state for connection status
+    const connectionSub = this.webSocketService.state$.subscribe(appState => {
+      if (!appState) return;
+      
+      const remoteStatus = appState.clientsConnectionState.remote;
+      if (remoteStatus === 'connected') {
         this.snackBar.open('Remote connected', 'Close', { duration: 3000 });
-      } else if (state === 'disconnected') {
+      } else if (remoteStatus === 'disconnected') {
         const snackBarRef = this.snackBar.open('Remote disconnected', 'Retry', { 
           duration: 5000
         });
@@ -338,35 +304,30 @@ export class App implements OnInit, OnDestroy {
     return networkDevice
   }
 
-  // Event handlers for shared components
+  // Event handlers for shared components - TV is display-only, these are stubs for local testing
   onPerformerSelected(performerId: string): void {
-    console.log('📺 TV: Performer selected:', performerId);
-    this.navigationService.navigateToPerformer(performerId);
+    console.log('📺 TV: Performer selected (local event, no-op):', performerId);
+    // TV is display-only: navigation commands should come from Remote via server
   }
 
   onVideoSelected(videoId: string): void {
-    console.log('📺 TV: Video selected:', videoId);
-    this.navigationService.navigateToVideo(videoId);
+    console.log('📺 TV: Video selected (local event, no-op):', videoId);
+    // TV is display-only: navigation commands should come from Remote via server
   }
 
   onSceneSelected(sceneId: string): void {
-    console.log('📺 TV: Scene selected:', sceneId);
-    // When a scene is clicked, find the current video and scene data
-    const nav = this.navigationService.getCurrentState();
-    if (nav.currentVideo) {
-      this.currentVideo = nav.currentVideo;
-      // Find the specific scene in the current video
-      const scene = nav.currentVideo.likedScenes.find(s => s.id === sceneId);
-      if (scene) {
-        this.currentScene = scene;
-        console.log('📺 TV: Starting video playback:', {
-          video: this.currentVideo.title,
-          scene: this.currentScene.title,
-          url: this.currentVideo.url
-        });
-      }
+    console.log('📺 TV: Scene selected (local event, no-op):', sceneId);
+    // TV is display-only: navigation commands should come from Remote via server
+    const currentVideo = this.webSocketService.getCurrentVideo();
+    const currentScene = this.webSocketService.getCurrentScene();
+    
+    if (currentVideo && currentScene) {
+      console.log('📺 TV: Would start video playback:', {
+        video: currentVideo.title,
+        scene: currentScene.title,
+        url: currentVideo.url
+      });
     }
-    this.navigationService.playScene(sceneId);
   }
 
   // Video Player Event Handlers
@@ -396,8 +357,6 @@ export class App implements OnInit, OnDestroy {
     // Send action confirmation to update server state
     this.webSocketService.sendActionConfirmation('success');
     // Optionally return to scene list or play next scene
-    this.currentVideo = undefined;
-    this.currentScene = undefined;
   }
 
   onTimeUpdate(currentTime: number): void {
@@ -406,12 +365,12 @@ export class App implements OnInit, OnDestroy {
   }
 
   onBackClick(): void {
-    console.log('📺 TV: Back button clicked');
-    this.navigationService.goBack();
+    console.log('📺 TV: Back button clicked (local event, no-op)');
+    // TV is display-only: navigation commands should come from Remote via server
   }
 
   onHomeClick(): void {
-    console.log('📺 TV: Home button clicked');
-    this.navigationService.goHome();
+    console.log('📺 TV: Home button clicked (local event, no-op)');
+    // TV is display-only: navigation commands should come from Remote via server
   }
 }

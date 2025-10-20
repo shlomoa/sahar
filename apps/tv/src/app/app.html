@@ -24,8 +24,6 @@
       @if (currentLevel === 'playing') {
         <div class="video-player-area" >
           <video-player
-            [currentVideo]="currentVideo"
-            [currentScene]="currentScene"
             [videoId]="playbackVideoId || undefined"
             [isPlaying]="playbackIsPlaying"
             [positionSec]="playbackPositionSec"
@@ -45,9 +43,7 @@
           [performers]="currentPerformers"
           [videos]="currentVideos"
           [scenes]="currentScenes"
-          [selectedPerformerId]="undefined"
-          [selectedVideoId]="undefined"
-          [sceneSelected]="currentScene !== null"
+          [selectedPerformerId]="currentPerformer?.id"
           [clientType]="'tv'"
           (back)="onBackClick()"
           (home)="onHomeClick()"
@@ -67,19 +63,11 @@
 
   <!-- Status Bar (10%) for debug -->
   <mat-toolbar class="status-bar" color="accent">
-    <div *ngIf="navigation$ | async as nav">      
-      <span>Items: {{ nav.currentLevel.length }}</span>
+    <span>Level: {{ currentLevel }}</span>
+    @if (currentPerformer) {
       <span class="spacer"></span>
-      @if (nav.currentPerformer) {
-        <span>Performer: {{ nav.currentPerformer.name }}</span>
-      }
-      @if (nav.currentVideo) {
-        <span>Video: {{ nav.currentVideo.title }}</span>
-      }
-      @if (currentScene) {
-        <span>Scene: {{ currentScene.title }}</span>
-      }
-    </div>
+      <span>Performer: {{ currentPerformer.name }}</span>
+    }
   </mat-toolbar>
 </div>
 

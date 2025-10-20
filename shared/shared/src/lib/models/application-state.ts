@@ -26,6 +26,13 @@ export interface ClientsConnectionState {
     remote?: ConnectionState;
 }
 
+export interface NavigationState {
+  currentLevel: NavigationLevel;
+  performerId?: string;
+  videoId?: string;
+  sceneId?: string;
+};
+
 // Shared authoritative ApplicationState model (with versioning)
 // Version increments on every committed mutation so clients can reconcile ordering.
 export interface ApplicationState {
@@ -36,12 +43,7 @@ export interface ApplicationState {
     videos?: { id: string }[];
     // Add other seeded data properties as needed
   };
-  navigation: {
-    currentLevel: NavigationLevel;
-    performerId?: string;
-    videoId?: string;
-    sceneId?: string;
-  };
+  navigation: NavigationState;    
   player: PlayerState;
   error?: {
     code: string;

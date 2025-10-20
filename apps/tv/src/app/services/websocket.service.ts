@@ -1,9 +1,7 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable } from '@angular/core';
 import {
   RegisterPayload,
-  VideoNavigationService,
   ApplicationState,
-  Performer,
   WebSocketMessage,  
   NavigationCommandMessage,
   ControlCommandMessage,
@@ -32,8 +30,7 @@ export class WebSocketService extends WebSocketBaseService {
     muted: false,
   };
 
-  private lastConnectedUrl: string | null = null;  // Remote-specific observables
-  private navigationService = inject(VideoNavigationService);
+  private lastConnectedUrl: string | null = null;
   protected override logMessagePrefix = '📺 TV: ';
   
   constructor() {    
@@ -122,29 +119,10 @@ export class WebSocketService extends WebSocketBaseService {
   // Handlers
   private handleNavigationCommand(message: NavigationCommandMessage): void {
     this.debugLog('Navigation command received:', message.payload);
-    const { action, targetId } = message.payload;
-    try {
-      switch (action) {
-        case 'navigate_to_performer':
-          if (targetId) this.navigationService.navigateToPerformer(targetId);
-          break;
-        case 'navigate_to_video':
-          if (targetId) this.navigationService.navigateToVideo(targetId);
-          break;
-        case 'navigate_to_scene':
-          if (targetId) this.navigationService.playScene(targetId);
-          break;
-        case 'navigate_back':
-          this.navigationService.goBack();
-          break;
-        case 'navigate_home':
-          this.navigationService.goHome();
-          break;
-      }
-      this.sendActionConfirmation('success');
-    } catch (e) {
-      this.sendActionConfirmation('failure', e instanceof Error ? e.message : 'navigation failed');
-    }
+    // TV receives navigation commands from server (originated from Remote)
+    // The App component will handle these through state_sync updates
+    // Just acknowledge receipt
+    this.sendActionConfirmation('success');
   }
 
   private handleControlCommand(message: ControlCommandMessage): void {
@@ -178,67 +156,20 @@ export class WebSocketService extends WebSocketBaseService {
   }
 
   private handleStateSync(message: StateSyncMessage): void {
-
-    // Apply authoritative server snapshot to the TV navigation view-model.
+    // Apply authoritative server snapshot - just emit it for App to handle
     this.debugLog('State sync received');
 
-    // Apply authoritative snapshot to shared navigation service so Remote UI can reflect server state
     try {
       const state = message.payload as ApplicationState;
-      // Log incoming payload for diagnosis
       this.debugLog(`Received state_sync v${state?.version}`);
-      // Avoid dumping full payload to reduce log noise
-
-      // If server provided performers (seeded data), apply it to the navigation service.
-      // Shape is flexible in Milestone 1 so check defensively.
-      const dataUnknown: unknown = (state as unknown as { data?: unknown }).data;
-      if (dataUnknown && typeof dataUnknown === 'object' && 'performers' in (dataUnknown as Record<string, unknown>)) {
-        const maybePerformers = (dataUnknown as Record<string, unknown>)['performers'];
-        if (Array.isArray(maybePerformers) && maybePerformers.length > 0 && maybePerformers.every(p => typeof p === 'object')) {
-          // Treat runtime-checked array elements as `Performer` for the navigation service.
-          this.navigationService.setPerformersData(maybePerformers as Performer[]);
-        }
-      }
-
-      // Reconcile navigation level from authoritative state
-      const nav = state.navigation;
-      if (nav) {
-        switch (nav.currentLevel) {
-          case 'performers':
-            this.navigationService.goHome();
-            break;
-          case 'videos':
-            if (nav.performerId) this.navigationService.navigateToPerformer(nav.performerId);
-            break;
-          case 'scenes':
-            // Ensure we navigate into performer and video before playing the scene
-            if (nav.performerId) this.navigationService.navigateToPerformer(nav.performerId);
-            if (nav.videoId) this.navigationService.navigateToVideo(nav.videoId);
-            if (nav.sceneId) this.navigationService.playScene(nav.sceneId);
-            break;
-        }
-      }
-      // Apply authoritative player snapshot if present
-      if (state.player && typeof state.player === 'object') {
-        try {
-          interface PlayerState { playingSceneId?: string; isPlaying?: boolean }
-          const navWithPlayer = this.navigationService as unknown as { setPlayerState?: (p: PlayerState) => void };
-          if (typeof navWithPlayer.setPlayerState === 'function') {
-            navWithPlayer.setPlayerState(state.player as PlayerState);
-          } else {
-            // No setPlayerState available; ere)
-            this.debugLog('setPlayerState not available on VideoNavigationService (skipping)');
-          }
-        } catch {
-          console.warn('📺 Failed to apply player state from state_sync');
-        }
-      }
+      
+      // Emit state to observable for App component to subscribe
+      this.emitState(state);
 
       // After successfully applying the authoritative snapshot, acknowledge the version
       try {
         const version = (state as ApplicationState)?.version;
         if (typeof version === 'number' || typeof version === 'string') {
-          // Construct a BasePayload-compatible wrapper and include version via unknown cast
           const ackPayload = { msgType: 'ack', version } as BasePayload;
           this.sendByType('ack', ackPayload);
           this.debugLog(`sent ack for state_sync v${version}`);
@@ -269,14 +200,12 @@ export class WebSocketService extends WebSocketBaseService {
       return;
     }
     this.debugLog('Connecting to device at', this.lastConnectedUrl);
-    this.connectionState$.next('connecting');
     this.connect(this.lastConnectedUrl!);
   }
 
   reconnectToDevice(): void {
     if (this.lastConnectedUrl) {
       this.debugLog('Device URL unchanged, reconnecting to lastConnectedUrl');
-      this.connectionState$.next('connecting');
       this.reconnect(this.lastConnectedUrl);
     } else {
       this.debugLog('No previous device URL to reconnect to, connecting to specified device');

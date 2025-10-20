@@ -142,6 +142,7 @@ export class Fsm {
       }
       case 'navigate_to_scene': {
         if (targetId && nav.sceneId !== targetId) {
+          nav.currentLevel = 'playing';
           nav.sceneId = targetId;
         }
         break;

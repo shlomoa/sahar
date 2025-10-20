@@ -27,6 +27,15 @@ export interface LikedScene {
   description?: string;
 }
 
+// VideoNavigationService state interface (for UI navigation)
+export interface VideoNavigationState {
+  currentLevel: Performer[] | Video[] | LikedScene[];
+  canGoBack: boolean;
+  currentPerformer?: Performer;
+  currentVideo?: Video;
+  currentScene?: LikedScene;
+}
+
 // Legacy interface for backward compatibility
 export interface VideoItem {
   id: string;
@@ -37,11 +46,4 @@ export interface VideoItem {
   children?: VideoItem[];
   startTime?: number; // For scenes with time offset
   endTime?: number;
-}
-
-export interface NavigationState {
-  currentLevel: VideoItem[];
-  canGoBack: boolean;
-  currentPerformer?: Performer;
-  currentVideo?: Video;
 }

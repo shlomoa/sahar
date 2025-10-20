@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   ErrorMessage,
@@ -10,13 +10,10 @@ import {
   RegisterPayload,
   NavigationAction,
   NavigationCommandPayload,
-  SaharMessage,  
-  ConnectionState,
+  SaharMessage,
   HeartbeatMessage,
   ActionConfirmationPayload,
-  VideoNavigationService, 
   ApplicationState, 
-  Performer,
   WebSocketUtils, 
   WebSocketBaseService,
   ItemType
@@ -32,7 +29,7 @@ export class WebSocketService extends WebSocketBaseService {
   // Remote-specific properties
   private lastConnectedUrl: string | null = null;  // Remote-specific observables
   protected override logMessagePrefix = '📱 Remote: ';
-  private navigationService = inject(VideoNavigationService);
+  
   constructor() {
     super();
     this.networkDevice.clientType = 'remote'; 
@@ -127,10 +124,8 @@ export class WebSocketService extends WebSocketBaseService {
   }
 
   // Public observables
-  getConnectionState(): Observable<ConnectionState> {
-    return this.connectionState$.asObservable();
-  }
-
+  // Note: connection state now available via state$.clientsConnectionState from base class
+  
   getMessages(): Observable<WebSocketMessage> {
     return this.messages$.asObservable();
   }
@@ -167,57 +162,17 @@ export class WebSocketService extends WebSocketBaseService {
  
   private handleStateSync(message: StateSyncMessage): void {
 
-    // Apply authoritative server snapshot to the remote navigation view-model.
+    // Apply authoritative server snapshot - just emit it for App to handle
     this.debugLog('State sync received');
 
-    // Apply authoritative snapshot to shared navigation service so Remote UI can reflect server state
     try {
       const state = message.payload as ApplicationState;
       // Log incoming payload for diagnosis
       this.debugLog(`Received state_sync v${state?.version}`);
       // Intentionally omit dumping full payload to keep logs concise
 
-      // Apply seeded performers if present
-      const dataUnknown: unknown = (state as unknown as { data?: unknown }).data;
-      if (dataUnknown && typeof dataUnknown === 'object' && 'performers' in (dataUnknown as Record<string, unknown>)) {
-        const maybePerformers = (dataUnknown as Record<string, unknown>)['performers'];
-        if (Array.isArray(maybePerformers) && maybePerformers.length > 0 && maybePerformers.every(p => typeof p === 'object')) {
-          this.navigationService.setPerformersData(maybePerformers as Performer[]);
-        }
-      }
-
-      // Reconcile navigation
-      const nav = state.navigation;
-      if (nav) {
-        switch (nav.currentLevel) {
-          case 'performers':
-            this.navigationService.goHome();
-            break;
-          case 'videos':
-            if (nav.performerId) this.navigationService.navigateToPerformer(nav.performerId);
-            break;
-          case 'scenes':
-            if (nav.performerId) this.navigationService.navigateToPerformer(nav.performerId);
-            if (nav.videoId) this.navigationService.navigateToVideo(nav.videoId);
-            if (nav.sceneId) this.navigationService.playScene(nav.sceneId);
-            break;
-        }
-      }
-      // Apply authoritative player state if present
-      if (state.player && typeof state.player === 'object') {
-        try {
-          interface PlayerState { playingSceneId?: string; isPlaying?: boolean }
-          // Assert that navigationService may implement setPlayerState
-          const navWithPlayer = this.navigationService as unknown as { setPlayerState?: (p: PlayerState) => void };
-          if (typeof navWithPlayer.setPlayerState === 'function') {
-            navWithPlayer.setPlayerState(state.player as PlayerState);
-          } else {
-            this.debugLog('setPlayerState not available on VideoNavigationService (skipping)');
-          }
-        } catch (e) {
-          console.warn(this.logMessagePrefix, 'failed to apply player state', e);
-        }
-      }
+      // Emit state to observable for App component to subscribe
+      this.emitState(state);
 
       // After successfully applying the authoritative snapshot, acknowledge the version
       try {
@@ -261,7 +216,6 @@ export class WebSocketService extends WebSocketBaseService {
       return;
     }
     this.debugLog('Connecting to device at', this.lastConnectedUrl);
-    this.connectionState$.next('connecting');
     this.connect(this.lastConnectedUrl!);
   }
 
@@ -269,7 +223,6 @@ export class WebSocketService extends WebSocketBaseService {
     if (this.lastConnectedUrl) {      
 
       this.debugLog('Device URL unchanged, reconnecting to lastConnectedUrl');
-      this.connectionState$.next('connecting');
       this.reconnect(this.lastConnectedUrl);
     } else {
       this.debugLog('No previous device URL to reconnect to, connecting to specified device');

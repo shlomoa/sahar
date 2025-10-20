@@ -9,8 +9,9 @@ import {
   ActionConfirmationPayload,
   ActionConfirmationMessage,
 } from '../models/messages';
+import { Performer, Video, LikedScene } from '../models/video-navigation';
 import { NetworkDevice } from '../models/websocket-protocol';
-import { ConnectionState } from '../models';
+import { ConnectionState, ApplicationState } from '../models';
 
 @Injectable()
 export abstract class WebSocketBaseService implements OnDestroy {
@@ -79,18 +80,14 @@ export abstract class WebSocketBaseService implements OnDestroy {
   >();
 
   // Common observables
-  protected connectionState$ = new BehaviorSubject<ConnectionState>('disconnected');
   protected messages$ = new Subject<WebSocketMessage>();
   protected errors$ = new Subject<string>();
+  protected applicationState$ = new BehaviorSubject<ApplicationState | null>(null);
 
   // Device - to be set by subclasses
   protected networkDevice: NetworkDevice = {} as NetworkDevice;
   
   // Public getters for observables
-  get connected$() {
-    return this.connectionState$.asObservable();
-  }
-
   get messages() {
     return this.messages$.asObservable();
   }
@@ -99,8 +96,64 @@ export abstract class WebSocketBaseService implements OnDestroy {
     return this.errors$.asObservable();
   }
 
+  get state$() {
+    return this.applicationState$.asObservable();
+  }
+
+  // Local WebSocket state check for send operations
   get isConnected(): boolean {
-    return this.connectionState$.value === 'connected';
+    return this.ws?.readyState === WebSocket.OPEN;
+  }
+
+  // Performers data for lookups (derived from server state)
+  protected performersData: Performer[] = [];
+
+  // Public getter for performers data
+  getPerformersData(): Performer[] {
+    return this.performersData;
+  }
+
+  // Lookup utilities - derive display objects from state IDs
+  getCurrentPerformer(): Performer | undefined {
+    const state = this.applicationState$.value;
+    if (!state?.navigation?.performerId) {
+      return undefined;
+    }
+    return this.performersData.find(p => p.id === state.navigation.performerId);
+  }
+
+  getCurrentVideo(): Video | undefined {
+    const state = this.applicationState$.value;
+    if (!state?.navigation?.videoId) {
+      return undefined;
+    }
+    const performer = this.getCurrentPerformer();
+    return performer?.videos.find(v => v.id === state.navigation.videoId);
+  }
+
+  getCurrentScene(): LikedScene | undefined {
+    const state = this.applicationState$.value;
+    if (!state?.navigation?.sceneId) {
+      return undefined;
+    }
+    const video = this.getCurrentVideo();
+    return video?.likedScenes.find(s => s.id === state.navigation.sceneId);
+  }
+
+  // Update performers data from server state
+  // Note: ApplicationState.data is intentionally loose. At runtime, it contains performers.
+  protected updatePerformersFromState(state: ApplicationState): void {
+    const stateData = state?.data as any;
+    if (stateData?.performers && Array.isArray(stateData.performers)) {
+      this.performersData = stateData.performers;
+    }
+  }
+
+  // Method for subclasses to emit new state
+  protected emitState(state: ApplicationState): void {
+    this.applicationState$.next(state);
+    // Update performers whenever state changes
+    this.updatePerformersFromState(state);
   }
 
   get deviceInfo(): NetworkDevice {
@@ -151,7 +204,6 @@ export abstract class WebSocketBaseService implements OnDestroy {
     }
 
     console.log(`🔌 ${this.networkDevice.clientType.toUpperCase()}: Connecting to ${url}`);
-    this.connectionState$.next('connecting');
 
     try {
       this.ws = new WebSocket(url);      
@@ -159,7 +211,6 @@ export abstract class WebSocketBaseService implements OnDestroy {
       console.log(`🔌 completed setting up WebSocket handlers`);
     } catch (error) {
       console.error(`❌ ${this.networkDevice.clientType.toUpperCase()}: Failed to create WebSocket:`, error);
-      this.connectionState$.next('error');
       this.scheduleReconnect(url);
       return false;
     }
@@ -178,7 +229,6 @@ export abstract class WebSocketBaseService implements OnDestroy {
       this.ws = null;
     }
 
-    this.connectionState$.next('disconnected');
     this.reconnectAttempts = 0;
     console.log(`🔌 disconnected !`);
   }
@@ -225,7 +275,6 @@ export abstract class WebSocketBaseService implements OnDestroy {
 
     this.ws.onopen = () => {
       console.log(`✅ ${this.networkDevice.clientType.toUpperCase()}: WebSocket connected`);
-      this.connectionState$.next('connected');
       this.reconnectAttempts = 0;
       this.startHeartbeat();
       this.onConnected();
@@ -250,7 +299,6 @@ export abstract class WebSocketBaseService implements OnDestroy {
 
     this.ws.onclose = (event) => {
       console.log(`🔌 ${this.networkDevice.clientType.toUpperCase()}: WebSocket closed:`, event.code, event.reason);
-      this.connectionState$.next('disconnected');
       
       if (this.heartbeatTimer) {
         clearInterval(this.heartbeatTimer);
@@ -267,7 +315,6 @@ export abstract class WebSocketBaseService implements OnDestroy {
 
     this.ws.onerror = (error) => {
       console.error(this.logMessagePrefix, `❌ ${this.networkDevice.clientType.toUpperCase()}: WebSocket error:`, error);
-      this.connectionState$.next('error');
       this.errors$.next('WebSocket connection error');
     };
   }

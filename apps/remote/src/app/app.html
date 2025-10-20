@@ -41,7 +41,7 @@
               <video-controls
                 [currentVideo]="getCurrentVideo()"
                 [currentScene]="getCurrentScene()"
-                [sceneId]="currentScene?.id"
+                [sceneId]="getCurrentScene()?.id"
                 [isPlaying]="isPlaying"
                 [isMuted]="isMuted"
                 [isFullscreen]="isFullscreen"
@@ -50,7 +50,7 @@
                 [hasNextScene]="hasNextScene()"
                 (controlCommand)="sendControlCommand($event)"
                 (volumeChange)="onVolumeChange($event)"
-                (backToScenes)="navigateToScenes(currentVideo?.id ?? '')">
+                (backToScenes)="navigateToScenes(getCurrentVideo()?.id ?? '')">
               </video-controls>
             }
           </div>
