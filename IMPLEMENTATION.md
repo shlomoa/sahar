@@ -65,12 +65,23 @@ This document outlines the implementation details for the SAHAR TV Remote system
             - HEALTH_STATUS: "ok" | "degraded" | "error" (not currently implemented in code; future work)
 
 - **Services**: Shared services for WebSocket handling and utilities.
-    - **WebSocketBaseService**: Base class for WebSocket services in TV and Remote. Handles connection, reconnection, heartbeats, message parsing, and provides lookup utilities:
-        - `getPerformersData()`: Public accessor for performers array from server state
-        - `getCurrentPerformer()`: Derives current performer from navigation state IDs
-        - `getCurrentVideo()`: Derives current video from navigation state IDs
-        - `getCurrentScene()`: Derives current scene from navigation state IDs
-        - These utilities enable apps to derive display objects from server's authoritative state without local state duplication
+    - **WebSocketBaseService**: Base class for WebSocket services in TV and Remote. Handles connection, reconnection, heartbeats, message parsing, and provides lookup utilities for the **flat normalized catalog structure**:
+        - **Catalog Storage**: Maintains three flat arrays extracted from `ApplicationState.data`
+          - `performersData: Performer[]` - Flat array of performers
+          - `videosData: Video[]` - Flat array with `performerId` foreign keys
+          - `scenesData: Scene[]` - Flat array with `videoId` foreign keys
+        - **Public Accessors**:
+          - `getPerformersData()`: Returns flat performers array
+          - `getVideosData()`: Returns flat videos array  
+          - `getScenesData()`: Returns flat scenes array
+        - **Lookup Utilities** (O(1) performance):
+          - `getCurrentPerformer()`: Finds performer by ID from navigation state
+          - `getCurrentVideo()`: Finds video by ID from navigation state
+          - `getCurrentScene()`: Finds scene by ID from navigation state
+        - **Foreign Key Queries**:
+          - `getVideosForPerformer(performerId)`: Filters videos by `performerId` FK
+          - `getScenesForVideo(videoId)`: Filters scenes by `videoId` FK
+        - These utilities enable apps to derive display objects from server's flat catalog structure without local state duplication or nested traversals
 
 ### shared componenets
 - **DeviceConnectionComponent**: Device connection indications and information.
@@ -101,10 +112,16 @@ The state is maintained and managed in the server FSM. Clients receive authorita
   - `navigate_to_scene`: sets `currentLevel='playing'`, `sceneId` ⭐ triggers video playback
   - `navigate_back`: steps back one level (playing→scenes→videos→performers)
   - `navigate_home`: resets to `currentLevel='performers'`
+- **Flat Normalized Catalog Structure** (Migrated 2025-10-20):
+  - `ApplicationState.data` contains `CatalogData` with three flat arrays
+  - Foreign key references enable O(1) lookups: `Video.performerId`, `Scene.videoId`
+  - No nested data structures - each entity stored once in its own array
 - Clients derive display objects via `WebSocketBaseService` utilities:
-  - `getCurrentPerformer()`: looks up performer from `state.data.performers` using `performerId`
-  - `getCurrentVideo()`: looks up video from current performer's videos using `videoId`
-  - `getCurrentScene()`: looks up scene from current video's likedScenes using `sceneId`
+  - `getCurrentPerformer()`: Looks up performer in flat `performersData` array by ID
+  - `getCurrentVideo()`: Looks up video in flat `videosData` array by ID
+  - `getCurrentScene()`: Looks up scene in flat `scenesData` array by ID
+  - `getVideosForPerformer(performerId)`: Filters videos by FK reference
+  - `getScenesForVideo(videoId)`: Filters scenes by FK reference
 - TV app: checks `currentLevel === 'playing'` to show video player vs navigation grids
 
 ```typescript
@@ -136,16 +153,19 @@ export interface ApplicationState {
         sceneId?: string;
     };
     player: PlayerState;  // Uses shared PlayerState interface
-    // Optional cache of content; server may echo subset for convenience
-    data?: {
-        performers?: any[];
-        videos?: Video[];
-        scenes?: Scene[];
-    };
+    // Flat normalized catalog structure (Migrated 2025-10-20)
+    data?: CatalogData;  // { performers[], videos[], scenes[] } with FK references
     error?: {
         code: string;
         message: string;
     };
+}
+
+// CatalogData: Flat normalized structure (Migrated 2025-10-20)
+export interface CatalogData {
+    performers: Performer[];  // { id, name, thumbnail, description }
+    videos: Video[];          // { id, title, url, performerId, description }
+    scenes: Scene[];          // { id, title, videoId, startTime, endTime, description }
 }
 ```
 

@@ -134,6 +134,11 @@ The entire system operates on a strictly synchronous, server-centric communicati
 - Server's `ApplicationState` is the single source of truth
 - Clients derive all display state from server broadcasts
 - No local state duplication - apps use lookup utilities to resolve IDs to objects
+- **Flat Normalized Catalog** (Migrated 2025-10-20): Content stored as flat arrays with foreign key references
+  - `CatalogData { performers[], videos[], scenes[] }`
+  - Foreign keys: `Video.performerId` → `Performer.id`, `Scene.videoId` → `Video.id`
+  - O(1) lookups instead of nested traversals
+  - Each entity stored once (no duplication)
 - See IMPLEMENTATION.md for technical details on `WebSocketBaseService` utilities
 
 ### Hybrid Architecture: Protocol Selection by Data Characteristics

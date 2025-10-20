@@ -36,7 +36,7 @@ Server Core
 - [x] [Task 1.13 — Scripts and environment (dev/prod entry points)](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-13)`
 - [x] [Task 1.15 — FSM core](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-13)`
 - [x] [Task 1.16 — state_sync broadcast discipline](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-13)`
-- [x] [Task 1.17 — data handler](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-13)`
+- [x] [Task 1.17 — data handler (updated 2025-10-20: flat normalized catalog structure with FK references)](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-13)`
 - [x] [Task 1.18 — navigation/control handlers](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-13)`
 - [x] [Task 1.20 — Structured logging](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-11)`
 - [x] [Task 1.21 — Invalid message handling](./IMPLEMENTATION.md#2-phase-1-server-side-refactoring-unified-server--ssr-host) `(2025-08-11)`
@@ -109,7 +109,7 @@ Status of discrete hook tasks (A–J) underpinning Milestone 1 integration confi
 - [x] Hook C – Navigation Command Propagation (2025-08-14)
 - [x] Hook D – Control Command Propagation (2025-08-14)
 - [x] Hook E – Stop-and-Wait (Ack-Gated Broadcast Discipline) (2025-08-14)
-- [x] Hook I – Data Seeding (Initial Data Handler) (2025-08-14)
+- [x] Hook I – Data Seeding (Initial Data Handler) — Updated 2025-10-20: Now uses flat normalized catalog structure (performers[], videos[], scenes[]) with foreign key references instead of nested structure (2025-08-14)
 - [x] Hook J – Reconnection Behavior (2025-08-14)
 
 Guidance:
@@ -261,7 +261,8 @@ TV App (Stateless rendering + YouTube)
 
 Remote App (Data owner + controls)
 - [ ] [Task 2.8 — Refactor WebsocketService to shared base](./IMPLEMENTATION.md#32-remote-application-appsremote) `(YYYY-MM-DD)`
-- [ ] [Task 2.10 — Send initial data on connection](./IMPLEMENTATION.md#32-remote-application-appsremote) `(YYYY-MM-DD)`
+Remote App (Data owner + controls)
+- [ ] [Task 2.10 — Send initial data on connection (updated: now sends flat catalog structure)](./IMPLEMENTATION.md#32-remote-application-appsremote) `(YYYY-MM-DD)`
 - [ ] [Task 2.11 — Route all navigation/control to server](./IMPLEMENTATION.md#32-remote-application-appsremote) `(YYYY-MM-DD)`
 - [ ] [Task 2.12 — Decide Remote delivery model (SSR vs SPA PWA)](./IMPLEMENTATION.md#32-remote-application-appsremote) `(YYYY-MM-DD)`
 - [ ] [Task 2.13 — PWA hardening](./IMPLEMENTATION.md#32-remote-application-appsremote) `(YYYY-MM-DD)`
