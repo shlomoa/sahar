@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from "@angular/material/icon";
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { RouterOutlet } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { SharedNavigationRootComponent,
@@ -13,7 +14,8 @@ import { SharedNavigationRootComponent,
          ApplicationState,
          Performer,
          Video,
-         Scene} from 'shared';
+         Scene,
+         ContentService} from 'shared';
 import { VideoControlsComponent } from './components/video-controls/video-controls.component';
 import { WebSocketService } from './services/websocket.service';
 
@@ -43,6 +45,8 @@ export class App implements OnInit, OnDestroy {
 
   // Service injections
   private readonly webSocketService = inject(WebSocketService);
+  private readonly contentService = inject(ContentService);
+  private readonly snackBar = inject(MatSnackBar);
 
   // Data
   clientType: ClientType = 'remote';
@@ -160,6 +164,9 @@ export class App implements OnInit, OnDestroy {
   } 
 
   ngOnInit() {    
+    // Fetch catalog data via HTTP before initializing WebSocket
+    this.initializeCatalog();
+
     // Subscribe to application state from server - single source of truth
     const stateSub = this.webSocketService.state$.subscribe(state => {
       this.applicationState = state;
@@ -200,6 +207,21 @@ export class App implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());    
+  }
+
+  private async initializeCatalog(): Promise<void> {
+    try {
+      console.log('📱 Remote: Fetching catalog via HTTP...');
+      await this.contentService.fetchCatalog();
+      console.log('📱 Remote: Catalog fetched successfully');
+    } catch (error) {
+      console.error('📱 Remote: Failed to fetch catalog:', error);
+      this.snackBar.open('Failed to load content catalog', 'Retry', { 
+        duration: 0 
+      }).onAction().subscribe(() => {
+        this.initializeCatalog();
+      });
+    }
   }
 
   // Connected device

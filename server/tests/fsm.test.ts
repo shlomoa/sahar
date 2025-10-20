@@ -73,26 +73,9 @@ test('Fsm: deregisters a client and regresses to initializing', () => {
     
 });
 
-// Data seeding: first seed inserts data; identical re-seed is a no-op; real change bumps version
-test('Fsm: seedData merges and only bumps on real change', () => {
-    const fsm = new Fsm();
-    const s0 = fsm.getSnapshot();
-
-    fsm.seedData({ videos: [{ id: 'v1' }] });
-    const s1 = fsm.getSnapshot();
-    expectVersionBump(s0, s1);
-    assert.ok(s1.data && s1.data.videos && s1.data.videos.length === 1);
-
-    // idempotent re-seed
-    fsm.seedData({ videos: [{ id: 'v1' }] });
-    const s2 = fsm.getSnapshot();
-    expectNoVersionChange(s1, s2);
-
-    // real change
-    fsm.seedData({ videos: [{ id: 'v1' }, { id: 'v2' }] });
-    const s3 = fsm.getSnapshot();
-    expectVersionBump(s2, s3);
-});
+// Phase 3: seedData removed - catalog no longer part of ApplicationState
+// Data seeding test disabled - catalog now served via HTTP GET /api/content/catalog
+// test('Fsm: seedData merges and only bumps on real change', () => { ... });
 
 // Navigation: performer→video→back preserves video context (scene cleared). Duplicate commands are suppressed.
 test('Fsm: navigationCommand updates levels with no-op suppression', () => {

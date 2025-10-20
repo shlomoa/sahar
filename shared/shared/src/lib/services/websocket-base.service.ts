@@ -1,4 +1,4 @@
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy, inject } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import {  
   WebSocketMessage,
@@ -12,6 +12,7 @@ import {
 import { Performer, Video, Scene, CatalogData } from '../models/video-navigation';
 import { NetworkDevice } from '../models/websocket-protocol';
 import { ConnectionState, ApplicationState } from '../models';
+import { ContentService } from './content.service';
 
 @Injectable()
 export abstract class WebSocketBaseService implements OnDestroy {
@@ -30,6 +31,9 @@ export abstract class WebSocketBaseService implements OnDestroy {
   protected lastMessageTimestamp: number | null = null;
   protected messageTimings: number[] = [];
   protected logMessagePrefix: string = 'Debug 🐞';
+
+  // Inject ContentService for catalog data access
+  protected contentService = inject(ContentService);
 
     /**
    * Add a debug log entry to the buffer and console
@@ -106,30 +110,32 @@ export abstract class WebSocketBaseService implements OnDestroy {
   }
 
   // Catalog data for lookups (derived from server state)
-  protected performersData: Performer[] = [];
-  protected videosData: Video[] = [];
-  protected scenesData: Scene[] = [];
+  // Phase 2: Catalog data now comes from ContentService via HTTP, not WebSocket state
+  // Legacy fields kept for reference but no longer used:
+  // protected performersData: Performer[] = [];
+  // protected videosData: Video[] = [];
+  // protected scenesData: Scene[] = [];
 
-  // Public getters for catalog data
+  // Public getters for catalog data - delegate to ContentService (Phase 2)
   getPerformersData(): Performer[] {
-    return this.performersData;
+    return this.contentService.getPerformers();
   }
 
   getVideosData(): Video[] {
-    return this.videosData;
+    return this.contentService.getVideos();
   }
 
   getScenesData(): Scene[] {
-    return this.scenesData;
+    return this.contentService.getScenes();
   }
 
-  // Lookup utilities - derive display objects from state IDs using flat arrays
+  // Lookup utilities - derive display objects from state IDs using ContentService
   getCurrentPerformer(): Performer | undefined {
     const state = this.applicationState$.value;
     if (!state?.navigation?.performerId) {
       return undefined;
     }
-    return this.performersData.find(p => p.id === state.navigation.performerId);
+    return this.contentService.getPerformer(state.navigation.performerId);
   }
 
   getCurrentVideo(): Video | undefined {
@@ -137,7 +143,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
     if (!state?.navigation?.videoId) {
       return undefined;
     }
-    return this.videosData.find((v: Video) => v.id === state.navigation.videoId);
+    return this.contentService.getVideo(state.navigation.videoId);
   }
 
   getCurrentScene(): Scene | undefined {
@@ -145,40 +151,39 @@ export abstract class WebSocketBaseService implements OnDestroy {
     if (!state?.navigation?.sceneId) {
       return undefined;
     }
-    return this.scenesData.find((s: Scene) => s.id === state.navigation.sceneId);
+    return this.contentService.getScene(state.navigation.sceneId);
   }
 
-  // Helper methods for filtering by foreign keys
+  // Helper methods for filtering by foreign keys - delegate to ContentService
   getVideosForPerformer(performerId: string): Video[] {
-    return this.videosData.filter((v: Video) => v.performerId === performerId);
+    return this.contentService.getVideosForPerformer(performerId);
   }
 
   getScenesForVideo(videoId: string): Scene[] {
-    return this.scenesData.filter((s: Scene) => s.videoId === videoId);
+    return this.contentService.getScenesForVideo(videoId);
   }
 
-  // Update catalog data from server state
-  // Note: ApplicationState.data is CatalogData with flat arrays
-  protected updateCatalogFromState(state: ApplicationState): void {
-    const catalogData = state?.data as CatalogData | undefined;
-    if (catalogData) {
-      if (catalogData.performers && Array.isArray(catalogData.performers)) {
-        this.performersData = catalogData.performers;
-      }
-      if (catalogData.videos && Array.isArray(catalogData.videos)) {
-        this.videosData = catalogData.videos;
-      }
-      if (catalogData.scenes && Array.isArray(catalogData.scenes)) {
-        this.scenesData = catalogData.scenes;
-      }
-    }
-  }
+  // Phase 2: updateCatalogFromState no longer needed - catalog comes from ContentService via HTTP
+  // protected updateCatalogFromState(state: ApplicationState): void {
+  //   const catalogData = state?.data as CatalogData | undefined;
+  //   if (catalogData) {
+  //     if (catalogData.performers && Array.isArray(catalogData.performers)) {
+  //       this.performersData = catalogData.performers;
+  //     }
+  //     if (catalogData.videos && Array.isArray(catalogData.videos)) {
+  //       this.videosData = catalogData.videos;
+  //     }
+  //     if (catalogData.scenes && Array.isArray(catalogData.scenes)) {
+  //       this.scenesData = catalogData.scenes;
+  //     }
+  //   }
+  // }
 
   // Method for subclasses to emit new state
   protected emitState(state: ApplicationState): void {
     this.applicationState$.next(state);
-    // Update catalog whenever state changes
-    this.updateCatalogFromState(state);
+    // Phase 2: No longer update catalog from state - catalog comes from ContentService
+    // this.updateCatalogFromState(state);
   }
 
   get deviceInfo(): NetworkDevice {

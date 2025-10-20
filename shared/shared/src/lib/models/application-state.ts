@@ -37,11 +37,11 @@ export interface NavigationState {
 
 // Shared authoritative ApplicationState model (with versioning)
 // Version increments on every committed mutation so clients can reconcile ordering.
+// Phase 3: Catalog data removed - now delivered via HTTP GET /api/content/catalog
 export interface ApplicationState {
   version: number; // monotonically increasing
   clientsConnectionState: ClientsConnectionState; // Synchronized connection status
-  // Domain data seeded by Remote. Normalized flat structure with ID references.
-  data?: CatalogData;
+  // Phase 3: data field removed - catalog delivered via HTTP, not WebSocket
   navigation: NavigationState;    
   player: PlayerState;
   error?: {

@@ -530,16 +530,15 @@ wss.on('connection', (ws: WebSocket) => {
     // Already registered normal messages
     switch (msg.msgType) {
       case 'data': {
-        // Only Remote should seed data (ignore if TV attempts)
+        // Phase 3: 'data' message type no longer supported - catalog served via HTTP
         const meta = clients.get(ws);
         if (meta?.clientType !== 'remote') {
-          sendError(ws, ERROR_CODES.INVALID_MESSAGE_FORMAT, 'Only remote can send data');
+          sendError(ws, ERROR_CODES.INVALID_MESSAGE_FORMAT, 'data message type no longer supported');
           break;
         }
-        fsm.seedData((msg as any).payload);
-        ws.send(JSON.stringify(makeAck('server')));
-        broadcastStateIfChanged();
-        logInfo('data_seed_handled');
+        // fsm.seedData((msg as any).payload); // Phase 3: removed
+        sendError(ws, ERROR_CODES.INVALID_MESSAGE_FORMAT, 'data message type no longer supported - use HTTP /api/content/catalog');
+        logWarn('data_message_deprecated', { from: meta.deviceId });
         break;
       }
       case 'navigation_command': {
@@ -561,15 +560,16 @@ wss.on('connection', (ws: WebSocket) => {
           // Validate target existence for authoritative navigation commands.
           const action = nav.payload.action;
           const targetId = nav.payload.targetId;
-          const snapshot = fsm.getSnapshot();
-          const catalogData: any = (snapshot as any).data || {};
-          const performers: any[] = catalogData.performers || [];
-          const videos: any[] = catalogData.videos || [];
-          const scenes: any[] = catalogData.scenes || [];
+          
+          // Phase 3: Get catalog from FSM's getCatalogData(), not from state
+          const catalogData = fsm.getCatalogData();
+          const performers = catalogData.performers || [];
+          const videos = catalogData.videos || [];
+          const scenes = catalogData.scenes || [];
 
-          const existsPerformer = (id?: string) => !!id && performers.some(p => p.id === id);
-          const existsVideo = (id?: string) => !!id && videos.some(v => v.id === id);
-          const existsScene = (id?: string) => !!id && scenes.some(s => s.id === id);
+          const existsPerformer = (id?: string) => !!id && performers.some((p: any) => p.id === id);
+          const existsVideo = (id?: string) => !!id && videos.some((v: any) => v.id === id);
+          const existsScene = (id?: string) => !!id && scenes.some((s: any) => s.id === id);
 
           let validTarget = true;
           switch (action) {
@@ -761,6 +761,20 @@ app.get('/host-ip', (req: Request, res: Response) => {
   res.json({ ip, port: WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT });
 });
 
+// Content API endpoint - Phase 1: HTTP Content Delivery Separation
+// Returns the flat catalog structure (performers, videos, scenes)
+// This allows clients to fetch content once via HTTP instead of receiving it in every state_sync
+app.get('/api/content/catalog', (req: Request, res: Response) => {
+  logInfo('http_request', { path: req.path, method: req.method });
+  const catalog = fsm.getCatalogData();
+  logInfo('catalog_served', { 
+    performers: catalog.performers.length, 
+    videos: catalog.videos.length, 
+    scenes: catalog.scenes.length 
+  });
+  res.json(catalog);
+});
+
 app.use('/.well-known', express.static('public/.well-known', { dotfiles: 'allow' }))
 app.use(express.static('public'));
 
@@ -851,19 +865,12 @@ server.listen(WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT, () => {
   logInfo('server_status', { express: true, httpListening: true, tvRoute: '/tv', remoteRoute: '/remote', websocket: true, devSsr: DEV_SSR, tvDevPort: WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT, remoteDevPort: WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT });
   markReady();
   logInfo('server_ready');
-  // Perform initial server-side seeding using built-in mock data so validation can use POST /seed
-  try {
-    // seed with catalogData structure (flat performers, videos, scenes)
-    fsm.seedData(catalogData);
-    broadcastStateIfChanged(true);
-    logInfo('initial_seed_applied', { 
-      performers: catalogData.performers.length,
-      videos: catalogData.videos.length,
-      scenes: catalogData.scenes.length
-    });
-  } catch (e: any) {
-    logError('initial_seed_failed', { error: e?.message || String(e) });
-  }
+  // Phase 3: Catalog initialization moved to FSM constructor, no longer part of state
+  // Catalog is served via HTTP GET /api/content/catalog, not via WebSocket state_sync
+  logInfo('catalog_initialization', { 
+    mode: 'http_only',
+    message: 'Catalog served via HTTP /api/content/catalog'
+  });
   logInfo('mode_banner', {
     mode: DEV_SSR ? 'dev_proxy' : 'prod_static',
     wsPath: WEBSOCKET_CONFIG.WS_PATH,
@@ -892,20 +899,14 @@ server.listen(WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT, () => {
     const remoteEntry = remoteDirExists ? pickEntry(remoteServerDir) : '';
     SSR_STATUS = { tv: tvDirExists, remote: remoteDirExists, tvPath: tvEntry, remotePath: remoteEntry };
 
-    // POST /seed - accept JSON payload to seed the server state; used by validation harness
+    // Phase 3: POST /seed endpoint deprecated - catalog is read-only via HTTP GET /api/content/catalog
     app.post('/seed', (req: Request, res: Response) => {
-      const body = req.body;
-      try {
-        logInfo('http_request', { path: req.path, method: req.method });
-        fsm.seedData(body);
-        // reply then broadcast
-        res.status(200).json({ ok: true });
-        broadcastStateIfChanged(true);
-        logInfo('seed_endpoint_called', { ok: true });
-      } catch (e: any) {
-        logError('seed_endpoint_error', { error: e?.message || String(e) });
-        res.status(500).json({ ok: false, error: e?.message || String(e) });
-      }
+      logInfo('http_request', { path: req.path, method: req.method });
+      logWarn('seed_endpoint_deprecated', { message: 'POST /seed is deprecated - catalog served via HTTP GET /api/content/catalog' });
+      res.status(410).json({ 
+        ok: false, 
+        error: 'POST /seed endpoint is deprecated. Catalog is now read-only via HTTP GET /api/content/catalog' 
+      });
     });
 
     logInfo('ssr_dir_status', { app: 'tv', dir: path.relative(__dirname, tvServerDir), exists: tvDirExists, pickedEntry: tvEntry ? path.relative(__dirname, tvEntry) : null });

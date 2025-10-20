@@ -17,7 +17,8 @@ import { ControlCommandMessage,
          SharedNavigationRootComponent,
          Video,
          Scene,
-         Performer} from 'shared';
+         Performer,
+         ContentService} from 'shared';
 import { WebSocketService } from './services/websocket.service';
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
 
@@ -49,6 +50,7 @@ export class App implements OnInit, OnDestroy {
 
   // Service injections
   private readonly webSocketService = inject(WebSocketService);
+  private readonly contentService = inject(ContentService);
   private readonly snackBar = inject(MatSnackBar);  
 
   // Local playback flags (derived from player state)
@@ -132,6 +134,9 @@ export class App implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // Fetch catalog data via HTTP before initializing WebSocket
+    this.initializeCatalog();
+
     // Build Remote URL as protocol://FQDN:SERVER_DEFAULT_PORT (avoid localhost in QR).
     // Prefer server-provided LAN IP from /host-ip, fall back to the browser hostname.
     const protocol = window.location.protocol;
@@ -264,6 +269,21 @@ export class App implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
+  }
+
+  private async initializeCatalog(): Promise<void> {
+    try {
+      console.log('📺 TV: Fetching catalog via HTTP...');
+      await this.contentService.fetchCatalog();
+      console.log('📺 TV: Catalog fetched successfully');
+    } catch (error) {
+      console.error('📺 TV: Failed to fetch catalog:', error);
+      this.snackBar.open('Failed to load content catalog', 'Retry', { 
+        duration: 0 
+      }).onAction().subscribe(() => {
+        this.initializeCatalog();
+      });
+    }
   }
 
   private initializeWebSocket(): void {

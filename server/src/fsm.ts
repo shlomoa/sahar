@@ -1,5 +1,6 @@
 import { ApplicationState, ActionConfirmationStatus, createLogger, NavigationAction, ClientInfo, FsmState } from 'shared';
-import { ClientType, ClientsConnectionState, ControlCommandPayload } from 'shared';
+import { ClientType, ClientsConnectionState, ControlCommandPayload, CatalogData } from 'shared';
+import { catalogData } from './mock-data';
 
 const logger = createLogger({ component: 'server-fsm' });
 const logInfo = (event: string, meta?: any, msg?: string) => logger.info(event, meta, msg);
@@ -24,12 +25,18 @@ export class Fsm {
   private dirty = false; // tracks whether a mutation occurred in current handler
   private connectedClients: ConnectedClients = {};
   fsmState: FsmState = 'initializing';
+  
+  // Phase 3: Catalog stored separately, not in ApplicationState
+  private catalogData: CatalogData;
 
   constructor() {
+    // Phase 3: Initialize catalog from mock data (not part of state)
+    this.catalogData = catalogData;
+    
     this.state = {
       version: 1,      
-      clientsConnectionState: { tv: 'disconnected', remote: 'disconnected' } as ClientsConnectionState, // Synchronized connection status
-      // data field intentionally omitted until seeded (Task 1.17)
+      clientsConnectionState: { tv: 'disconnected', remote: 'disconnected' } as ClientsConnectionState,
+      // Phase 3: data field removed - catalog delivered via HTTP
       navigation: {
         currentLevel: 'performers'
       },
@@ -45,27 +52,9 @@ export class Fsm {
     logInfo('fsm_initialized', {}, 'Sahar FSM initialized with state: ' + JSON.stringify(this.state));
   }
 
-  seedData(payload: any) {
-    if (!payload || typeof payload !== 'object') {
-      logError('fsm_seed_invalid', { payload }, 'Invalid seed data payload');
-      return; // ignore invalid
-    }
-    if (!this.state.data) {
-      logInfo('fsm_seed_data', { payload }, 'Seeding initial data');
-      this.state.data = JSON.parse(JSON.stringify(payload));
-      this.dirty = true;
-      this.commit();
-      return;
-    }
-    // Shallow merge: add/overwrite top-level keys; detect real change
-    logInfo('fsm_seed_data_merge', { payload }, 'Merging seed data');
-    const before = JSON.stringify(this.state.data);
-    Object.assign(this.state.data, JSON.parse(JSON.stringify(payload)));
-    if (JSON.stringify(this.state.data) !== before) {
-      this.dirty = true;
-      this.commit();
-    }
-  }
+  // Phase 3: seedData method removed - catalog no longer part of ApplicationState
+  // Catalog is now initialized from mock-data.ts in constructor and served via HTTP endpoint
+  // seedData(payload: any) { ... }
 
   /** Return a defensive deep copy so outside code cannot mutate internal state */
   getSnapshot(): ApplicationState {
@@ -73,6 +62,12 @@ export class Fsm {
     // we can switch to structuredClone (Node >=17.0) or a handcrafted shallow+nested copy.
     logInfo('fsm_get_snapshot', { version: this.state.version }, 'FSM snapshot requested');
     return JSON.parse(JSON.stringify(this.state)) as ApplicationState;
+  }
+
+  /** Return catalog data for HTTP API endpoint (Phase 3: Content Delivery Separation) */
+  getCatalogData(): CatalogData {
+    // Phase 3: Return catalog from internal field, not ApplicationState
+    return this.catalogData;
   }
 
   registerClient(clientType: ClientType, deviceId: string): { ok: boolean; reason?: string } {
