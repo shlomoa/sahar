@@ -64,10 +64,13 @@ This document outlines the implementation details for the SAHAR TV Remote system
             - SERVER_PORT: 8080
             - HEALTH_STATUS: "ok" | "degraded" | "error" (not currently implemented in code; future work)
 
-- **Services**: Shared services for navigation and WebSocket handling.
-    - **VideoNavigationService**: Shared navigation logic and state management.
-    - **WebSocketBaseService**: Base class for WebSocket services in TV and Remote. Handles connection, reconnection, heartbeats, and message parsing.
-    - **NavigationService**: Navigation logic and state management.
+- **Services**: Shared services for WebSocket handling and utilities.
+    - **WebSocketBaseService**: Base class for WebSocket services in TV and Remote. Handles connection, reconnection, heartbeats, message parsing, and provides lookup utilities:
+        - `getPerformersData()`: Public accessor for performers array from server state
+        - `getCurrentPerformer()`: Derives current performer from navigation state IDs
+        - `getCurrentVideo()`: Derives current video from navigation state IDs
+        - `getCurrentScene()`: Derives current scene from navigation state IDs
+        - These utilities enable apps to derive display objects from server's authoritative state without local state duplication
 
 ### shared componenets
 - **DeviceConnectionComponent**: Device connection indications and information.
@@ -89,6 +92,20 @@ Prerequisites
 
 ### ApplicationState definition and implementation
 The state is maintained and managed in the server FSM. Clients receive authoritative state snapshots via `state_sync` messages after each committed change.
+
+**Navigation State Management** (Updated 2025-10-20):
+- Server FSM owns navigation state as IDs only: `{ currentLevel, performerId?, videoId?, sceneId? }`
+- FSM transitions on navigation commands:
+  - `navigate_to_performer`: sets `currentLevel='videos'`, `performerId`
+  - `navigate_to_video`: sets `currentLevel='scenes'`, `videoId`
+  - `navigate_to_scene`: sets `currentLevel='playing'`, `sceneId` ⭐ triggers video playback
+  - `navigate_back`: steps back one level (playing→scenes→videos→performers)
+  - `navigate_home`: resets to `currentLevel='performers'`
+- Clients derive display objects via `WebSocketBaseService` utilities:
+  - `getCurrentPerformer()`: looks up performer from `state.data.performers` using `performerId`
+  - `getCurrentVideo()`: looks up video from current performer's videos using `videoId`
+  - `getCurrentScene()`: looks up scene from current video's likedScenes using `sceneId`
+- TV app: checks `currentLevel === 'playing'` to show video player vs navigation grids
 
 ```typescript
 // Shared PlayerState interface (consolidated from duplicate implementations)

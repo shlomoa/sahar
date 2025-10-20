@@ -130,6 +130,12 @@ Target Architecture Note (clarification): The server will own content and naviga
 
 The entire system operates on a strictly synchronous, server-centric communication model. All state is owned by the server's FSM. Clients are stateless and merely reflect the state broadcast by the server.
 
+**Client State Management Principle**:
+- Server's `ApplicationState` is the single source of truth
+- Clients derive all display state from server broadcasts
+- No local state duplication - apps use lookup utilities to resolve IDs to objects
+- See IMPLEMENTATION.md for technical details on `WebSocketBaseService` utilities
+
 ### Protocol constants (defaults)
 
 [See IMEPLEMENTATION.md for authoritative runtime constants.](./IMPLEMENTATION.md#models-and-constants---protocol-constants)
