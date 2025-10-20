@@ -2,7 +2,7 @@ import { Component, Input, Output, EventEmitter, OnInit, ViewChild, OnChanges, S
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { YouTubePlayerModule, YouTubePlayer } from '@angular/youtube-player';
-import { Video, LikedScene, YouTubeThumbnailImageQuality } from 'shared';
+import { Video, Scene, YouTubeThumbnailImageQuality } from 'shared';
 import { getYoutubeVideoId, getYoutubeThumbnailUrl } from 'shared';
 
 @Component({
@@ -27,7 +27,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   @Input() volume?: number | null;       // 0..1 (preferred) or 0..100
 
   @Input() currentVideo?: Video;
-  @Input() currentScene?: LikedScene;
+  @Input() currentScene?: Scene;
   @Input() autoplay = true;
   @Input() showControls = true;
   

@@ -8,7 +8,7 @@ import { SharedPerformersGridComponent } from '../performers-grid/performers-gri
 import { SharedVideosGridComponent } from '../videos-grid/videos-grid.component';
 import { SharedScenesGridComponent } from '../scenes-grid/scenes-grid.component';
 import { NavigationLevel } from '../../models/application-state';
-import { Performer, Video, LikedScene } from '../../models/video-navigation';
+import { Performer, Video, Scene } from '../../models/video-navigation';
 import { ClientType } from '../../models';
 
 @Component({
@@ -32,7 +32,7 @@ export class SharedNavigationRootComponent {
   @Input() level: NavigationLevel = 'performers';
   @Input() performers: Performer[] = [];
   @Input() videos: Video[] = [];
-  @Input() scenes: LikedScene[] = [];
+  @Input() scenes: Scene[] = [];
   @Input() selectedPerformerId?: string;
   @Input() selectedVideoId?: string;
   @Input() sceneSelected = false;

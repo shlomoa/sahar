@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { LikedScene } from '../../models/video-navigation';
+import { Scene } from '../../models/video-navigation';
 
 @Component({
   selector: 'shared-scenes-grid',
@@ -18,7 +18,7 @@ import { LikedScene } from '../../models/video-navigation';
   styleUrls: ['./scenes-grid.component.scss']
 })
 export class SharedScenesGridComponent {
-  @Input() scenes: LikedScene[] = [];
+  @Input() scenes: Scene[] = [];
   @Input() selectedSceneId?: string;
   @Input() clientType: 'remote' | 'tv' = 'remote';
   
@@ -34,7 +34,7 @@ export class SharedScenesGridComponent {
     this.backToVideos.emit();
   }
 
-  trackBySceneId(index: number, scene: LikedScene): string {
+  trackBySceneId(index: number, scene: Scene): string {
     return scene.id;
   }
 

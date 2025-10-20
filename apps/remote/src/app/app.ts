@@ -13,7 +13,7 @@ import { SharedNavigationRootComponent,
          ApplicationState,
          Performer,
          Video,
-         LikedScene} from 'shared';
+         Scene} from 'shared';
 import { VideoControlsComponent } from './components/video-controls/video-controls.component';
 import { WebSocketService } from './services/websocket.service';
 
@@ -130,20 +130,18 @@ export class App implements OnInit, OnDestroy {
     
     // At videos level (performer set, no video)
     if (state.navigation.performerId && !state.navigation.videoId) {
-      const performer = this.webSocketService.getCurrentPerformer();
-      return performer?.videos || [];
+      return this.webSocketService.getVideosForPerformer(state.navigation.performerId);
     }
     return [];
   }
 
-  get currentScenes(): LikedScene[] {
+  get currentScenes(): Scene[] {
     const state = this.applicationState;
     if (!state) return [];
     
     // At scenes level (video set)
     if (state.navigation.videoId) {
-      const video = this.webSocketService.getCurrentVideo();
-      return video?.likedScenes || [];
+      return this.webSocketService.getScenesForVideo(state.navigation.videoId);
     }
     return [];
   }
@@ -251,8 +249,8 @@ export class App implements OnInit, OnDestroy {
     
     if (!currentVideo || !currentScene) return;
     
-    const scenes = currentVideo.likedScenes || [];
-    const idx = scenes.findIndex((s: LikedScene) => s.id === currentScene.id);
+    const scenes = this.webSocketService.getScenesForVideo(currentVideo.id);
+    const idx = scenes.findIndex((s: Scene) => s.id === currentScene.id);
     if (idx > 0) {
       const prev = scenes[idx - 1];
       this.navigateToScene(prev.id);
@@ -265,8 +263,8 @@ export class App implements OnInit, OnDestroy {
     
     if (!currentVideo || !currentScene) return;
     
-    const scenes = currentVideo.likedScenes || [];
-    const idx = scenes.findIndex((s: LikedScene) => s.id === currentScene.id);
+    const scenes = this.webSocketService.getScenesForVideo(currentVideo.id);
+    const idx = scenes.findIndex((s: Scene) => s.id === currentScene.id);
     if (idx >= 0 && idx < scenes.length - 1) {
       const next = scenes[idx + 1];
       this.navigateToScene(next.id);
@@ -275,23 +273,18 @@ export class App implements OnInit, OnDestroy {
 
   // Data access methods - use webSocketService utilities
   getVideosForPerformer(performerId: string): Video[] {
-    const performers = this.webSocketService.getPerformersData();
-    const performer = performers.find((p: Performer) => p.id === performerId);
-    return performer?.videos || [];
+    return this.webSocketService.getVideosForPerformer(performerId);
   }
 
-  getScenesForVideo(performerId: string, videoId: string): LikedScene[] {
-    const performers = this.webSocketService.getPerformersData();
-    const performer = performers.find((p: Performer) => p.id === performerId);
-    const video = performer?.videos.find((v: Video) => v.id === videoId);
-    return video?.likedScenes || [];
+  getScenesForVideo(performerId: string, videoId: string): Scene[] {
+    return this.webSocketService.getScenesForVideo(videoId);
   }
 
   getCurrentVideo(): Video | undefined {
     return this.webSocketService.getCurrentVideo();
   }
 
-  getCurrentScene(): LikedScene | undefined {
+  getCurrentScene(): Scene | undefined {
     return this.webSocketService.getCurrentScene();
   }
 
@@ -375,8 +368,8 @@ export class App implements OnInit, OnDestroy {
     
     if (!currentVideo || !currentScene) return false;
     
-    const scenes = currentVideo.likedScenes || [];
-    const idx = scenes.findIndex((s: LikedScene) => s.id === currentScene.id);
+    const scenes = this.webSocketService.getScenesForVideo(currentVideo.id);
+    const idx = scenes.findIndex((s: Scene) => s.id === currentScene.id);
     return idx > 0;
   }
 
@@ -386,8 +379,8 @@ export class App implements OnInit, OnDestroy {
     
     if (!currentVideo || !currentScene) return false;
     
-    const scenes = currentVideo.likedScenes || [];
-    const idx = scenes.findIndex((s: LikedScene) => s.id === currentScene.id);
+    const scenes = this.webSocketService.getScenesForVideo(currentVideo.id);
+    const idx = scenes.findIndex((s: Scene) => s.id === currentScene.id);
     return idx >= 0 && idx < scenes.length - 1;
   }
 

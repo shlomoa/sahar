@@ -11,7 +11,7 @@
       (error)="onImageError($event)">
     <mat-card-content>
       <h3>{{ performer.name }}</h3>
-      <p>{{ performer.videos.length }} videos</p>
+      <p *ngIf="performer.description">{{ performer.description }}</p>
     </mat-card-content>
   </mat-card>
 </div>

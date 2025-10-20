@@ -22,7 +22,7 @@ import {
   ClientType
 } from 'shared';
 import { Fsm } from './fsm';
-import { performersData } from './mock-data';
+import { catalogData } from './mock-data';
 import { networkInterfaces } from 'os';
 
 // --- Structured Logger (shared) ---------------------------------------------------------------
@@ -562,11 +562,14 @@ wss.on('connection', (ws: WebSocket) => {
           const action = nav.payload.action;
           const targetId = nav.payload.targetId;
           const snapshot = fsm.getSnapshot();
-          const performers: any[] = (snapshot as any).data?.performers || [];
+          const catalogData: any = (snapshot as any).data || {};
+          const performers: any[] = catalogData.performers || [];
+          const videos: any[] = catalogData.videos || [];
+          const scenes: any[] = catalogData.scenes || [];
 
           const existsPerformer = (id?: string) => !!id && performers.some(p => p.id === id);
-          const existsVideo = (id?: string) => !!id && performers.some(p => Array.isArray(p.videos) && p.videos.some((v: any) => v.id === id));
-          const existsScene = (id?: string) => !!id && performers.some(p => Array.isArray(p.videos) && p.videos.some((v: any) => Array.isArray(v.likedScenes) && v.likedScenes.some((s: any) => s.id === id)));
+          const existsVideo = (id?: string) => !!id && videos.some(v => v.id === id);
+          const existsScene = (id?: string) => !!id && scenes.some(s => s.id === id);
 
           let validTarget = true;
           switch (action) {
@@ -850,10 +853,14 @@ server.listen(WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT, () => {
   logInfo('server_ready');
   // Perform initial server-side seeding using built-in mock data so validation can use POST /seed
   try {
-    // seed with performersData structure expected by FSM
-    fsm.seedData({ performers: performersData });
+    // seed with catalogData structure (flat performers, videos, scenes)
+    fsm.seedData(catalogData);
     broadcastStateIfChanged(true);
-    logInfo('initial_seed_applied', { performers: performersData.length });
+    logInfo('initial_seed_applied', { 
+      performers: catalogData.performers.length,
+      videos: catalogData.videos.length,
+      scenes: catalogData.scenes.length
+    });
   } catch (e: any) {
     logError('initial_seed_failed', { error: e?.message || String(e) });
   }

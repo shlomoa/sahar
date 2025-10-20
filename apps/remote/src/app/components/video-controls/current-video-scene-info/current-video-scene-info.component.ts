@@ -2,7 +2,7 @@ import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { LikedScene, Video } from 'shared';
+import { Scene, Video } from 'shared';
 
 @Component({
   // eslint-disable-next-line @angular-eslint/component-selector
@@ -18,5 +18,5 @@ import { LikedScene, Video } from 'shared';
 })
 export class CurrentVideoSceneInfoComponent {
   @Input() currentVideo?: Video;
-  @Input() currentScene?: LikedScene;
+  @Input() currentScene?: Scene;
 }

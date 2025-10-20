@@ -1,430 +1,489 @@
-import { Performer } from 'shared';
+import { CatalogData } from 'shared';
 
-// Example performer data structure
-export const performersData: Performer[] = [
-  {
-    id: 'yuval',
-    name: 'Yuval',
-    thumbnail: 'https://yt3.googleusercontent.com/ELvjLVIwbpAabtF2R3wgzS4fOVL1XU4ySxrm61gdhdlZCx3zYAR5HKmVlsuI_IkhzNpZEjAd=s160-c-k-c0x00ffffff-no-rj',
-    description: 'Children\'s music and educational content',
-    videos: [
-      {
-        id: 'israely-boy',
-        title: 'יובל המבולבל - אני ילד ישראלי המופע המלא',
-        url: 'https://www.youtube.com/watch?v=RLXswLCRG08',
-        duration: 240, // 4 minutes
-        description: 'A fun birthday celebration song',
-        likedScenes: [
-          {
-            id: 'scene-1',
-            title: 'בילבולים',
-            startTime: 112,
-            endTime: 145,
-            description: 'Introduction and welcome'
-          },
-          {
-            id: 'scene-2',
-            title: 'דודי-דו',
-            startTime: 1533,
-            endTime: 1613,
-            description: 'שיר עם דודי-דו'
-          },
-          {
-            id: 'scene-3',
-            title: 'אני יהודי',
-            startTime: 2338,
-            endTime: 2350,
-            description: 'אני יהודי'
-          }
-        ]
-      },
-      {
-        id: 'space-travel',
-        title: 'יובל המבולבל - המסע אל הכוכב (ההצגה המלאה)',
-        url: 'https://www.youtube.com/watch?v=teSXi_C2jNY',
-        duration: 300, // 5 minutes
-        description: 'Learn different animal sounds',
-        likedScenes: [
-          {
-            id: 'scene-5',
-            title: 'פתיחה',
-            startTime: 0,
-            endTime: 75,
-            description: 'גיבור שאוהב לעזור'
-          },
-          {
-            id: 'scene-6',
-            title: 'אמא של יובלי',
-            startTime: 285,
-            endTime: 385,
-            description: 'אמא אמריקאית'
-          },          
-          {
-            id: 'scene-7',
-            title: 'שטויות',
-            startTime: 1228,
-            endTime: 1258,
-            description: ''
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'little-michal',
-    name: 'Little Michal',
-    thumbnail: 'https://yt3.googleusercontent.com/ytc/AIdro_nWusm1zzELGjN8vNamxNfqWvZ18QCb98giM0suD4jaOLQ=s160-c-k-c0x00ffffff-no-rj',
-    description: 'Educational content for toddlers',
-    videos: [
-      {
-        id: 'michal-abc-song',
-        title: 'ABC Learning Song',
-        url: 'https://www.youtube.com/watch?v=kffacxfA7G4',
-        duration: 180, // 3 minutes
-        description: 'Learn the alphabet with songs',
-        likedScenes: [
-          {
-            id: 'scene-9',
-            title: 'Letters A-F',
-            startTime: 0,
-            endTime: 45,
-            description: 'First group of letters'
-          },
-          {
-            id: 'scene-10',
-            title: 'Letters G-M',
-            startTime: 45,
-            endTime: 90,
-            description: 'Second group of letters'
-          },
-          {
-            id: 'scene-11',
-            title: 'Letters N-S',
-            startTime: 90,
-            endTime: 135,
-            description: 'Third group of letters'
-          },
-          {
-            id: 'scene-12',
-            title: 'Letters T-Z',
-            startTime: 135,
-            endTime: 180,
-            description: 'Final group of letters'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'roy-boy',
-    name: 'Roy Boy',
-    thumbnail: 'https://yt3.googleusercontent.com/pVKTM2PwD5QEYrvk2WvjIv_in_yCXnpH9HlgO8EQYXxys0wZRCoNfaCSWhPVHE-e4rorqWjmeA=s160-c-k-c0x00ffffff-no-rj',
-    description: 'Adventure and superhero content for kids',
-    videos: [
-      {
-        id: 'roy-superhero-training',
-        title: 'Superhero Training',
-        url: 'https://www.youtube.com/watch?v=YQHsXMglC9A',
-        duration: 320, // 5 minutes 20 seconds
-        description: 'Join Roy Boy in superhero training adventures',
-        likedScenes: [
-          {
-            id: 'scene-13',
-            title: 'Super Strength',
-            startTime: 0,
-            endTime: 80,
-            description: 'Training with super strength exercises'
-          },
-          {
-            id: 'scene-14',
-            title: 'Flying Practice',
-            startTime: 80,
-            endTime: 160,
-            description: 'Learning to fly like a superhero'
-          },
-          {
-            id: 'scene-15',
-            title: 'Rescue Mission',
-            startTime: 160,
-            endTime: 240,
-            description: 'First rescue mission adventure'
-          },
-          {
-            id: 'scene-16',
-            title: 'Hero Celebration',
-            startTime: 240,
-            endTime: 320,
-            description: 'Celebrating becoming a hero'
-          }
-        ]
-      },
-      {
-        id: 'roy-space-adventure',
-        title: 'Space Adventure',
-        url: 'https://www.youtube.com/watch?v=Ct6BUPvE2sM',
-        duration: 400, // 6 minutes 40 seconds
-        description: 'Explore the galaxy with Roy Boy',
-        likedScenes: [
-          {
-            id: 'scene-17',
-            title: 'Rocket Launch',
-            startTime: 0,
-            endTime: 100,
-            description: 'Preparing and launching the rocket ship'
-          },
-          {
-            id: 'scene-18',
-            title: 'Planet Exploration',
-            startTime: 100,
-            endTime: 200,
-            description: 'Discovering new planets and environments'
-          },
-          {
-            id: 'scene-19',
-            title: 'Alien Friends',
-            startTime: 200,
-            endTime: 300,
-            description: 'Meeting friendly alien creatures'
-          },
-          {
-            id: 'scene-20',
-            title: 'Return to Earth',
-            startTime: 300,
-            endTime: 400,
-            description: 'Safe journey back home'
-          }
-        ]
-      },
-      {
-        id: 'roy-dinosaur-discovery',
-        title: 'Dinosaur Discovery',
-        url: 'https://www.youtube.com/watch?v=y6120QOlsfU',
-        duration: 340, // 5 minutes 40 seconds
-        description: 'Travel back in time to meet dinosaurs',
-        likedScenes: [
-          {
-            id: 'scene-21',
-            title: 'T-Rex Encounter',
-            startTime: 0,
-            endTime: 85,
-            description: 'Meeting the mighty Tyrannosaurus Rex'
-          },
-          {
-            id: 'scene-22',
-            title: 'Triceratops Family',
-            startTime: 85,
-            endTime: 170,
-            description: 'Learning about herbivore dinosaurs'
-          },
-          {
-            id: 'scene-23',
-            title: 'Flying Pterodactyl',
-            startTime: 170,
-            endTime: 255,
-            description: 'Soaring with prehistoric flying reptiles'
-          },
-          {
-            id: 'scene-24',
-            title: 'Fossil Hunt',
-            startTime: 255,
-            endTime: 340,
-            description: 'Discovering ancient fossils and bones'
-          }
-        ]
-      },
-      {
-        id: 'roy-ocean-exploration',
-        title: 'Ocean Exploration',
-        url: 'https://www.youtube.com/watch?v=d1YBv2mWll0',
-        duration: 380, // 6 minutes 20 seconds
-        description: 'Dive deep into ocean adventures',
-        likedScenes: [
-          {
-            id: 'scene-25',
-            title: 'Submarine Dive',
-            startTime: 0,
-            endTime: 95,
-            description: 'Descending into the deep ocean'
-          },
-          {
-            id: 'scene-26',
-            title: 'Coral Reef Tour',
-            startTime: 95,
-            endTime: 190,
-            description: 'Exploring colorful coral reefs'
-          },
-          {
-            id: 'scene-27',
-            title: 'Whale Song',
-            startTime: 190,
-            endTime: 285,
-            description: 'Listening to beautiful whale songs'
-          },
-          {
-            id: 'scene-28',
-            title: 'Treasure Discovery',
-            startTime: 285,
-            endTime: 380,
-            description: 'Finding hidden underwater treasure'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'uncle-haim',
-    name: 'Uncle Haim',
-    thumbnail: 'https://yt3.googleusercontent.com/VH4WLb2QOqIsNue1J9MnsVJgraCN3lDc6tSkhTRqhtK6Ug-KLNh7htAXfNbZ-wX8-2hQsNoVFKY=s160-c-k-c0x00ffffff-no-rj',
-    description: 'Comedy and entertainment content for children',
-    videos: [
-      {
-        id: 'haim-comedy-sketches',
-        title: 'Comedy Sketches',
-        url: 'https://www.youtube.com/watch?v=ZjjvFP2-PKs',
-        duration: 360, // 6 minutes
-        description: 'Funny comedy sketches and entertainment',
-        likedScenes: [
-          {
-            id: 'scene-29',
-            title: 'Funny Faces',
-            startTime: 0,
-            endTime: 90,
-            description: 'Hilarious facial expressions and comedy'
-          },
-          {
-            id: 'scene-30',
-            title: 'Silly Voices',
-            startTime: 90,
-            endTime: 180,
-            description: 'Funny character voices and impressions'
-          },
-          {
-            id: 'scene-31',
-            title: 'Magic Tricks',
-            startTime: 180,
-            endTime: 270,
-            description: 'Simple magic tricks for kids'
-          },
-          {
-            id: 'scene-32',
-            title: 'Joke Time',
-            startTime: 270,
-            endTime: 360,
-            description: 'Kid-friendly jokes and humor'
-          }
-        ]
-      },
-      {
-        id: 'haim-musical-fun',
-        title: 'Musical Fun',
-        url: 'https://www.youtube.com/watch?v=rTgj1HxmUbg',
-        duration: 480, // 8 minutes
-        description: 'Musical entertainment and sing-alongs',
-        likedScenes: [
-          {
-            id: 'scene-33',
-            title: 'Guitar Songs',
-            startTime: 0,
-            endTime: 120,
-            description: 'Acoustic guitar songs for children'
-          },
-          {
-            id: 'scene-34',
-            title: 'Sing Along',
-            startTime: 120,
-            endTime: 240,
-            description: 'Interactive singing sessions'
-          },
-          {
-            id: 'scene-35',
-            title: 'Dance Party',
-            startTime: 240,
-            endTime: 360,
-            description: 'Fun dance moves and party music'
-          },
-          {
-            id: 'scene-36',
-            title: 'Instrument Fun',
-            startTime: 360,
-            endTime: 480,
-            description: 'Learning about different instruments'
-          }
-        ]
-      },
-      {
-        id: 'haim-story-time',
-        title: 'Story Time',
-        url: 'https://www.youtube.com/watch?v=SLMJpHihykI',
-        duration: 600, // 10 minutes
-        description: 'Engaging storytelling sessions',
-        likedScenes: [
-          {
-            id: 'scene-37',
-            title: 'Adventure Tales',
-            startTime: 0,
-            endTime: 150,
-            description: 'Exciting adventure stories'
-          },
-          {
-            id: 'scene-38',
-            title: 'Funny Stories',
-            startTime: 150,
-            endTime: 300,
-            description: 'Humorous and entertaining tales'
-          },
-          {
-            id: 'scene-39',
-            title: 'Fairy Tales',
-            startTime: 300,
-            endTime: 450,
-            description: 'Classic fairy tales with a twist'
-          },
-          {
-            id: 'scene-40',
-            title: 'Interactive Stories',
-            startTime: 450,
-            endTime: 600,
-            description: 'Stories where kids can participate'
-          }
-        ]
-      },
-      {
-        id: 'haim-learning-games',
-        title: 'Learning Games',
-        url: 'https://www.youtube.com/watch?v=hFcLyDb7niM',
-        duration: 400, // 6 minutes 40 seconds
-        description: 'Educational games and brain exercises',
-        likedScenes: [
-          {
-            id: 'scene-41',
-            title: 'Memory Games',
-            startTime: 0,
-            endTime: 100,
-            description: 'Fun memory exercises and challenges'
-          },
-          {
-            id: 'scene-42',
-            title: 'Riddles & Puzzles',
-            startTime: 100,
-            endTime: 200,
-            description: 'Brain teasers and puzzle solving'
-          },
-          {
-            id: 'scene-43',
-            title: 'Word Games',
-            startTime: 200,
-            endTime: 300,
-            description: 'Vocabulary and language games'
-          },
-          {
-            id: 'scene-44',
-            title: 'Brain Teasers',
-            startTime: 300,
-            endTime: 400,
-            description: 'Logic puzzles and thinking games'
-          }
-        ]
-      }
-    ]
-  }
-];
+// Normalized catalog data with flat structure and ID references
+export const catalogData: CatalogData = {
+  performers: [
+    {
+      id: 'yuval',
+      name: 'Yuval',
+      thumbnail: 'https://yt3.googleusercontent.com/ELvjLVIwbpAabtF2R3wgzS4fOVL1XU4ySxrm61gdhdlZCx3zYAR5HKmVlsuI_IkhzNpZEjAd=s160-c-k-c0x00ffffff-no-rj',
+      description: 'Children\'s music and educational content'
+    },
+    {
+      id: 'little-michal',
+      name: 'Little Michal',
+      thumbnail: 'https://yt3.googleusercontent.com/ytc/AIdro_nWusm1zzELGjN8vNamxNfqWvZ18QCb98giM0suD4jaOLQ=s160-c-k-c0x00ffffff-no-rj',
+      description: 'Educational content for toddlers'
+    },
+    {
+      id: 'roy-boy',
+      name: 'Roy Boy',
+      thumbnail: 'https://yt3.googleusercontent.com/pVKTM2PwD5QEYrvk2WvjIv_in_yCXnpH9HlgO8EQYXxys0wZRCoNfaCSWhPVHE-e4rorqWjmeA=s160-c-k-c0x00ffffff-no-rj',
+      description: 'Adventure and superhero content for kids'
+    },
+    {
+      id: 'uncle-haim',
+      name: 'Uncle Haim',
+      thumbnail: 'https://yt3.googleusercontent.com/VH4WLb2QOqIsNue1J9MnsVJgraCN3lDc6tSkhTRqhtK6Ug-KLNh7htAXfNbZ-wX8-2hQsNoVFKY=s160-c-k-c0x00ffffff-no-rj',
+      description: 'Comedy and entertainment content for children'
+    }
+  ],
+  videos: [
+    // Yuval videos
+    {
+      id: 'israely-boy',
+      performerId: 'yuval',
+      title: 'יובל המבולבל - אני ילד ישראלי המופע המלא',
+      url: 'https://www.youtube.com/watch?v=RLXswLCRG08',
+      duration: 240,
+      description: 'A fun birthday celebration song'
+    },
+    {
+      id: 'yuval-happy-birthday',
+      performerId: 'yuval',
+      title: 'יום הולדת שמח - עם יובל המבולבל',
+      url: 'https://www.youtube.com/watch?v=EsXQkdYj9jg',
+      duration: 180,
+      description: 'Birthday celebration song'
+    },
+    // Little Michal videos
+    {
+      id: 'michal-colors',
+      performerId: 'little-michal',
+      title: 'לומדים צבעים עם מיכל הקטנה',
+      url: 'https://www.youtube.com/watch?v=mMRfmgR_oZ0',
+      duration: 300,
+      description: 'Learning colors'
+    },
+    {
+      id: 'michal-numbers',
+      performerId: 'little-michal',
+      title: 'מיכל מלמדת מספרים',
+      url: 'https://www.youtube.com/watch?v=numbers123',
+      duration: 240,
+      description: 'Learning numbers'
+    },
+    {
+      id: 'michal-animals',
+      performerId: 'little-michal',
+      title: 'חיות בחווה - עם מיכל הקטנה',
+      url: 'https://www.youtube.com/watch?v=animals456',
+      duration: 360,
+      description: 'Farm animals'
+    },
+    // Roy Boy videos
+    {
+      id: 'roy-superhero',
+      performerId: 'roy-boy',
+      title: 'רועי בוי - הגיבור שלי',
+      url: 'https://www.youtube.com/watch?v=superhero789',
+      duration: 420,
+      description: 'Superhero adventures'
+    },
+    {
+      id: 'roy-adventure',
+      performerId: 'roy-boy',
+      title: 'הרפתקה עם רועי',
+      url: 'https://www.youtube.com/watch?v=adventure101',
+      duration: 480,
+      description: 'Adventure time'
+    },
+    {
+      id: 'roy-friends',
+      performerId: 'roy-boy',
+      title: 'רועי והחברים',
+      url: 'https://www.youtube.com/watch?v=friends202',
+      duration: 300,
+      description: 'Friends and teamwork'
+    },
+    // Uncle Haim videos
+    {
+      id: 'haim-funny',
+      performerId: 'uncle-haim',
+      title: 'דוד חיים מצחיק',
+      url: 'https://www.youtube.com/watch?v=funny303',
+      duration: 360,
+      description: 'Comedy show'
+    },
+    {
+      id: 'haim-magic',
+      performerId: 'uncle-haim',
+      title: 'קסמים עם דוד חיים',
+      url: 'https://www.youtube.com/watch?v=magic404',
+      duration: 300,
+      description: 'Magic tricks'
+    },
+    {
+      id: 'haim-stories',
+      performerId: 'uncle-haim',
+      title: 'סיפורים מדוד חיים',
+      url: 'https://www.youtube.com/watch?v=stories505',
+      duration: 420,
+      description: 'Storytelling time'
+    }
+  ],
+  scenes: [
+    // Scenes for 'israely-boy' video
+    {
+      id: 'scene-1',
+      videoId: 'israely-boy',
+      title: 'בילבולים',
+      startTime: 112,
+      endTime: 145,
+      description: 'Introduction and welcome'
+    },
+    {
+      id: 'scene-2',
+      videoId: 'israely-boy',
+      title: 'דודי-דו',
+      startTime: 1533,
+      endTime: 1613,
+      description: 'שיר עם דודי-דו'
+    },
+    {
+      id: 'scene-3',
+      videoId: 'israely-boy',
+      title: 'שירים ושיגעון',
+      startTime: 1730,
+      endTime: 1900,
+      description: 'עוד שירים כיפיים'
+    },
+    // Scenes for 'yuval-happy-birthday' video
+    {
+      id: 'scene-4',
+      videoId: 'yuval-happy-birthday',
+      title: 'ברכות יום הולדת',
+      startTime: 0,
+      endTime: 60,
+      description: 'Opening birthday wishes'
+    },
+    {
+      id: 'scene-5',
+      videoId: 'yuval-happy-birthday',
+      title: 'שיר יום הולדת',
+      startTime: 60,
+      endTime: 120,
+      description: 'Birthday song performance'
+    },
+    {
+      id: 'scene-6',
+      videoId: 'yuval-happy-birthday',
+      title: 'ריקודים',
+      startTime: 120,
+      endTime: 180,
+      description: 'Dancing celebration'
+    },
+    // Scenes for 'michal-colors' video
+    {
+      id: 'scene-7',
+      videoId: 'michal-colors',
+      title: 'צבע אדום',
+      startTime: 0,
+      endTime: 60,
+      description: 'Learning red color'
+    },
+    {
+      id: 'scene-8',
+      videoId: 'michal-colors',
+      title: 'צבע כחול',
+      startTime: 60,
+      endTime: 120,
+      description: 'Learning blue color'
+    },
+    {
+      id: 'scene-9',
+      videoId: 'michal-colors',
+      title: 'צבע צהוב',
+      startTime: 120,
+      endTime: 180,
+      description: 'Learning yellow color'
+    },
+    {
+      id: 'scene-10',
+      videoId: 'michal-colors',
+      title: 'צבע ירוק',
+      startTime: 180,
+      endTime: 240,
+      description: 'Learning green color'
+    },
+    {
+      id: 'scene-11',
+      videoId: 'michal-colors',
+      title: 'כל הצבעים ביחד',
+      startTime: 240,
+      endTime: 300,
+      description: 'All colors together'
+    },
+    // Scenes for 'michal-numbers' video
+    {
+      id: 'scene-12',
+      videoId: 'michal-numbers',
+      title: 'מספר 1',
+      startTime: 0,
+      endTime: 48,
+      description: 'Learning number 1'
+    },
+    {
+      id: 'scene-13',
+      videoId: 'michal-numbers',
+      title: 'מספר 2',
+      startTime: 48,
+      endTime: 96,
+      description: 'Learning number 2'
+    },
+    {
+      id: 'scene-14',
+      videoId: 'michal-numbers',
+      title: 'מספר 3',
+      startTime: 96,
+      endTime: 144,
+      description: 'Learning number 3'
+    },
+    {
+      id: 'scene-15',
+      videoId: 'michal-numbers',
+      title: 'מספר 4',
+      startTime: 144,
+      endTime: 192,
+      description: 'Learning number 4'
+    },
+    {
+      id: 'scene-16',
+      videoId: 'michal-numbers',
+      title: 'מספר 5',
+      startTime: 192,
+      endTime: 240,
+      description: 'Learning number 5'
+    },
+    // Scenes for 'michal-animals' video
+    {
+      id: 'scene-17',
+      videoId: 'michal-animals',
+      title: 'פרה',
+      startTime: 0,
+      endTime: 72,
+      description: 'The cow'
+    },
+    {
+      id: 'scene-18',
+      videoId: 'michal-animals',
+      title: 'כבשה',
+      startTime: 72,
+      endTime: 144,
+      description: 'The sheep'
+    },
+    {
+      id: 'scene-19',
+      videoId: 'michal-animals',
+      title: 'עז',
+      startTime: 144,
+      endTime: 216,
+      description: 'The goat'
+    },
+    {
+      id: 'scene-20',
+      videoId: 'michal-animals',
+      title: 'תרנגולת',
+      startTime: 216,
+      endTime: 288,
+      description: 'The chicken'
+    },
+    {
+      id: 'scene-21',
+      videoId: 'michal-animals',
+      title: 'כל החיות',
+      startTime: 288,
+      endTime: 360,
+      description: 'All the animals'
+    },
+    // Scenes for 'roy-superhero' video
+    {
+      id: 'scene-22',
+      videoId: 'roy-superhero',
+      title: 'הכוחות שלי',
+      startTime: 0,
+      endTime: 84,
+      description: 'My superpowers'
+    },
+    {
+      id: 'scene-23',
+      videoId: 'roy-superhero',
+      title: 'להציל את היום',
+      startTime: 84,
+      endTime: 168,
+      description: 'Saving the day'
+    },
+    {
+      id: 'scene-24',
+      videoId: 'roy-superhero',
+      title: 'שיר הגיבור',
+      startTime: 168,
+      endTime: 252,
+      description: 'Hero song'
+    },
+    {
+      id: 'scene-25',
+      videoId: 'roy-superhero',
+      title: 'מסע הגיבורים',
+      startTime: 252,
+      endTime: 336,
+      description: 'Hero journey'
+    },
+    {
+      id: 'scene-26',
+      videoId: 'roy-superhero',
+      title: 'ניצחון!',
+      startTime: 336,
+      endTime: 420,
+      description: 'Victory celebration'
+    },
+    // Scenes for 'roy-adventure' video
+    {
+      id: 'scene-27',
+      videoId: 'roy-adventure',
+      title: 'התחלת ההרפתקה',
+      startTime: 0,
+      endTime: 96,
+      description: 'Adventure begins'
+    },
+    {
+      id: 'scene-28',
+      videoId: 'roy-adventure',
+      title: 'היער המסתורי',
+      startTime: 96,
+      endTime: 192,
+      description: 'Mysterious forest'
+    },
+    {
+      id: 'scene-29',
+      videoId: 'roy-adventure',
+      title: 'האתגר הגדול',
+      startTime: 192,
+      endTime: 288,
+      description: 'Big challenge'
+    },
+    {
+      id: 'scene-30',
+      videoId: 'roy-adventure',
+      title: 'מצאנו את האוצר',
+      startTime: 288,
+      endTime: 384,
+      description: 'Found the treasure'
+    },
+    {
+      id: 'scene-31',
+      videoId: 'roy-adventure',
+      title: 'חזרה הביתה',
+      startTime: 384,
+      endTime: 480,
+      description: 'Journey home'
+    },
+    // Scenes for 'roy-friends' video
+    {
+      id: 'scene-32',
+      videoId: 'roy-friends',
+      title: 'החברים שלי',
+      startTime: 0,
+      endTime: 60,
+      description: 'Meet my friends'
+    },
+    {
+      id: 'scene-33',
+      videoId: 'roy-friends',
+      title: 'עבודת צוות',
+      startTime: 60,
+      endTime: 120,
+      description: 'Teamwork'
+    },
+    {
+      id: 'scene-34',
+      videoId: 'roy-friends',
+      title: 'ביחד נצליח',
+      startTime: 120,
+      endTime: 180,
+      description: 'Together we succeed'
+    },
+    {
+      id: 'scene-35',
+      videoId: 'roy-friends',
+      title: 'חגיגה',
+      startTime: 180,
+      endTime: 240,
+      description: 'Celebration with friends'
+    },
+    {
+      id: 'scene-36',
+      videoId: 'roy-friends',
+      title: 'שיר החברות',
+      startTime: 240,
+      endTime: 300,
+      description: 'Friendship song'
+    },
+    // Scenes for 'haim-funny' video
+    {
+      id: 'scene-37',
+      videoId: 'haim-funny',
+      title: 'בדיחות',
+      startTime: 0,
+      endTime: 90,
+      description: 'Jokes time'
+    },
+    {
+      id: 'scene-38',
+      videoId: 'haim-funny',
+      title: 'פרצופים מצחיקים',
+      startTime: 90,
+      endTime: 180,
+      description: 'Funny faces'
+    },
+    {
+      id: 'scene-39',
+      videoId: 'haim-funny',
+      title: 'משחקים',
+      startTime: 180,
+      endTime: 270,
+      description: 'Funny games'
+    },
+    {
+      id: 'scene-40',
+      videoId: 'haim-funny',
+      title: 'שיר מצחיק',
+      startTime: 270,
+      endTime: 360,
+      description: 'Funny song'
+    },
+    // Scenes for 'haim-magic' video
+    {
+      id: 'scene-41',
+      videoId: 'haim-magic',
+      title: 'קסם הכובעים',
+      startTime: 0,
+      endTime: 75,
+      description: 'Hat magic trick'
+    },
+    {
+      id: 'scene-42',
+      videoId: 'haim-magic',
+      title: 'קסם הקלפים',
+      startTime: 75,
+      endTime: 150,
+      description: 'Card magic trick'
+    },
+    {
+      id: 'scene-43',
+      videoId: 'haim-magic',
+      title: 'קסם הכדורים',
+      startTime: 150,
+      endTime: 225,
+      description: 'Ball magic trick'
+    },
+    {
+      id: 'scene-44',
+      videoId: 'haim-magic',
+      title: 'הקסם הגדול',
+      startTime: 225,
+      endTime: 300,
+      description: 'The grand finale magic'
+    }
+  ]
+};

@@ -16,7 +16,7 @@ import { ControlCommandMessage,
          NavigationLevel,
          SharedNavigationRootComponent,
          Video,
-         LikedScene,
+         Scene,
          Performer} from 'shared';
 import { WebSocketService } from './services/websocket.service';
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
@@ -98,20 +98,18 @@ export class App implements OnInit, OnDestroy {
     
     // At videos level (performer set, no video)
     if (state.navigation.performerId && !state.navigation.videoId) {
-      const performer = this.webSocketService.getCurrentPerformer();
-      return performer?.videos || [];
+      return this.webSocketService.getVideosForPerformer(state.navigation.performerId);
     }
     return [];
   }
 
-  get currentScenes(): LikedScene[] {
+  get currentScenes(): Scene[] {
     const state = this.applicationState;
     if (!state) return [];
     
     // At scenes level (video set)
     if (state.navigation.videoId) {
-      const video = this.webSocketService.getCurrentVideo();
-      return video?.likedScenes || [];
+      return this.webSocketService.getScenesForVideo(state.navigation.videoId);
     }
     return [];
   }

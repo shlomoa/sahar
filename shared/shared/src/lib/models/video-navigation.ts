@@ -1,49 +1,34 @@
-// Performer data structure for YouTube-like content
+// Normalized content catalog structure for YouTube-like content
 import { getYoutubeVideoId, getYoutubeThumbnailUrl } from '../utils/youtube-helpers';
-export type ItemType = 'video' | 'category' | 'segment' | 'performer';
+
 export interface Performer {
   id: string;
   name: string;
   thumbnail: string;
   description?: string;
-  videos: Video[];
 }
 
 export interface Video {
   id: string;
   title: string;
   url: string; // YouTube video URL
-  duration: number; // Video duration in seconds
+  performerId: string; // Foreign key reference to Performer
+  duration?: number; // Optional metadata hint (PlayerState.duration is authoritative at runtime)
   description?: string;
-  likedScenes: LikedScene[];
 }
 
-export interface LikedScene {
+export interface Scene {
   id: string;
   title: string;
+  videoId: string; // Foreign key reference to Video
   startTime: number; // Offset time from video start in seconds
   endTime?: number; // Optional end time for scene duration
   thumbnail?: string; // Optional custom thumbnail for the scene
   description?: string;
 }
 
-// VideoNavigationService state interface (for UI navigation)
-export interface VideoNavigationState {
-  currentLevel: Performer[] | Video[] | LikedScene[];
-  canGoBack: boolean;
-  currentPerformer?: Performer;
-  currentVideo?: Video;
-  currentScene?: LikedScene;
-}
-
-// Legacy interface for backward compatibility
-export interface VideoItem {
-  id: string;
-  title: string;
-  thumbnail: string;
-  itemType: ItemType;
-  url?: string;
-  children?: VideoItem[];
-  startTime?: number; // For scenes with time offset
-  endTime?: number;
+export interface CatalogData {
+  performers: Performer[];
+  videos: Video[];
+  scenes: Scene[];
 }

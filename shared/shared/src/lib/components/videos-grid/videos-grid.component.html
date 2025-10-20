@@ -14,7 +14,7 @@
         
       <mat-card-content>
         <h3>{{ video.title }}</h3>
-        <p>{{ formatDuration(video.duration) }} min • {{ video.likedScenes.length }} scenes</p>
+        <p *ngIf="video.duration">{{ formatDuration(video.duration) }} min</p>
       </mat-card-content>
     </mat-card>
   </div>

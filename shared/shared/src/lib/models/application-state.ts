@@ -1,5 +1,7 @@
 // System-level state for client connection and operational readiness
 
+import { CatalogData } from './video-navigation';
+
 // @TODO: separate Player-specific state tracking (playing/paused) from 
 // FsmState as it is already tracked in PlayerState.isPlaying
 
@@ -38,11 +40,8 @@ export interface NavigationState {
 export interface ApplicationState {
   version: number; // monotonically increasing
   clientsConnectionState: ClientsConnectionState; // Synchronized connection status
-  // Domain data seeded by Remote (Task 1.17). Shape intentionally loose for Milestone 1.
-  data?: {
-    videos?: { id: string }[];
-    // Add other seeded data properties as needed
-  };
+  // Domain data seeded by Remote. Normalized flat structure with ID references.
+  data?: CatalogData;
   navigation: NavigationState;    
   player: PlayerState;
   error?: {

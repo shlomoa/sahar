@@ -9,7 +9,7 @@ import {
   ActionConfirmationPayload,
   ActionConfirmationMessage,
 } from '../models/messages';
-import { Performer, Video, LikedScene } from '../models/video-navigation';
+import { Performer, Video, Scene, CatalogData } from '../models/video-navigation';
 import { NetworkDevice } from '../models/websocket-protocol';
 import { ConnectionState, ApplicationState } from '../models';
 
@@ -105,15 +105,25 @@ export abstract class WebSocketBaseService implements OnDestroy {
     return this.ws?.readyState === WebSocket.OPEN;
   }
 
-  // Performers data for lookups (derived from server state)
+  // Catalog data for lookups (derived from server state)
   protected performersData: Performer[] = [];
+  protected videosData: Video[] = [];
+  protected scenesData: Scene[] = [];
 
-  // Public getter for performers data
+  // Public getters for catalog data
   getPerformersData(): Performer[] {
     return this.performersData;
   }
 
-  // Lookup utilities - derive display objects from state IDs
+  getVideosData(): Video[] {
+    return this.videosData;
+  }
+
+  getScenesData(): Scene[] {
+    return this.scenesData;
+  }
+
+  // Lookup utilities - derive display objects from state IDs using flat arrays
   getCurrentPerformer(): Performer | undefined {
     const state = this.applicationState$.value;
     if (!state?.navigation?.performerId) {
@@ -127,33 +137,48 @@ export abstract class WebSocketBaseService implements OnDestroy {
     if (!state?.navigation?.videoId) {
       return undefined;
     }
-    const performer = this.getCurrentPerformer();
-    return performer?.videos.find(v => v.id === state.navigation.videoId);
+    return this.videosData.find((v: Video) => v.id === state.navigation.videoId);
   }
 
-  getCurrentScene(): LikedScene | undefined {
+  getCurrentScene(): Scene | undefined {
     const state = this.applicationState$.value;
     if (!state?.navigation?.sceneId) {
       return undefined;
     }
-    const video = this.getCurrentVideo();
-    return video?.likedScenes.find(s => s.id === state.navigation.sceneId);
+    return this.scenesData.find((s: Scene) => s.id === state.navigation.sceneId);
   }
 
-  // Update performers data from server state
-  // Note: ApplicationState.data is intentionally loose. At runtime, it contains performers.
-  protected updatePerformersFromState(state: ApplicationState): void {
-    const stateData = state?.data as any;
-    if (stateData?.performers && Array.isArray(stateData.performers)) {
-      this.performersData = stateData.performers;
+  // Helper methods for filtering by foreign keys
+  getVideosForPerformer(performerId: string): Video[] {
+    return this.videosData.filter((v: Video) => v.performerId === performerId);
+  }
+
+  getScenesForVideo(videoId: string): Scene[] {
+    return this.scenesData.filter((s: Scene) => s.videoId === videoId);
+  }
+
+  // Update catalog data from server state
+  // Note: ApplicationState.data is CatalogData with flat arrays
+  protected updateCatalogFromState(state: ApplicationState): void {
+    const catalogData = state?.data as CatalogData | undefined;
+    if (catalogData) {
+      if (catalogData.performers && Array.isArray(catalogData.performers)) {
+        this.performersData = catalogData.performers;
+      }
+      if (catalogData.videos && Array.isArray(catalogData.videos)) {
+        this.videosData = catalogData.videos;
+      }
+      if (catalogData.scenes && Array.isArray(catalogData.scenes)) {
+        this.scenesData = catalogData.scenes;
+      }
     }
   }
 
   // Method for subclasses to emit new state
   protected emitState(state: ApplicationState): void {
     this.applicationState$.next(state);
-    // Update performers whenever state changes
-    this.updatePerformersFromState(state);
+    // Update catalog whenever state changes
+    this.updateCatalogFromState(state);
   }
 
   get deviceInfo(): NetworkDevice {

@@ -15,8 +15,7 @@ import {
   ActionConfirmationPayload,
   ApplicationState, 
   WebSocketUtils, 
-  WebSocketBaseService,
-  ItemType
+  WebSocketBaseService
 } from 'shared';
 
 @Injectable({
@@ -134,7 +133,7 @@ export class WebSocketService extends WebSocketBaseService {
   sendNavigationCommand(
     action: NavigationAction,
     targetId?: string,
-    _targetType?: ItemType
+    _targetType?: string
   ): void {
     this.debugLog(`Sending navigation command: ${action} ${targetId ?? ''}`);
     // no-op usage to satisfy lint for legacy param
