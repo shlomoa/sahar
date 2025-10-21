@@ -1,6 +1,5 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { SharedBackCardComponent } from '../back-card/back-card.component';
@@ -16,7 +15,6 @@ import { ClientType } from '../../models';
   standalone: true,
   imports: [
     CommonModule,
-    
     MatIconModule,
     MatButtonModule,
     SharedBackCardComponent,

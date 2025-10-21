@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { SimpleChange } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { VideoPlayerComponent } from './video-player.component';
+import { YouTubePlayer } from '@angular/youtube-player';
 
 
 // Stub for @angular/youtube-player component with compatible API
@@ -91,7 +92,7 @@ describe('VideoPlayerComponent (POC)', () => {
     fixture.detectChanges();
     const stub = getStub();
 
-    component['youtubePlayer'] = stub as any; // satisfy @ViewChild usage
+    component['youtubePlayer'] = stub as unknown as YouTubePlayer; // satisfy @ViewChild usage
     component.isPlayerReady = true;
 
     component.isPlaying = true;
@@ -104,7 +105,7 @@ describe('VideoPlayerComponent (POC)', () => {
     fixture.detectChanges();
     const stub = getStub();
 
-    component['youtubePlayer'] = stub as any;
+    component['youtubePlayer'] = stub as unknown as YouTubePlayer; // satisfy @ViewChild usage
     component.isPlayerReady = true;
 
     component.isPlaying = false;
@@ -117,7 +118,7 @@ describe('VideoPlayerComponent (POC)', () => {
     fixture.detectChanges();
     const stub = getStub();
 
-    component['youtubePlayer'] = stub as any;
+    component['youtubePlayer'] = stub as unknown as YouTubePlayer; // satisfy @ViewChild usage
     component.isPlayerReady = true;
 
     component.positionSec = 42;
@@ -130,7 +131,7 @@ describe('VideoPlayerComponent (POC)', () => {
     fixture.detectChanges();
     const stub = getStub();
 
-    component['youtubePlayer'] = stub as any;
+    component['youtubePlayer'] = stub as unknown as YouTubePlayer; // satisfy @ViewChild usage
     component.isPlayerReady = true;
 
     component.volume = 0.5; // 50%
@@ -142,7 +143,7 @@ describe('VideoPlayerComponent (POC)', () => {
     fixture.detectChanges();
     const stub = getStub();
 
-    component['youtubePlayer'] = stub as any;
+    component['youtubePlayer'] = stub as unknown as YouTubePlayer; // satisfy @ViewChild usage
     component.isPlayerReady = true;
 
     component.volume = 80;

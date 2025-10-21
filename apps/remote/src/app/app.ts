@@ -6,8 +6,7 @@ import { MatIconModule } from "@angular/material/icon";
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { RouterOutlet } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { SharedNavigationRootComponent,
-         ClientType,
+import { ClientType,
          NetworkDevice,
          ConnectionState,
          NavigationLevel,
@@ -16,6 +15,7 @@ import { SharedNavigationRootComponent,
          Video,
          Scene,
          ContentService} from 'shared';
+import { SharedNavigationRootComponent } from 'shared';
 import { VideoControlsComponent } from './components/video-controls/video-controls.component';
 import { WebSocketService } from './services/websocket.service';
 
