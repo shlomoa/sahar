@@ -378,9 +378,15 @@ export class App implements OnInit, OnDestroy {
     console.log('🔊 Volume change requested:', value);
   }
 
+  // Check if scene is selected (for video controls visibility)
+  get isSceneSelected(): boolean {
+    const state = this.applicationState;
+    return this.currentLevel === 'scenes' && !!state?.navigation.sceneId;
+  }
+
   // Enhanced controls visibility
   showEnhancedControls(): boolean {
-    return (this.currentLevel === 'playing') && 
+    return this.isSceneSelected && 
            (this.connectionStatus === 'connected');
   }
 

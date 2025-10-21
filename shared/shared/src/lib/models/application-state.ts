@@ -2,7 +2,7 @@
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
-export type NavigationLevel = 'performers' | 'videos' | 'scenes' | 'playing';
+export type NavigationLevel = 'performers' | 'videos' | 'scenes';
 
 export interface PlayerState {
     isPlaying: boolean;

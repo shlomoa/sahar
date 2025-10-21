@@ -151,7 +151,7 @@ export class Fsm {
       }
       case 'navigate_to_scene': {
         if (targetId && nav.sceneId !== targetId) {
-          nav.currentLevel = 'playing';
+          // Keep currentLevel at 'scenes' - playback state tracked by PlayerState.isPlaying
           nav.sceneId = targetId;
         }
         break;

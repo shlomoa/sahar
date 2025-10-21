@@ -133,6 +133,11 @@ export class App implements OnInit, OnDestroy {
     return level !== 'performers';
   }
 
+  // Whether video player should be shown - when scene is selected
+  get isSceneSelected(): boolean {
+    return this.currentLevel === 'scenes' && !!this.applicationState?.navigation.sceneId;
+  }
+
   ngOnInit(): void {
     // Fetch catalog data via HTTP before initializing WebSocket
     this.initializeCatalog();

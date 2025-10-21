@@ -20,8 +20,8 @@
   <!-- Main Content Area (80%) -->
   <div class="main-content">    
     @if (bothConnected) {
-      <!-- Video Player (when playing) -->
-      @if (currentLevel === 'playing') {
+      <!-- Video Player (when scene selected) -->
+      @if (isSceneSelected) {
         <div class="video-player-area" >
           <video-player
             [videoId]="playbackVideoId || undefined"

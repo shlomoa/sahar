@@ -111,12 +111,12 @@ The state is maintained and managed in the server FSM. Clients receive authorita
 
 **Navigation State Management** (Updated 2025-10-21):
 - Server FSM owns navigation state as IDs only: `{ currentLevel, performerId?, videoId?, sceneId? }`
-- NavigationLevel: `'performers' | 'videos' | 'scenes' | 'playing'` (removed unused 'scene-selected' 2025-10-21)
+- NavigationLevel: `'performers' | 'videos' | 'scenes'` (removed 'scene-selected' and 'playing' 2025-10-21)
 - FSM transitions on navigation commands:
   - `navigate_to_performer`: sets `currentLevel='videos'`, `performerId`
   - `navigate_to_video`: sets `currentLevel='scenes'`, `videoId`
-  - `navigate_to_scene`: sets `currentLevel='playing'`, `sceneId` ⭐ triggers video playback
-  - `navigate_back`: steps back one level (playing→scenes→videos→performers)
+  - `navigate_to_scene`: sets `sceneId` (stays at 'scenes' level) ⭐ playback controlled by PlayerState.isPlaying
+  - `navigate_back`: steps back one level (scenes→videos→performers)
   - `navigate_home`: resets to `currentLevel='performers'`
 - **HTTP Content Delivery** (Phase 3, Migrated 2025-10-21):
   - Catalog delivered via `GET /api/content/catalog` endpoint (HTTP-based, not WebSocket)
@@ -137,7 +137,8 @@ The state is maintained and managed in the server FSM. Clients receive authorita
     * `getCurrentScene()`: Gets `sceneId` from state, queries ContentService
     * `getVideosForPerformer(performerId)`: Delegates to ContentService
     * `getScenesForVideo(videoId)`: Delegates to ContentService
-- TV app: checks `currentLevel === 'playing'` to show video player vs navigation grids
+- TV app: checks `currentLevel === 'scenes' && navigation.sceneId` to show video player vs navigation grids
+- Remote app: shows video controls when scene is selected (same check)
 
 ```typescript
 // Shared PlayerState interface (consolidated from duplicate implementations)
