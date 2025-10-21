@@ -57,10 +57,10 @@ export class Fsm {
       player: {
         isPlaying: false,
         isFullscreen: false,
+        isMuted: false,
         currentTime: 0,
         duration: 0,
-        volume: 50,  // Use 0-100 range to match Remote UI and YouTube API
-        isMuted: false
+        volume: 50  // Use 0-100 range to match Remote UI and YouTube API
       }
     };
     logInfo('fsm_initialized', {}, 'Sahar FSM initialized with state: ' + JSON.stringify(this.state));
@@ -70,7 +70,8 @@ export class Fsm {
   // Catalog is now initialized from mock-data.ts in constructor and served via HTTP endpoint
   // seedData(payload: any) { ... }
 
-  /** Return a defensive deep copy so outside code cannot mutate internal state */
+  /** Return a defensive deep copy so outside code cannot mutate internal state,
+   *  used for validation purposes */
   getSnapshot(): ApplicationState {
     // Using JSON clone is acceptable here (state is simple / purely data). If performance becomes an issue
     // we can switch to structuredClone (Node >=17.0) or a handcrafted shallow+nested copy.
