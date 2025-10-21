@@ -182,7 +182,7 @@ export class App implements OnInit, OnDestroy {
       // Update player state from server
       if (state.player) {
         this.isPlaying = state.player.isPlaying;
-        this.isMuted = state.player.muted;
+        this.isMuted = state.player.isMuted;
         this.isFullscreen = state.player.isFullscreen;
         this.volumeLevel = state.player.volume ?? 50;
       }

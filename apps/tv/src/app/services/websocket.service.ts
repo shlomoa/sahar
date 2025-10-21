@@ -12,7 +12,8 @@ import {
   BasePayload,
   WebSocketBaseService, 
   WebSocketUtils,
-  ActionConfirmationStatus
+  ActionConfirmationStatus,
+  PlayerState
 } from 'shared';
 
 @Injectable({
@@ -23,11 +24,13 @@ export class WebSocketService extends WebSocketBaseService {
 
 
   // Lightweight playback state used for action confirmations
-  private playerState = {
+  private playerState: PlayerState = {
     isPlaying: false,
+    isFullscreen: false,
+    duration: 0,
     currentTime: 0,
     volume: 100,
-    muted: false,
+    isMuted: false,
   };
 
   private lastConnectedUrl: string | null = null;
@@ -143,10 +146,10 @@ export class WebSocketService extends WebSocketBaseService {
           if (typeof message.payload.volume === 'number') this.playerState.volume = message.payload.volume;
           break;
         case 'mute':
-          this.playerState.muted = true;
+          this.playerState.isMuted = true;
           break;
         case 'unmute':
-          this.playerState.muted = false;
+          this.playerState.isMuted = false;
           break;
       }
       this.sendActionConfirmation('success');

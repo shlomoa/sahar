@@ -142,12 +142,12 @@ test('Fsm: controlCommand play/pause/seek/volume/mute toggles with no-op suppres
     fsm.controlCommand({ action: 'mute' } as ControlCommandPayload);
     const s5 = fsm.getSnapshot();
     expectVersionBump(s4, s5);
-    assert.equal(s5.player.muted, true);
+    assert.equal(s5.player.isMuted, true);
 
     fsm.controlCommand({ action: 'unmute' } as ControlCommandPayload);
     const s6 = fsm.getSnapshot();
     expectVersionBump(s5, s6);
-    assert.equal(s6.player.muted, false);
+    assert.equal(s6.player.isMuted, false);
 });
 
 // action_confirmation: failure drives error state; repeated same failure is no-op; success clears error and returns to ready

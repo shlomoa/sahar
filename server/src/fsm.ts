@@ -46,7 +46,7 @@ export class Fsm {
         currentTime: 0,
         duration: 0,
         volume: 50,  // Use 0-100 range to match Remote UI and YouTube API
-        muted: false
+        isMuted: false
       }
     };
     logInfo('fsm_initialized', {}, 'Sahar FSM initialized with state: ' + JSON.stringify(this.state));
@@ -175,10 +175,10 @@ export class Fsm {
         }
         break; }
       case 'mute': {
-        if (!this.state.player.muted) this.state.player.muted = true;
+        if (!this.state.player.isMuted) this.state.player.isMuted = true;
         break; }
       case 'unmute': {
-        if (this.state.player.muted) this.state.player.muted = false;
+        if (this.state.player.isMuted) this.state.player.isMuted = false;
         break; }
       case 'enter_fullscreen': {
         // Note: Fullscreen state is managed by the TV client, but we can track it for consistency
@@ -202,6 +202,7 @@ export class Fsm {
     const beforeErr = this.state.error ? this.state.error.code + this.state.error.message : 'none';
     const beforeState = this.fsmState;
     if (status === 'failure') {
+      logError('fsm_action_confirmation', { errorMessage }, 'Action confirmation indicates failure');
       this.state.error = { code: 'COMMAND_FAILED', message: errorMessage || 'Unknown failure' };
       this.fsmState = 'error';
     } else if (status === 'success' && this.state.error) {
@@ -220,8 +221,10 @@ export class Fsm {
     const both = this.state.clientsConnectionState.tv === 'connected' && 
                  this.state.clientsConnectionState.remote === 'connected';
     if (both && this.fsmState === 'initializing') {
+      logInfo('fsm_recalc', {}, 'Both clients connected, transitioning to ready state');
       this.fsmState = 'ready';
     } else if (!both && this.fsmState !== 'initializing' && this.fsmState !== 'error') {
+      logInfo('fsm_recalc', {}, 'One or more clients disconnected, transitioning to initializing state');
       // Only regress to initializing if not in an error state (preserve error until cleared)
       this.fsmState = 'initializing';
     }
