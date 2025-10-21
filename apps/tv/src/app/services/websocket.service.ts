@@ -27,7 +27,6 @@ export class WebSocketService extends WebSocketBaseService {
   private playerState: PlayerState = {
     isPlaying: false,
     isFullscreen: false,
-    duration: 0,
     currentTime: 0,
     volume: 100,
     isMuted: false,

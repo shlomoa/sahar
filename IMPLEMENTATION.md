@@ -111,6 +111,7 @@ The state is maintained and managed in the server FSM. Clients receive authorita
 
 **Navigation State Management** (Updated 2025-10-21):
 - Server FSM owns navigation state as IDs only: `{ currentLevel, performerId?, videoId?, sceneId? }`
+- NavigationLevel: `'performers' | 'videos' | 'scenes' | 'playing'` (removed unused 'scene-selected' 2025-10-21)
 - FSM transitions on navigation commands:
   - `navigate_to_performer`: sets `currentLevel='videos'`, `performerId`
   - `navigate_to_video`: sets `currentLevel='scenes'`, `videoId`
@@ -140,11 +141,11 @@ The state is maintained and managed in the server FSM. Clients receive authorita
 
 ```typescript
 // Shared PlayerState interface (consolidated from duplicate implementations)
+// Note: duration removed (2025-10-21) - runtime value from YouTube player, not part of server state
 export interface PlayerState {
     isPlaying: boolean;
     isFullscreen: boolean;
     currentTime: number;
-    duration: number;
     volume: number;      // 0-100 range (standardized across YouTube API and UI)
     isMuted: boolean;
     youtubeId?: string;

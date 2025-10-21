@@ -59,7 +59,6 @@ export class Fsm {
         isFullscreen: false,
         isMuted: false,
         currentTime: 0,
-        duration: 0,
         volume: 50  // Use 0-100 range to match Remote UI and YouTube API
       }
     };

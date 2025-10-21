@@ -2,15 +2,14 @@
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
-export type NavigationLevel = 'performers' | 'videos' | 'scenes' | 'playing' | 'scene-selected';
+export type NavigationLevel = 'performers' | 'videos' | 'scenes' | 'playing';
 
 export interface PlayerState {
     isPlaying: boolean;
     isFullscreen: boolean;
-    currentTime: number;
-    duration: number;
-    volume: number;      // 0-100 range (matches YouTube API and UI)
     isMuted: boolean;
+    currentTime: number;
+    volume: number;      // 0-100 range (matches YouTube API and UI)
     youtubeId?: string;
     // Optional explicit marker for which scene is currently playing )
     playingSceneId?: string;

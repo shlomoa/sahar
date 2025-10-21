@@ -138,7 +138,7 @@ The FSM (`fsm.ts`) owns:
 - **Version**: Monotonic counter (incremented on mutations)
 - **FSM State**: System readiness (`initializing`, `ready`, `error`)
 - **Navigation**: Current level and IDs (performers/videos/scenes)
-- **Player**: Playback state (isPlaying, currentTime, duration)
+- **Player**: Playback state (isPlaying, currentTime, volume, mute/fullscreen flags)
 - **Clients**: Connection states (TV/Remote online/offline)
 - **Catalog**: Private field (not in ApplicationState, served via HTTP)
 
