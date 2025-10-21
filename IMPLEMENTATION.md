@@ -131,6 +131,12 @@ The state is maintained and managed in the server FSM. Clients receive authorita
 - **Client Content Resolution** (Phase 3 Pattern):
   - ContentService: Fetches catalog via HTTP GET, caches locally, provides lookup methods
   - WebSocketBaseService: Delegates catalog queries to ContentService (no longer from state)
+- **Client State Pattern** (Updated 2025-10-21):
+  - Apps use **getters to derive all state** from `applicationState` (server snapshot)
+  - No local copies of player or connection state - eliminates desync risk
+  - Player state: `get isPlaying() { return this.applicationState?.player.isPlaying ?? false; }`
+  - Connection state: `get bothConnected() { return tv && remote both 'connected'; }`
+  - Result: ~17 redundant assignments removed, 2 duplicate subscriptions eliminated
   - Clients combine navigation IDs from `state_sync` with ContentService catalog:
     * `getCurrentPerformer()`: Gets `performerId` from state, queries ContentService
     * `getCurrentVideo()`: Gets `videoId` from state, queries ContentService
@@ -145,6 +151,7 @@ The state is maintained and managed in the server FSM. Clients receive authorita
 // Note: duration removed (2025-10-21) - runtime value from YouTube player, not part of server state
 // Note: youtubeId removed (2025-10-21) - derived from navigation.videoId lookup in apps
 // Note: playingSceneId removed (2025-10-21) - use navigation.sceneId directly
+// Note: Client apps use getters to derive from ApplicationState.player (2025-10-21) - no local copies
 export interface PlayerState {
     isPlaying: boolean;
     isFullscreen: boolean;

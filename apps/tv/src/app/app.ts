@@ -53,19 +53,8 @@ export class App implements OnInit, OnDestroy {
   private readonly contentService = inject(ContentService);
   private readonly snackBar = inject(MatSnackBar);  
 
-  // Local playback flags (derived from player state)
-  isPlaying = false;
-  isMuted = false;
-  isFullscreen = false;
-  volumeLevel = 50;
-
   // QR: Remote entry URL to encode
   remoteUrl = '';
-
-  // Visibility flag: when both TV and Remote are connected according to server state
-  bothConnected = false;
-  // Connection status text to mirror Remote's UI mapping: 'connected' | 'connecting' | 'disconnected'
-  connectionStatus: ConnectionState = 'disconnected';
 
   // Derived playback bindings for the video-player component
   get playbackVideoId(): string | null {
@@ -80,6 +69,35 @@ export class App implements OnInit, OnDestroy {
 
   get playbackIsPlaying(): boolean {
     return this.videoPlayer?.isPlaying ?? false;
+  }
+
+  // Player state getters - derive from server's authoritative state
+  get isPlaying(): boolean {
+    return this.applicationState?.player.isPlaying ?? false;
+  }
+
+  get isMuted(): boolean {
+    return this.applicationState?.player.isMuted ?? false;
+  }
+
+  get isFullscreen(): boolean {
+    return this.applicationState?.player.isFullscreen ?? false;
+  }
+
+  get volumeLevel(): number {
+    return this.applicationState?.player.volume ?? 50;
+  }
+
+  // Connection state getters - derive from server's authoritative state
+  get bothConnected(): boolean {
+    return (
+      this.applicationState?.clientsConnectionState.tv === 'connected' &&
+      this.applicationState?.clientsConnectionState.remote === 'connected'
+    ) ?? false;
+  }
+
+  get connectionStatus(): ConnectionState {
+    return this.applicationState?.clientsConnectionState.tv ?? 'disconnected';
   }
 
   // Current navigation level helpers for templates - derive from server state
@@ -175,25 +193,11 @@ export class App implements OnInit, OnDestroy {
     const mainStateSub = this.webSocketService.state$.subscribe(state => {
       this.applicationState = state;
       
-      if (!state) {
-        this.connectionStatus = 'disconnected';
-        return;
-      }
-
-      // Update connection status
-      this.connectionStatus = state.clientsConnectionState.tv || 'disconnected';
-      
-      // Update both connected flag
-      this.bothConnected = (
-        state.clientsConnectionState.tv === 'connected' && 
-        state.clientsConnectionState.remote === 'connected'
-      );
-      
       console.log('📺 TV: Application state updated:', {
-        level: state.navigation.currentLevel,
-        performerId: state.navigation.performerId,
-        videoId: state.navigation.videoId,
-        sceneId: state.navigation.sceneId,
+        level: state?.navigation.currentLevel,
+        performerId: state?.navigation.performerId,
+        videoId: state?.navigation.videoId,
+        sceneId: state?.navigation.sceneId,
         bothConnected: this.bothConnected
       });
     });
@@ -228,16 +232,13 @@ export class App implements OnInit, OnDestroy {
         }
         case 'mute':
           this.videoPlayer?.setVolume(0);
-          this.isMuted = true;
           break;
         case 'unmute':
           this.videoPlayer?.setVolume(100);
-          this.isMuted = false;
           break;
         case 'enter_fullscreen':
         case 'exit_fullscreen':
           this.videoPlayer?.toggleFullscreen();
-          this.isFullscreen = !this.isFullscreen;
           break;
         default:
           console.error('📺 TV: Unknown control command action:', action);
@@ -245,31 +246,6 @@ export class App implements OnInit, OnDestroy {
       }
     });
     this.subscriptions.push(controlSub);
-
-    // Watch for authoritative state_sync messages so we can hide the QR when both clients are connected
-    const stateSub = this.webSocketService.messages.subscribe((msg) => {
-      try {
-        if (!msg || msg.msgType !== 'state_sync') return;
-        console.log('📺 TV: Received state_sync message via WebSocket:', msg);
-        const payloadUnknown = msg.payload as unknown;
-        const state = payloadUnknown as ApplicationState | undefined;
-        this.bothConnected = ((state?.clientsConnectionState['tv'] && state?.clientsConnectionState['remote']) && 
-        state?.clientsConnectionState['tv'] === 'connected' && state?.clientsConnectionState['remote'] === 'connected') || false;        
-      } catch (e) {
-        console.warn('📺 TV: Failed to parse state_sync for connection info', e);
-      }
-    });
-    this.subscriptions.push(stateSub);
-
-    // Subscribe to application state to get server's authoritative connection status
-    const connSub = this.webSocketService.state$.subscribe(appState => {
-      if (appState) {
-        this.connectionStatus = appState.clientsConnectionState.tv || 'disconnected';
-      } else {
-        this.connectionStatus = 'disconnected';
-      }
-    });
-    this.subscriptions.push(connSub);
   }
 
   ngOnDestroy(): void {
@@ -360,7 +336,6 @@ export class App implements OnInit, OnDestroy {
 
   onVideoStarted(): void {
     console.log('📺 TV: Video playback started');
-    this.isPlaying = true;
     // Send action confirmation to update server state
     this.webSocketService.sendActionConfirmation('success');
     // Don't immediately set volume to avoid autoplay policy conflicts
@@ -369,14 +344,12 @@ export class App implements OnInit, OnDestroy {
 
   onVideoPaused(): void {
     console.log('📺 TV: Video playback paused');
-    this.isPlaying = false;
     // Send action confirmation to update server state
     this.webSocketService.sendActionConfirmation('success');
   }
 
   onVideoEnded(): void {
     console.log('📺 TV: Video playback ended');
-    this.isPlaying = false;
     // Send action confirmation to update server state
     this.webSocketService.sendActionConfirmation('success');
     // Optionally return to scene list or play next scene

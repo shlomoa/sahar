@@ -50,17 +50,6 @@ export class App implements OnInit, OnDestroy {
 
   // Data
   clientType: ClientType = 'remote';
-    
-  // Video control states (derived from server state)
-  isPlaying = false;
-  isMuted = false;
-  volumeLevel = 50;
-  isFullscreen = false;
-  
-  // Visibility flag: when both TV and Remote are connected according to server state
-  bothConnected = false;
-  // Connection management - starts disconnected
-  connectionStatus: ConnectionState = 'disconnected';
 
   // Event handlers - send commands to server only, don't update local state
   onPerformerSelected(performerId: string): void {
@@ -161,7 +150,36 @@ export class App implements OnInit, OnDestroy {
   get canGoBack(): boolean {
     const level = this.currentLevel;
     return level !== 'performers';
-  } 
+  }
+
+  // Player state getters - derive from server's authoritative state
+  get isPlaying(): boolean {
+    return this.applicationState?.player.isPlaying ?? false;
+  }
+
+  get isMuted(): boolean {
+    return this.applicationState?.player.isMuted ?? false;
+  }
+
+  get isFullscreen(): boolean {
+    return this.applicationState?.player.isFullscreen ?? false;
+  }
+
+  get volumeLevel(): number {
+    return this.applicationState?.player.volume ?? 50;
+  }
+
+  // Connection state getters - derive from server's authoritative state
+  get bothConnected(): boolean {
+    return (
+      this.applicationState?.clientsConnectionState.tv === 'connected' &&
+      this.applicationState?.clientsConnectionState.remote === 'connected'
+    ) ?? false;
+  }
+
+  get connectionStatus(): ConnectionState {
+    return this.applicationState?.clientsConnectionState.remote ?? 'disconnected';
+  }
 
   ngOnInit() {    
     // Fetch catalog data via HTTP before initializing WebSocket
@@ -171,33 +189,11 @@ export class App implements OnInit, OnDestroy {
     const stateSub = this.webSocketService.state$.subscribe(state => {
       this.applicationState = state;
       
-      if (!state) {
-        this.connectionStatus = 'disconnected';
-        return;
-      }
-
-      // Update connection status
-      this.connectionStatus = state.clientsConnectionState.remote || 'disconnected';
-      
-      // Update player state from server
-      if (state.player) {
-        this.isPlaying = state.player.isPlaying;
-        this.isMuted = state.player.isMuted;
-        this.isFullscreen = state.player.isFullscreen;
-        this.volumeLevel = state.player.volume ?? 50;
-      }
-      
-      // Update both connected flag
-      this.bothConnected = (
-        state.clientsConnectionState.tv === 'connected' && 
-        state.clientsConnectionState.remote === 'connected'
-      );
-      
       console.log('📱 Remote: Application state updated:', {
-        level: state.navigation.currentLevel,
-        performerId: state.navigation.performerId,
-        videoId: state.navigation.videoId,
-        sceneId: state.navigation.sceneId,
+        level: state?.navigation.currentLevel,
+        performerId: state?.navigation.performerId,
+        videoId: state?.navigation.videoId,
+        sceneId: state?.navigation.sceneId,
         isPlaying: this.isPlaying,
         bothConnected: this.bothConnected
       });
