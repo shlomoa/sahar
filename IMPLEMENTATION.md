@@ -144,14 +144,13 @@ The state is maintained and managed in the server FSM. Clients receive authorita
 // Shared PlayerState interface (consolidated from duplicate implementations)
 // Note: duration removed (2025-10-21) - runtime value from YouTube player, not part of server state
 // Note: youtubeId removed (2025-10-21) - derived from navigation.videoId lookup in apps
+// Note: playingSceneId removed (2025-10-21) - use navigation.sceneId directly
 export interface PlayerState {
     isPlaying: boolean;
     isFullscreen: boolean;
     currentTime: number;
     volume: number;      // 0-100 range (standardized across YouTube API and UI)
     isMuted: boolean;
-    // Optional explicit marker for which scene is currently playing
-    playingSceneId?: string;
 }
 
 // Monotonic version increases on each committed state change

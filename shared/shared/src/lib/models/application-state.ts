@@ -11,8 +11,7 @@ export interface PlayerState {
     currentTime: number;
     volume: number;      // 0-100 range (matches YouTube API and UI)
     // youtubeId removed (2025-10-21) - derived from navigation.videoId lookup
-    // Optional explicit marker for which scene is currently playing )
-    playingSceneId?: string;
+    // playingSceneId removed (2025-10-21) - use navigation.sceneId directly
 }
 
 export interface ClientsConnectionState {
