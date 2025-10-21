@@ -7,6 +7,7 @@
 // - navigation back behavior: backing from 'scenes' to 'videos' clears sceneId but retains videoId
 // - control: play/pause/seek/volume/mute update only if values actually change (no-op suppressed)
 // - actionConfirmation: failure sets error + fsmState='error'; success clears error and re-evaluates to 'ready' when both clients present
+// - fsmState: Tracks system readiness only ('initializing' | 'ready' | 'error'); playback state tracked in PlayerState.isPlaying
 
 import test from 'node:test';
 import { strict as assert } from 'node:assert';

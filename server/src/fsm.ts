@@ -11,10 +11,7 @@ import {
 } from 'shared';
 import { catalogData } from './mock-data';
 
-// @TODO: separate Player-specific state tracking (playing/paused) from 
-// FsmState as it is already tracked in PlayerState.isPlaying
-
-export type FsmState = 'initializing' | 'ready' | 'playing' | 'paused' | 'error';
+export type FsmState = 'initializing' | 'ready' | 'error';
 
 const logger = createLogger({ component: 'server-fsm' });
 const logInfo = (event: string, meta?: any, msg?: string) => logger.info(event, meta, msg);
@@ -27,6 +24,9 @@ const logError = (event: string, meta?: any, msg?: string) => logger.error(event
  * - Ensures monotonic version only bumps on real mutations
  * - Provides pure snapshot (defensive copy) so callers cannot mutate internal state
  * - Central place to extend future invariants (heartbeat, recovery, etc.) without leaking details
+ * 
+ * Note: FsmState tracks system readiness only. Playback state (playing/paused) is tracked
+ * in ApplicationState.player.isPlaying and should not be duplicated in FsmState.
  */
 
 interface ConnectedClients {
@@ -173,11 +173,9 @@ export class Fsm {
         if (youtubeId && this.state.player.youtubeId !== youtubeId) this.state.player.youtubeId = youtubeId;
         if (!this.state.player.isPlaying) this.state.player.isPlaying = true;
         if (typeof startTime === 'number' && this.state.player.currentTime !== startTime) this.state.player.currentTime = startTime;
-        if (this.fsmState !== 'playing') this.fsmState = 'playing';
         break; }
       case 'pause': {
         if (this.state.player.isPlaying) this.state.player.isPlaying = false;
-        if (this.fsmState !== 'paused') this.fsmState = 'paused';
         break; }
       case 'seek': {
         if (typeof seekTime === 'number' && this.state.player.currentTime !== seekTime) this.state.player.currentTime = seekTime;
