@@ -1,6 +1,20 @@
-import { ApplicationState, ActionConfirmationStatus, createLogger, NavigationAction, ClientInfo, FsmState } from 'shared';
-import { ClientType, ClientsConnectionState, ControlCommandPayload, CatalogData } from 'shared';
+import { 
+  ApplicationState,
+  ActionConfirmationStatus, 
+  createLogger, 
+  NavigationAction, 
+  ClientInfo, 
+  ClientType, 
+  ClientsConnectionState, 
+  ControlCommandPayload, 
+  CatalogData 
+} from 'shared';
 import { catalogData } from './mock-data';
+
+// @TODO: separate Player-specific state tracking (playing/paused) from 
+// FsmState as it is already tracked in PlayerState.isPlaying
+
+export type FsmState = 'initializing' | 'ready' | 'playing' | 'paused' | 'error';
 
 const logger = createLogger({ component: 'server-fsm' });
 const logInfo = (event: string, meta?: any, msg?: string) => logger.info(event, meta, msg);

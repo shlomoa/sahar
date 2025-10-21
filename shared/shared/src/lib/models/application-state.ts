@@ -1,12 +1,5 @@
 // System-level state for client connection and operational readiness
 
-import { CatalogData } from './video-navigation';
-
-// @TODO: separate Player-specific state tracking (playing/paused) from 
-// FsmState as it is already tracked in PlayerState.isPlaying
-
-export type FsmState = 'initializing' | 'ready' | 'playing' | 'paused' | 'error';
-
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 export type NavigationLevel = 'performers' | 'videos' | 'scenes' | 'playing' | 'scene-selected';

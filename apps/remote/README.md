@@ -1,14 +1,14 @@
 # Remote Application
 
-Control interface and data owner connected to the Unified Server.
+Control interface connected to the Unified Server.
 
 ## 🎯 Purpose
 
-The Remote application serves as the **data owner** and **enhanced UI** in the direct communication architecture. It manages all content data and provides an intuitive remote control interface for the TV display.
+The Remote application serves as the **control interface** in the Unified Server architecture. It provides an intuitive remote control interface for the TV display, sending navigation and playback commands to the server. Content data is fetched via HTTP from the server's Content API.
 
-**Role**: Data Owner and Control Interface
+**Role**: Control Interface
 - **WebSocket Client**: Connects to Unified Server `/ws`
-- **Data Owner**: Seeds server FSM with data on connect
+- **Content Consumer**: Fetches catalog via HTTP Content API on startup
 - **Enhanced UI**: Mobile-optimized Material Design interface
 - **Remote Control**: Sends navigation and control commands (ack-gated)
 
@@ -42,7 +42,7 @@ Note:
 	- Package: https://www.npmjs.com/package/angularx-qrcode
 
 ### Key Responsibilities
-1. **Data Management**: Maintains dataset; seeds server on connect
+1. **Content Fetching**: Fetches catalog via HTTP GET /api/content/catalog on startup
 2. **Navigation Control**: Sends navigation commands to server
 3. **Video Control**: Sends playback commands to server (ack-gated)
 4. **Resilience**: Reconnect/backoff via shared base service

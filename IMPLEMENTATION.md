@@ -117,23 +117,25 @@ The state is maintained and managed in the server FSM. Clients receive authorita
   - `navigate_to_scene`: sets `currentLevel='playing'`, `sceneId` ⭐ triggers video playback
   - `navigate_back`: steps back one level (playing→scenes→videos→performers)
   - `navigate_home`: resets to `currentLevel='performers'`
-- **HTTP Content Delivery** (Migrated 2025-10-21):
-  - Catalog delivered via `GET /api/content/catalog` (not in WebSocket state)
-  - `ApplicationState` no longer has `data` field - operational state only
-  - Clients fetch catalog once on startup via ContentService
-  - Server FSM stores catalog in private `catalogData` field (initialized from mock-data.ts)
+- **HTTP Content Delivery** (Phase 3, Migrated 2025-10-21):
+  - Catalog delivered via `GET /api/content/catalog` endpoint (HTTP-based, not WebSocket)
+  - `ApplicationState` no longer has `data` field - operational state only (navigation + player + clients)
+  - Clients fetch catalog once on startup via ContentService and cache locally
+  - Server FSM stores catalog privately in `catalogData` field (initialized from mock-data.ts)
+  - Deprecated endpoint: POST `/seed` returns 410 Gone (data seeding no longer supported)
 - **Flat Normalized Catalog Structure** (Implemented 2025-10-20):
   - `CatalogData { performers[], videos[], scenes[] }` with flat arrays
   - Foreign key references enable O(n) lookups: `Video.performerId`, `Scene.videoId`
   - No nested data structures - each entity stored once in its own array
-- Clients derive display objects via ContentService and WebSocketBaseService:
-  - ContentService: Fetches and caches catalog, provides lookup methods
-  - WebSocketBaseService: Delegates catalog queries to ContentService
-  - `getCurrentPerformer()`: Gets performerId from state, queries ContentService
-  - `getCurrentVideo()`: Gets videoId from state, queries ContentService
-  - `getCurrentScene()`: Gets sceneId from state, queries ContentService
-  - `getVideosForPerformer(performerId)`: Delegates to ContentService
-  - `getScenesForVideo(videoId)`: Delegates to ContentService
+- **Client Content Resolution** (Phase 3 Pattern):
+  - ContentService: Fetches catalog via HTTP GET, caches locally, provides lookup methods
+  - WebSocketBaseService: Delegates catalog queries to ContentService (no longer from state)
+  - Clients combine navigation IDs from `state_sync` with ContentService catalog:
+    * `getCurrentPerformer()`: Gets `performerId` from state, queries ContentService
+    * `getCurrentVideo()`: Gets `videoId` from state, queries ContentService
+    * `getCurrentScene()`: Gets `sceneId` from state, queries ContentService
+    * `getVideosForPerformer(performerId)`: Delegates to ContentService
+    * `getScenesForVideo(videoId)`: Delegates to ContentService
 - TV app: checks `currentLevel === 'playing'` to show video player vs navigation grids
 
 ```typescript
@@ -153,10 +155,9 @@ export interface PlayerState {
 // Monotonic version increases on each committed state change
 export interface ApplicationState {
     version: number;
-    fsmState: FsmState;
-    connectedClients: {
-        tv?: ClientInfo;
-        remote?: ClientInfo;
+    clientsConnectionState: {
+        tv?: ConnectionState;
+        remote?: ConnectionState;
     };
     navigation: {
         currentLevel: NavigationLevel;
@@ -165,8 +166,9 @@ export interface ApplicationState {
         sceneId?: string;
     };
     player: PlayerState;  // Uses shared PlayerState interface
-    // Flat normalized catalog structure (Migrated 2025-10-20)
-    data?: CatalogData;  // { performers[], videos[], scenes[] } with FK references
+    // Phase 3: data field removed (HTTP Content API migration 2025-10-21)
+    // Catalog now fetched via GET /api/content/catalog (not in state)
+    // FSM stores catalog privately in catalogData field
     error?: {
         code: string;
         message: string;
@@ -174,6 +176,7 @@ export interface ApplicationState {
 }
 
 // CatalogData: Flat normalized structure (Migrated 2025-10-20)
+// Delivered via HTTP GET /api/content/catalog (Phase 3, 2025-10-21)
 export interface CatalogData {
     performers: Performer[];  // { id, name, thumbnail, description }
     videos: Video[];          // { id, title, url, performerId, description }

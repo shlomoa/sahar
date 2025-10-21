@@ -64,69 +64,155 @@ For more information on using the Angular CLI, including detailed command refere
 
 
 
-# Shared Components and Models
+# Shared Library
 
-*Common models, services, and components used by both TV and Remote applications.*
+Angular library package containing common models, services, components, and protocol definitions used by both TV and Remote applications.
 
 ## 🎯 Purpose
 
-The shared folder contains all common code, models, and protocols used by both the TV and Remote applications. This ensures consistency and maintains the single source of truth principle across the SAHAR TV Remote Control System.
+The shared library is an Angular library that provides all common code, models, and protocols for the SAHAR TV Remote Control System. It ensures consistency and maintains the single source of truth principle.
 
-**Contents**: Common Models, Components, and Protocols
+**Contents**: Common Models, Services, Components, and Protocol v3.0
 - **Models**: TypeScript interfaces and data structures
 - **Components**: Reusable UI components (performers, videos, scenes grids)
-- **Services**: Shared business logic and utilities
-- **WebSocket Protocol**: Communication protocol definitions
+- **Services**: Shared business logic (WebSocket base, ContentService, navigation)
+- **Protocol**: WebSocket Protocol v3.0 definitions and utilities
 
 ## 📁 Structure
 
 ```
-shared/
+shared/shared/src/lib/
 ├── components/           # Reusable UI components
 │   ├── index.ts         # Component exports
-│   ├── performers-grid/ # Performers grid display
-│   ├── scenes-grid/     # Scenes grid display
-│   └── videos-grid/     # Videos grid display
+│   ├── device-connection/   # Connection status display
+│   ├── performers-grid/     # Performers grid component
+│   ├── scenes-grid/         # Scenes grid component
+│   └── videos-grid/         # Videos grid component
 ├── models/              # TypeScript interfaces and data models
-│   ├── video-navigation.ts        # Navigation state models
-│   └── video-navigation.service.ts # Navigation service interface
-├── services/            # Shared business logic (empty - app-specific)
-└── websocket/           # WebSocket communication protocol
-    └── websocket-protocol.ts      # Protocol v2.0 definitions
+│   ├── application-state.ts    # Core state interface
+│   ├── messages.ts             # Protocol message types and unions
+│   ├── video-navigation.ts     # Navigation data models
+│   └── websocket-protocol.ts   # Protocol v3.0 definitions
+├── services/            # Shared services
+│   ├── content.service.ts           # HTTP catalog fetching + caching
+│   ├── video-navigation.service.ts  # Navigation state queries
+│   └── websocket-base.service.ts    # Base WebSocket client
+└── utils/               # Utility functions
+    ├── logging.ts       # Structured logging helpers
+    ├── websocket-utils.ts   # Protocol utilities
+    └── youtube-helpers.ts   # YouTube URL/thumbnail helpers
 ```
 
 ## 🔗 Usage in Applications
 
-### Symlink Architecture
-Both TV and Remote applications access shared code via symbolic links:
+The shared library is built as an npm package and installed as a dependency in TV, Remote, and Server applications.
+
+### Building the Library
 
 ```bash
-apps/tv/src/shared -> ../../../shared/      # TV app symlink
-apps/remote/src/shared -> ../../../shared/  # Remote app symlink
+# From repo root or shared directory
+npm run build -w shared
+
+# Or from shared/shared directory
+ng build shared
 ```
 
-```powershell
-# Create symlinks (from repo root)
-cd apps\tv\src\
-New-Item -ItemType SymbolicLink -Path shared -Target ..\..\..\shared
-cd ..\..\remote\src\
-New-Item -ItemType SymbolicLink -Path shared -Target ..\..\..\shared
+Build artifacts are placed in `dist/shared/`.
+
+### Installing in Applications
+
+After building, install the package in consuming applications:
+
+```bash
+# From TV app directory
+npm install ../../shared/dist/shared --save
+
+# From Remote app directory  
+npm install ../../shared/dist/shared --save
+
+# From Server directory
+npm install ../shared/dist/shared --save
 ```
 
 ### Import Examples
-```typescript
-// In TV or Remote app (using symlinks)
-import { PerformersGridComponent } from './shared/components';
-import { VideoNavigation, Scene } from './shared/models/video-navigation';
-import { WebSocketProtocol } from './shared/models/websocket-protocol';
 
-// Alternative: Direct path (without symlinks)
-import { PerformersGridComponent } from '../../shared/components';
-import { VideoNavigation, Scene } from '../../shared/models/video-navigation';
-import { WebSocketProtocol } from '../../shared/models/websocket-protocol';
+```typescript
+// Import models
+import { ApplicationState, CatalogData, Performer, Video, Scene } from 'shared';
+import { WebSocketMessage, NavigationCommand, ControlCommand } from 'shared';
+import { WEBSOCKET_CONFIG, ERROR_CODES } from 'shared';
+
+// Import services
+import { ContentService } from 'shared';
+import { WebSocketBaseService } from 'shared';
+import { VideoNavigationService } from 'shared';
+
+// Import components
+import { PerformersGridComponent, VideosGridComponent, ScenesGridComponent } from 'shared';
+import { DeviceConnectionComponent } from 'shared';
+
+// Import utilities
+import { createLogger } from 'shared';
+import { validateMessage, createErrorMessage } from 'shared';
+import { extractYouTubeId, getYouTubeThumbnail } from 'shared';
+```
+
+## 📡 Protocol v3.0
+
+The shared library defines Protocol v3.0 (Stop-and-Wait) used for WebSocket communication:
+
+- **Message Types**: `register`, `navigation_command`, `control_command`, `state_sync`, `ack`, `error`, `heartbeat`
+- **ACK Protocol**: Clients must ACK each `state_sync` with the received version
+- **Validation**: Message structure validation and error codes
+- **Configuration**: `WEBSOCKET_CONFIG` (port, timeouts, paths)
+
+See `models/websocket-protocol.ts` for complete protocol definitions.
+
+## 🧩 Key Services
+
+### ContentService
+HTTP-based catalog fetching with caching:
+```typescript
+const catalog = await contentService.getCatalog();
+// Returns: { performers, videos, scenes }
+```
+
+### WebSocketBaseService
+Abstract base class for WebSocket clients with:
+- Connection management and reconnection logic
+- Message sending with type-safe generators
+- Handler registration for incoming messages
+- Heartbeat and connection state tracking
+
+### VideoNavigationService
+Stateless catalog query service:
+- `getPerformers()`, `getVideos(performerId)`, `getScenes(videoId)`
+- `getPerformer(id)`, `getVideo(id)`, `getScene(id)`
+- Validates IDs and returns typed results
+
+## 🎨 Components
+
+All components are Angular 20 standalone components with Material Design:
+
+- **PerformersGridComponent**: Grid display of performers with thumbnails
+- **VideosGridComponent**: Grid display of videos for a performer
+- **ScenesGridComponent**: Grid display of scenes for a video
+- **DeviceConnectionComponent**: Real-time connection status indicator
+
+## 🔍 Utilities
+
+- **Logging**: `createLogger(component)` - Structured JSON logging
+- **WebSocket**: `validateMessage()`, `createErrorMessage()` - Protocol helpers
+- **YouTube**: `extractYouTubeId()`, `getYouTubeThumbnail()` - YouTube URL parsing
+
+## 🧪 Testing
+
+```bash
+# Run unit tests
+ng test shared
 ```
 
 ---
 
 *Part of the SAHAR TV Remote Control System*  
-*For complete documentation, see [../README.md](../README.md)*
+*For complete documentation, see [../../README.md](../../README.md)*

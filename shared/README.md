@@ -1,59 +1,77 @@
-# Shared
+# Shared Library Workspace
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.1.6.
+This workspace contains the `shared` Angular library package that provides common models, services, components, and utilities used by the SAHAR TV Remote system applications (TV app, Remote app, and server).
 
-## Development server
+## Overview
 
-To start a local development server, run:
+The shared library is built as an npm package and consumed by:
+- **TV App** (`apps/tv`) - Display interface
+- **Remote App** (`apps/remote`) - Control interface  
+- **Server** (`server`) - WebSocket and HTTP server with FSM
 
-```bash
-ng serve
+## Structure
+
+```
+shared/
+├── README.md (this file)
+├── angular.json
+├── package.json
+└── shared/
+    ├── README.md (library documentation)
+    ├── ng-package.json
+    ├── package.json
+    └── src/
+        ├── public-api.ts
+        └── lib/
+            ├── models/        # Shared TypeScript interfaces
+            ├── services/      # Shared Angular services
+            ├── components/    # Shared Angular components
+            └── utils/         # Utility functions
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Building the Library
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+Build the shared library from the workspace root:
 
 ```bash
-ng generate component component-name
+npm run build:shared
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Or from this directory:
 
 ```bash
-ng generate --help
+ng build shared
 ```
 
-## Building
+Build artifacts are placed in `dist/shared/` and installed as a file dependency in consuming projects via:
 
-To build the project run:
-
-```bash
-ng build
+```json
+{
+  "dependencies": {
+    "shared": "file:../shared/dist/shared"
+  }
+}
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+## Development Workflow
 
-## Running unit tests
+1. **Make changes** to library code in `shared/src/lib/`
+2. **Rebuild** the library: `npm run build:shared`
+3. **Reinstall** in consuming apps/server: `npm install` (in their directories)
+4. **Restart** dev servers or rebuild consuming applications
 
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+## Key Exports
 
-```bash
-ng test
-```
+See `shared/README.md` for detailed documentation of:
+- **Models**: ApplicationState, PlayerState, Messages, WebSocket Protocol
+- **Services**: WebSocketBaseService, ContentService, VideoNavigationService
+- **Components**: Device connection, grid displays (performers, videos, scenes)
+- **Utilities**: Logging, WebSocket utilities, YouTube helpers
 
-## Running end-to-end tests
+## Protocol
 
-For end-to-end (e2e) testing, run:
+The shared library defines Protocol v3.0 (Stop-and-Wait with ACK) for WebSocket communication between server and clients.
 
-```bash
-ng e2e
-```
+## Architecture
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+For system architecture details, see the root-level `ARCHITECTURE.md` and `IMPLEMENTATION.md` files.
