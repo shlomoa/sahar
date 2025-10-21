@@ -10,7 +10,7 @@ export interface PlayerState {
     isMuted: boolean;
     currentTime: number;
     volume: number;      // 0-100 range (matches YouTube API and UI)
-    youtubeId?: string;
+    // youtubeId removed (2025-10-21) - derived from navigation.videoId lookup
     // Optional explicit marker for which scene is currently playing )
     playingSceneId?: string;
 }

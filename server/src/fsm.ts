@@ -166,10 +166,10 @@ export class Fsm {
   controlCommand(payload: ControlCommandPayload) {
     logInfo('fsm_control_command', { payload }, 'Processing control command');
     const before = JSON.stringify(this.state.player);
-    const { action, youtubeId, startTime, seekTime, volume } = payload;
+    const { action, startTime, seekTime, volume } = payload;
     switch (action) {
       case 'play': {
-        if (youtubeId && this.state.player.youtubeId !== youtubeId) this.state.player.youtubeId = youtubeId;
+        // youtubeId removed from PlayerState - derived from navigation.videoId in apps
         if (!this.state.player.isPlaying) this.state.player.isPlaying = true;
         if (typeof startTime === 'number' && this.state.player.currentTime !== startTime) this.state.player.currentTime = startTime;
         break; }

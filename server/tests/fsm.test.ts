@@ -117,7 +117,7 @@ test('Fsm: controlCommand play/pause/seek/volume/mute toggles with no-op suppres
     const s1 = fsm.getSnapshot();
     expectVersionBump(s0, s1);
     assert.equal(s1.player.isPlaying, true);
-    assert.equal(s1.player.youtubeId, 'yt1');
+    // youtubeId removed from PlayerState - now derived from navigation.videoId in apps
     assert.equal(s1.player.currentTime, 10);
 
     // no-op repeat
