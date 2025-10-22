@@ -1,5 +1,4 @@
 // Normalized content catalog structure for YouTube-like content
-import { getYoutubeVideoId, getYoutubeThumbnailUrl } from '../utils/youtube-helpers';
 
 export interface Performer {
   id: string;

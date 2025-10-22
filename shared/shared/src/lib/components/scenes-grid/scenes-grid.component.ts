@@ -34,10 +34,6 @@ export class SharedScenesGridComponent {
     this.backToVideos.emit();
   }
 
-  trackBySceneId(index: number, scene: Scene): string {
-    return scene.id;
-  }
-
   // Helper methods for styling based on display mode
   getSectionClasses(): string {
     return this.clientType === 'tv' 

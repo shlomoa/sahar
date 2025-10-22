@@ -1,6 +1,6 @@
 <div class="scenes-section">
   <div class="scenes-grid">
-    @for (scene of scenes; track trackBySceneId($index, scene)) {
+    @for (scene of scenes; track scene.id) {
       <mat-card
         class="scene-card"
         [class.selected]="scene.id === selectedSceneId"

@@ -5,7 +5,8 @@
     "ng": "ng",
     "build": "ng build shared",
     "watch": "ng build shared --watch",
-    "pack": "cd dist/shared && npm pack"
+    "pack": "cd dist/shared && npm pack",
+    "typecheck": "tsc -p shared/tsconfig.lib.json --noEmit --noUnusedLocals --noUnusedParameters"
   },
   "prettier": {
     "printWidth": 100,

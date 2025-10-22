@@ -35,10 +35,6 @@ export class SharedVideosGridComponent {
     this.backToPerformers.emit();
   }
 
-  trackByVideoId(index: number, video: Video): string {
-    return video.id;
-  }
-
   // Helper methods for styling based on display mode
   getSectionClasses(): string {
     return this.clientType === 'tv' 

@@ -1,5 +1,5 @@
 <div [class]="getGridClasses()">
-  @for (performer of performers; track trackByPerformerId($index, performer)) {
+  @for (performer of performers; track performer.id) {
     <mat-card      
       [class]="getCardClasses()"
       [class.selected]="selectedPerformerId === performer.id"

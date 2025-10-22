@@ -10,6 +10,25 @@ This document outlines the implementation details for the SAHAR TV Remote system
 -   **Documentation**: Any significant feature, class, function and variable should be inline documented in detail.
 -   **Completion**: Planning and execution management is done via GitHub tools.
 
+### Dead Code Detection
+
+All packages have TypeScript strict unused code checks enabled via `noUnusedLocals` and `noUnusedParameters` compiler options.
+
+**Check individual packages:**
+```bash
+cd server && npm run typecheck
+cd shared && npm run typecheck
+cd apps/tv && npm run typecheck
+cd apps/remote && npm run typecheck
+```
+
+**Check all packages at once:**
+```bash
+cd server && npm run typecheck:all
+```
+
+The typecheck scripts will flag unused variables, parameters, and imports. All packages currently pass with 0 issues.
+
 ---
 
 ## Implementation fabric

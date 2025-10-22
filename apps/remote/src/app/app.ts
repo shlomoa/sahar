@@ -294,7 +294,7 @@ export class App implements OnInit, OnDestroy {
     return this.webSocketService.getVideosForPerformer(performerId);
   }
 
-  getScenesForVideo(performerId: string, videoId: string): Scene[] {
+  getScenesForVideo(videoId: string): Scene[] {
     return this.webSocketService.getScenesForVideo(videoId);
   }
 

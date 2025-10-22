@@ -9,9 +9,9 @@ import {
   ActionConfirmationPayload,
   ActionConfirmationMessage,
 } from '../models/messages';
-import { Performer, Video, Scene, CatalogData } from '../models/video-navigation';
+import { Performer, Video, Scene } from '../models/video-navigation';
 import { NetworkDevice } from '../models/websocket-protocol';
-import { ConnectionState, ApplicationState } from '../models';
+import { ApplicationState } from '../models';
 import { ContentService } from './content.service';
 
 @Injectable()

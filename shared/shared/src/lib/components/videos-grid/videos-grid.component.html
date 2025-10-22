@@ -1,6 +1,6 @@
 <div [class]="getSectionClasses()">
   <div [class]="getGridClasses()">
-    @for (video of videos; track trackByVideoId($index, video)) {
+    @for (video of videos; track video.id) {
       <mat-card
         [class]="getCardClasses()"
         [class.selected]="video.id === selectedVideoId"
