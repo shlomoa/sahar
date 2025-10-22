@@ -22,7 +22,6 @@ import {
   ClientType
 } from 'shared';
 import { Fsm } from './fsm';
-import { catalogData } from './mock-data';
 import { networkInterfaces } from 'os';
 
 // --- Structured Logger (shared) ---------------------------------------------------------------
