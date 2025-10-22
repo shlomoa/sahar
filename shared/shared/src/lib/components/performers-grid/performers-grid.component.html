@@ -1,17 +1,20 @@
 <div [class]="getGridClasses()">
-  <mat-card 
-    *ngFor="let performer of performers; trackBy: trackByPerformerId" 
-    [class]="getCardClasses()"
-    [class.selected]="selectedPerformerId === performer.id"
-    (click)="selectPerformer(performer.id)">
-    <img 
-      [src]="performer.thumbnail" 
-      [alt]="performer.name"
-      loading="lazy"
-      (error)="onImageError($event)">
-    <mat-card-content>
-      <h3>{{ performer.name }}</h3>
-      <p *ngIf="performer.description">{{ performer.description }}</p>
-    </mat-card-content>
-  </mat-card>
+  @for (performer of performers; track trackByPerformerId($index, performer)) {
+    <mat-card      
+      [class]="getCardClasses()"
+      [class.selected]="selectedPerformerId === performer.id"
+      (click)="selectPerformer(performer.id)">
+      <img 
+        [src]="performer.thumbnail" 
+        [alt]="performer.name"
+        loading="lazy"
+        (error)="onImageError($event)">
+      <mat-card-content>
+        <h3>{{ performer.name }}</h3>
+        @if (performer.description) {
+          <p>{{ performer.description }}</p>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
 </div>

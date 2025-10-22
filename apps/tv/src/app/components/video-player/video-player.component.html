@@ -1,46 +1,58 @@
 <div class="video-player-container">
-  <div class="video-info" *ngIf="currentVideo">
-    <h2>{{ currentVideo.title }}</h2>
-    <p *ngIf="currentScene" class="scene-info">
-      🎬 {{ currentScene.title }}
-    </p>
-  </div>
 
-  <div class="youtube-player-wrapper" *ngIf="videoId || (currentVideo?.url && getYouTubeId())">
-    <youtube-player
-      #youtubePlayer
-      [videoId]="videoId || getYouTubeId() || ''"
-      [width]="playerWidth"
-      [height]="playerHeight"
-      [playerVars]="{
-        autoplay: autoplay ? 1 : 0,
-        controls: showControls ? 1 : 0,
-        modestbranding: 1,
-        rel: 0,
-        showinfo: 0,
-        enablejsapi: 1,
-        playsinline: 1,
-        iv_load_policy: 3,
-        origin: origin
-      }"
-      (ready)="onPlayerReady($event)"
-      (stateChange)="onStateChange($event)">
-    </youtube-player>
-  </div>
-
-  <div class="no-video" *ngIf="!videoId && !currentVideo?.url">
-    <div class="placeholder">
-      <mat-icon>tv</mat-icon>
-      <h3>No Video Selected</h3>
-      <p>Select a scene from the remote to start playing</p>
+  @if (currentVideo) {
+    <div class="video-info">
+      <h2>{{ currentVideo.title }}</h2>
+      @if (currentScene) {
+        <p class="scene-info">
+          🎬 {{ currentScene.title }}
+        </p>
+      }
     </div>
-  </div>
+  }
 
-  <div class="player-controls" *ngIf="currentVideo && isPlayerReady">
-    <div class="time-info">
-      <span class="current-time">{{ formatTime(currentTime) }}</span>
-      <span class="separator">/</span>
-      <span class="total-time">{{ formatTime(duration) }}</span>
+  @if (videoId || (currentVideo?.url && getYouTubeId())) {
+    <div class="youtube-player-wrapper" >
+      <youtube-player
+        #youtubePlayer
+        [videoId]="videoId || getYouTubeId() || ''"
+        [width]="playerWidth"
+        [height]="playerHeight"
+        [playerVars]="{
+          autoplay: autoplay ? 1 : 0,
+          controls: showControls ? 1 : 0,
+          modestbranding: 1,
+          rel: 0,
+          showinfo: 0,
+          enablejsapi: 1,
+          playsinline: 1,
+          iv_load_policy: 3,
+          origin: origin
+        }"
+        (ready)="onPlayerReady($event)"
+        (stateChange)="onStateChange($event)">
+      </youtube-player>
     </div>
-  </div>
+  }
+  
+  @if (!videoId && !currentVideo?.url) {
+    <div class="no-video" >
+      <div class="placeholder">
+        <mat-icon>tv</mat-icon>
+        <h3>No Video Selected</h3>
+        <p>Select a scene from the remote to start playing</p>
+      </div>
+    </div>
+  }
+
+  @if (currentVideo && isPlayerReady) {
+    <div class="player-controls">
+      <div class="time-info">
+        <span class="current-time">{{ formatTime(currentTime) }}</span>
+        <span class="separator">/</span>
+        <span class="total-time">{{ formatTime(duration) }}</span>
+      </div>
+    </div>
+  }
+  
 </div>

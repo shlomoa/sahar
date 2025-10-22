@@ -1,21 +1,26 @@
 <div [class]="getSectionClasses()">
   <div [class]="getGridClasses()">
-    <mat-card 
-      *ngFor="let video of videos; trackBy: trackByVideoId"
-      [class]="getCardClasses()"
-      [class.selected]="video.id === selectedVideoId"
-      (click)="onVideoSelected(video.id)">
-      
-      <img 
-        mat-card-image 
-        [src]="getVideoThumbnail(video)" 
-        [alt]="video.title"
-        loading="lazy">
+    @for (video of videos; track trackByVideoId($index, video)) {
+      <mat-card
+        [class]="getCardClasses()"
+        [class.selected]="video.id === selectedVideoId"
+        (click)="onVideoSelected(video.id)">
         
-      <mat-card-content>
-        <h3>{{ video.title }}</h3>
-        <p *ngIf="video.duration">{{ formatDuration(video.duration) }} min</p>
-      </mat-card-content>
-    </mat-card>
+        <img 
+          mat-card-image 
+          [src]="getVideoThumbnail(video)" 
+          [alt]="video.title"
+          loading="lazy">
+          
+        <mat-card-content>
+          <h3>{{ video.title }}</h3>
+          @if (video.duration) {
+            <p>{{ formatDuration(video.duration) }} min</p>
+          }
+        </mat-card-content>
+      </mat-card>
+    } @empty {
+      <p>No videos found.</p>
+    }
   </div>
 </div>
