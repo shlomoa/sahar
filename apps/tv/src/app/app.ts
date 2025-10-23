@@ -15,10 +15,7 @@ import { ControlCommandMessage,
          WEBSOCKET_CONFIG,
          NavigationLevel,
          SharedNavigationRootComponent,
-         Video,
-         Scene,
-         Performer,
-         ContentService} from 'shared';
+         CatalogHelperService} from 'shared';
 import { WebSocketService } from './services/websocket.service';
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
 
@@ -50,21 +47,30 @@ export class App implements OnInit, OnDestroy {
 
   // Service injections
   private readonly webSocketService = inject(WebSocketService);
-  private readonly contentService = inject(ContentService);
-  private readonly snackBar = inject(MatSnackBar);  
+  private readonly catalogHelper = inject(CatalogHelperService);
+  private readonly snackBar = inject(MatSnackBar);
+  
+  // Computed signals from CatalogHelperService - automatic reactivity
+  readonly currentPerformer = this.catalogHelper.currentPerformer;
+  readonly currentVideo = this.catalogHelper.currentVideo;
+  readonly currentScene = this.catalogHelper.currentScene;
+  readonly currentPerformers = this.catalogHelper.currentPerformers;
+  readonly currentVideos = this.catalogHelper.currentVideos;
+  readonly currentScenes = this.catalogHelper.currentScenes;
+  readonly catalogReady = this.catalogHelper.catalogReady;  
 
   // QR: Remote entry URL to encode
   remoteUrl = '';
 
   // Derived playback bindings for the video-player component
   get playbackVideoId(): string | null {
-    const currentVideo = this.webSocketService.getCurrentVideo();
-    return currentVideo?.url ? getYoutubeVideoId(currentVideo.url) : null;
+    const video = this.currentVideo();
+    return video?.url ? getYoutubeVideoId(video.url) : null;
   }
 
   get playbackPositionSec(): number | null {
-    const currentScene = this.webSocketService.getCurrentScene();
-    return currentScene?.startTime ?? null;
+    const scene = this.currentScene();
+    return scene?.startTime ?? null;
   }
 
   get playbackIsPlaying(): boolean {
@@ -101,48 +107,11 @@ export class App implements OnInit, OnDestroy {
   }
 
   // Current navigation level helpers for templates - derive from server state
-  get currentPerformers(): Performer[] {
-    const state = this.applicationState;
-    if (!state) return [];
-    
-    // At performers level (no IDs set)
-    if (!state.navigation.performerId) {
-      return this.webSocketService.getPerformersData();
-    }
-    return [];
-  }
-
-  get currentVideos(): Video[] {
-    const state = this.applicationState;
-    if (!state) return [];
-    
-    // At videos level (performer set, no video)
-    if (state.navigation.performerId && !state.navigation.videoId) {
-      return this.webSocketService.getVideosForPerformer(state.navigation.performerId);
-    }
-    return [];
-  }
-
-  get currentScenes(): Scene[] {
-    const state = this.applicationState;
-    if (!state) return [];
-    
-    // At scenes level (video set)
-    if (state.navigation.videoId) {
-      return this.webSocketService.getScenesForVideo(state.navigation.videoId);
-    }
-    return [];
-  }
-
   get currentLevel(): NavigationLevel {
     const state = this.applicationState;
     if (!state) return 'performers';
     
     return state.navigation.currentLevel;
-  }
-
-  get currentPerformer(): Performer | undefined {
-    return this.webSocketService.getCurrentPerformer();
   }
 
   // Whether going back is possible - derive from current level
@@ -157,9 +126,6 @@ export class App implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Fetch catalog data via HTTP before initializing WebSocket
-    this.initializeCatalog();
-
     // Build Remote URL as protocol://FQDN:SERVER_DEFAULT_PORT (avoid localhost in QR).
     // Prefer server-provided LAN IP from /host-ip, fall back to the browser hostname.
     const protocol = window.location.protocol;
@@ -192,6 +158,11 @@ export class App implements OnInit, OnDestroy {
     // Subscribe to application state from server - single source of truth
     const mainStateSub = this.webSocketService.state$.subscribe(state => {
       this.applicationState = state;
+      
+      // CRITICAL: Update CatalogHelperService state (enables all computed signals)
+      if (state) {
+        this.catalogHelper.setState(state);
+      }
       
       console.log('📺 TV: Application state updated:', {
         level: state?.navigation.currentLevel,
@@ -252,21 +223,6 @@ export class App implements OnInit, OnDestroy {
     this.subscriptions.forEach(sub => sub.unsubscribe());
   }
 
-  private async initializeCatalog(): Promise<void> {
-    try {
-      console.log('📺 TV: Fetching catalog via HTTP...');
-      await this.contentService.fetchCatalog();
-      console.log('📺 TV: Catalog fetched successfully');
-    } catch (error) {
-      console.error('📺 TV: Failed to fetch catalog:', error);
-      this.snackBar.open('Failed to load content catalog', 'Retry', { 
-        duration: 0 
-      }).onAction().subscribe(() => {
-        this.initializeCatalog();
-      });
-    }
-  }
-
   private initializeWebSocket(): void {
     // Subscribe to application state for connection status
     const connectionSub = this.webSocketService.state$.subscribe(appState => {
@@ -317,14 +273,14 @@ export class App implements OnInit, OnDestroy {
   onSceneSelected(sceneId: string): void {
     console.log('📺 TV: Scene selected (local event, no-op):', sceneId);
     // TV is display-only: navigation commands should come from Remote via server
-    const currentVideo = this.webSocketService.getCurrentVideo();
-    const currentScene = this.webSocketService.getCurrentScene();
+    const video = this.currentVideo();
+    const scene = this.currentScene();
     
-    if (currentVideo && currentScene) {
+    if (video && scene) {
       console.log('📺 TV: Would start video playback:', {
-        video: currentVideo.title,
-        scene: currentScene.title,
-        url: currentVideo.url
+        video: video.title,
+        scene: scene.title,
+        url: video.url
       });
     }
   }

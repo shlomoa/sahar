@@ -302,6 +302,166 @@ Ports (clarification):
 
 ## Data Flow Architecture
 
+### Application Bootstrap & Initialization Order
+
+SAHAR uses Angular's **provideAppInitializer()** function to guarantee catalog availability before app bootstrap completes. This prevents race conditions between catalog loading and WebSocket state synchronization.
+
+**Why provideAppInitializer():**
+- Catalog data is critical - apps are unusable without performers/videos/scenes
+- Data is small (~few KB) - fast fetch on LAN, minimal bootstrap delay
+- Prevents race conditions - guarantees catalog loads before WebSocket connects
+- Simplifies components - no loading states or defensive null checks needed
+- Fail-fast behavior - catalog errors block bootstrap with clear user feedback
+- Modern Angular pattern - functional provider (APP_INITIALIZER deprecated)
+
+**Bootstrap Sequence:**
+```
+1. Angular App Starts
+   ↓
+2. provideAppInitializer() Executes (blocks bootstrap)
+   ↓
+3. ContentService.fetchCatalog() - HTTP GET /api/content/catalog
+   ↓
+4. Catalog Data Cached in Signal
+   ↓
+5. Bootstrap Completes - Components Initialize
+   ↓
+6. WebSocket Connection Established
+   ↓
+7. Navigation State Syncs (catalog already available)
+```
+
+**Configuration** (both TV and Remote `app.config.ts`):
+```typescript
+export const appConfig: ApplicationConfig = {
+  providers: [
+    // ... other providers
+    provideAppInitializer(() => {
+      const contentService = inject(ContentService);
+      return contentService.fetchCatalog();
+    })
+  ]
+};
+```
+
+**Error Handling:**
+- Catalog fetch failures prevent app bootstrap
+- User sees loading indicator until success or error
+- Retry mechanism managed by Angular's initialization framework
+- No partial app state - either fully initialized or failed
+
+**Benefits:**
+- WebSocket state_sync can safely reference catalog data
+- Components access catalog synchronously (no async loading)
+- CatalogHelperService assumptions hold (both state and catalog ready)
+- Eliminates entire class of race condition bugs
+
+See `shared/shared/src/lib/services/content.service.ts` for implementation details.
+
+---
+
+## Shared Service Architecture
+
+### CatalogHelperService - Signal-Based State-Aware Facade
+
+**Purpose**: Bridge between ApplicationState (navigation context) and ContentService (catalog data) using modern Angular signals for automatic reactivity.
+
+**Architecture Decision**: Signal-based stateful service over stateless parameter-passing approach.
+
+**Rationale**:
+- Automatic reactivity - templates update when state or catalog changes (no manual change detection)
+- Zero boilerplate - apps expose signals directly without manual getters or try/catch blocks
+- Type safety - non-null state contract enforced at compile time
+- Performance - fine-grained updates via computed signals (only affected views re-render)
+- Angular 20 BKM - signals are the recommended reactive primitive over RxJS observables
+
+**Service Contract**:
+```typescript
+/**
+ * CONTRACT (Enforced via TypeScript):
+ * - State must be initialized before accessing any computed signals
+ * - State is NEVER set to null after initialization (always valid ApplicationState)
+ * - Apps MUST call setState() with non-null state before using helper methods
+ * - Violation results in undefined behavior
+ */
+
+// State signal type is non-nullable
+private state = signal<ApplicationState>(null as unknown as ApplicationState);
+
+// setState() only accepts non-null
+setState(state: ApplicationState): void {
+  this.state.set(state);
+}
+```
+
+**API Surface**:
+
+1. **State Management**
+   - `setState(state: ApplicationState): void` - Update internal state (NEVER pass null)
+
+2. **Current Item Computed Signals** (return `T | null`)
+   - `readonly currentPerformer` - Auto-updates when state/catalog changes
+   - `readonly currentVideo` - Auto-updates when state/catalog changes
+   - `readonly currentScene` - Auto-updates when state/catalog changes
+
+3. **Level-Based Collection Computed Signals** (return `T[]`)
+   - `readonly currentPerformers` - Returns performers array when level === 'performers'
+   - `readonly currentVideos` - Returns videos array when level === 'videos'
+   - `readonly currentScenes` - Returns scenes array when level === 'scenes'
+
+4. **Utility Signals**
+   - `readonly catalogReady` - Returns boolean (checks if catalog is loaded)
+
+**Usage Pattern** (in app components):
+```typescript
+// 1. Inject service
+private catalogHelper = inject(CatalogHelperService);
+
+// 2. Initialize state (REQUIRED before accessing signals)
+ngOnInit(): void {
+  // When WebSocket sends initial state
+  this.catalogHelper.setState(initialState);
+}
+
+// 3. Expose computed signals (zero boilerplate)
+readonly currentPerformer = this.catalogHelper.currentPerformer;
+readonly currentVideos = this.catalogHelper.currentVideos;
+readonly catalogReady = this.catalogHelper.catalogReady;
+
+// 4. Update state when it changes
+handleStateSync(state: ApplicationState): void {
+  this.catalogHelper.setState(state);  // Triggers all computed signal updates
+}
+
+// 5. Use in templates with signal syntax
+// Template:
+@if (catalogReady()) {
+  @if (currentPerformer(); as performer) {
+    <h2>{{ performer.name }}</h2>
+  }
+  
+  @for (video of currentVideos(); track video.id) {
+    <div>{{ video.title }}</div>
+  }
+}
+```
+
+**Benefits Delivered**:
+- ✅ Eliminates 8 duplicate methods from WebSocketBaseService (separation of concerns)
+- ✅ Single source of truth for "current item" logic (DRY principle)
+- ✅ Synchronization guarantees via computed signals (prevents race conditions)
+- ✅ Reduces TV/Remote app code by ~57% (120 lines duplicated → 52 lines shared)
+- ✅ Type-safe non-null contract enforced at compile time
+- ✅ Zero manual change detection or getter boilerplate
+
+**Dependencies**:
+- `ContentService` - Access `catalog` signal and ID/FK getters
+- No WebSocketBaseService dependency (clean separation of concerns)
+
+**Location**: `shared/shared/src/lib/services/catalog-helper.service.ts`
+
+---
+
 ### Server-owned Data Model
 ```
 1. Server Startup

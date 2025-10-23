@@ -84,18 +84,34 @@ The typecheck scripts will flag unused variables, parameters, and imports. All p
             - HEALTH_STATUS: "ok" | "degraded" | "error" (not currently implemented in code; future work)
 
 - **Services**: Shared services for WebSocket handling, content delivery, and utilities.
-    - **ContentService** (Added 2025-10-21): HTTP-based catalog delivery with caching
-        - **Purpose**: Fetch static content catalog once via HTTP instead of receiving it in every WebSocket state_sync message
+    - **ContentService** (Added 2025-10-21, Updated 2025-10-23 with provideAppInitializer):
+        - **Purpose**: HTTP-based catalog delivery with caching
         - **HTTP Endpoint**: `GET /api/content/catalog` returns `{ performers[], videos[], scenes[] }`
-        - **Caching**: In-memory cache prevents duplicate fetches
-        - **Public Accessors**:
-          - `getPerformers()`: Returns flat performers array
-          - `getPerformer(id)`: Finds performer by ID (O(n))
-          - `getVideosForPerformer(performerId)`: Filters videos by `performerId` FK
-          - `getVideo(id)`: Finds video by ID (O(n))
-          - `getScenesForVideo(videoId)`: Filters scenes by `videoId` FK
-          - `getScene(id)`: Finds scene by ID (O(n))
-        - **Usage**: Apps call `await contentService.fetchCatalog()` on startup before connecting WebSocket
+        - **Initialization**: Automatic via **provideAppInitializer()** in both TV and Remote apps
+          - Modern functional provider (APP_INITIALIZER deprecated)
+          - Catalog loads during app bootstrap (before components initialize)
+          - Guarantees catalog availability when WebSocket connects
+          - Eliminates race conditions between catalog and state_sync
+          - See `apps/tv/src/app/app.config.ts` and `apps/remote/src/app/app.config.ts`
+        - **Signal Support** (Optimized 2025-10-23):
+          - `readonly catalog = signal<CatalogData | null>(null)`: Full catalog data
+          - Removed `catalogReady` signal (redundant - catalog() !== null check sufficient)
+          - Enables reactive computed signals in CatalogHelperService
+        - **Caching**: In-memory signal-based cache prevents duplicate fetches
+        - **Duplicate Request Prevention**: Closure-scoped promise prevents concurrent fetches
+        - **Public Accessors** (guaranteed available after bootstrap):
+          - `getPerformer(id): Performer`: Finds performer by ID or throws
+          - `getVideo(id): Video`: Finds video by ID or throws
+          - `getScene(id): Scene`: Finds scene by ID or throws
+          - All getters use non-null assertions - provideAppInitializer guarantees catalog loaded
+        - **FK Helpers** (guaranteed available after bootstrap):
+          - `getVideosForPerformer(performerId): Video[]`: Filters by `performerId` FK
+          - `getScenesForVideo(videoId): Scene[]`: Filters by `videoId` FK
+          - Use non-null assertions - provideAppInitializer guarantees catalog loaded
+        - **Error Handling**:
+          - Fetch failures block app bootstrap (provideAppInitializer behavior)
+          - Clear error feedback to user - no partial app initialization
+          - Item-not-found errors throw with descriptive messages
     - **WebSocketBaseService**: Base class for WebSocket services in TV and Remote. Handles connection, reconnection, heartbeats, message parsing, and delegates catalog queries to ContentService:
         - **Catalog Delegation** (Updated 2025-10-21): No longer stores catalog data internally; all lookup methods delegate to ContentService
         - **Navigation State**: Maintains `applicationState$` BehaviorSubject with operational state only (no catalog)

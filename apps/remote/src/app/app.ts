@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from "@angular/material/icon";
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { RouterOutlet } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ClientType,
@@ -11,10 +10,10 @@ import { ClientType,
          ConnectionState,
          NavigationLevel,
          ApplicationState,
-         Performer,
          Video,
          Scene,
-         ContentService} from 'shared';
+         ContentService,
+         CatalogHelperService} from 'shared';
 import { SharedNavigationRootComponent } from 'shared';
 import { VideoControlsComponent } from './components/video-controls/video-controls.component';
 import { WebSocketService } from './services/websocket.service';
@@ -46,7 +45,16 @@ export class App implements OnInit, OnDestroy {
   // Service injections
   private readonly webSocketService = inject(WebSocketService);
   private readonly contentService = inject(ContentService);
-  private readonly snackBar = inject(MatSnackBar);
+  private readonly catalogHelper = inject(CatalogHelperService);
+  
+  // Computed signals from CatalogHelperService - automatic reactivity
+  readonly currentPerformer = this.catalogHelper.currentPerformer;
+  readonly currentVideo = this.catalogHelper.currentVideo;
+  readonly currentScene = this.catalogHelper.currentScene;
+  readonly currentPerformers = this.catalogHelper.currentPerformers;
+  readonly currentVideos = this.catalogHelper.currentVideos;
+  readonly currentScenes = this.catalogHelper.currentScenes;
+  readonly catalogReady = this.catalogHelper.catalogReady;
 
   // Data
   clientType: ClientType = 'remote';
@@ -64,15 +72,15 @@ export class App implements OnInit, OnDestroy {
 
   onSceneSelected(sceneId: string): void {
     console.log('📱 Remote: Scene selected:', sceneId);
-    const currentVideo = this.webSocketService.getCurrentVideo();
-    const currentScene = this.webSocketService.getCurrentScene();
+    const video = this.currentVideo();
+    const scene = this.currentScene();
     
     // Send play command with scene context
     this.webSocketService.sendControlCommand({
       msgType: 'control_command',
       action: 'play',
-      youtubeId: currentVideo?.url,
-      startTime: currentScene?.startTime
+      youtubeId: video?.url,
+      startTime: scene?.startTime
     });
   }
 
@@ -102,43 +110,6 @@ export class App implements OnInit, OnDestroy {
   }
 
   // Current navigation level helpers for templates - derive from server state
-  get currentPerformers(): Performer[] {
-    const state = this.applicationState;
-    if (!state) return [];
-    
-    // At performers level (no IDs set)
-    if (!state.navigation.performerId) {
-      return this.webSocketService.getPerformersData();
-    }
-    return [];
-  }
-
-  get currentPerformer(): Performer | undefined {
-    return this.webSocketService.getCurrentPerformer();
-  }
-
-  get currentVideos(): Video[] {
-    const state = this.applicationState;
-    if (!state) return [];
-    
-    // At videos level (performer set, no video)
-    if (state.navigation.performerId && !state.navigation.videoId) {
-      return this.webSocketService.getVideosForPerformer(state.navigation.performerId);
-    }
-    return [];
-  }
-
-  get currentScenes(): Scene[] {
-    const state = this.applicationState;
-    if (!state) return [];
-    
-    // At scenes level (video set)
-    if (state.navigation.videoId) {
-      return this.webSocketService.getScenesForVideo(state.navigation.videoId);
-    }
-    return [];
-  }
-
   get currentLevel(): NavigationLevel {
     const state = this.applicationState;
     if (!state) return 'performers';
@@ -182,12 +153,14 @@ export class App implements OnInit, OnDestroy {
   }
 
   ngOnInit() {    
-    // Fetch catalog data via HTTP before initializing WebSocket
-    this.initializeCatalog();
-
     // Subscribe to application state from server - single source of truth
     const stateSub = this.webSocketService.state$.subscribe(state => {
       this.applicationState = state;
+      
+      // CRITICAL: Update CatalogHelperService state (enables all computed signals)
+      if (state) {
+        this.catalogHelper.setState(state);
+      }
       
       console.log('📱 Remote: Application state updated:', {
         level: state?.navigation.currentLevel,
@@ -203,21 +176,6 @@ export class App implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());    
-  }
-
-  private async initializeCatalog(): Promise<void> {
-    try {
-      console.log('📱 Remote: Fetching catalog via HTTP...');
-      await this.contentService.fetchCatalog();
-      console.log('📱 Remote: Catalog fetched successfully');
-    } catch (error) {
-      console.error('📱 Remote: Failed to fetch catalog:', error);
-      this.snackBar.open('Failed to load content catalog', 'Retry', { 
-        duration: 0 
-      }).onAction().subscribe(() => {
-        this.initializeCatalog();
-      });
-    }
   }
 
   // Connected device
@@ -262,13 +220,14 @@ export class App implements OnInit, OnDestroy {
   }
 
   navigateToPreviousScene() {
-    const currentVideo = this.webSocketService.getCurrentVideo();
-    const currentScene = this.webSocketService.getCurrentScene();
+    console.log('⏮️ Navigate to previous scene');
+    const video = this.currentVideo();
+    const scene = this.currentScene();
     
-    if (!currentVideo || !currentScene) return;
+    if (!video || !scene) return;
     
-    const scenes = this.webSocketService.getScenesForVideo(currentVideo.id);
-    const idx = scenes.findIndex((s: Scene) => s.id === currentScene.id);
+    const scenes = this.contentService.getScenesForVideo(video.id);
+    const idx = scenes.findIndex((s: Scene) => s.id === scene.id);
     if (idx > 0) {
       const prev = scenes[idx - 1];
       this.navigateToScene(prev.id);
@@ -276,44 +235,55 @@ export class App implements OnInit, OnDestroy {
   }
   
   navigateToNextScene() {
-    const currentVideo = this.webSocketService.getCurrentVideo();
-    const currentScene = this.webSocketService.getCurrentScene();
+    console.log('⏭️ Navigate to next scene');
+    const video = this.currentVideo();
+    const scene = this.currentScene();
     
-    if (!currentVideo || !currentScene) return;
+    if (!video || !scene) return;
     
-    const scenes = this.webSocketService.getScenesForVideo(currentVideo.id);
-    const idx = scenes.findIndex((s: Scene) => s.id === currentScene.id);
+    const scenes = this.contentService.getScenesForVideo(video.id);
+    const idx = scenes.findIndex((s: Scene) => s.id === scene.id);
     if (idx >= 0 && idx < scenes.length - 1) {
       const next = scenes[idx + 1];
       this.navigateToScene(next.id);
     }
   }
 
-  // Data access methods - use webSocketService utilities
+  // Data access methods - use contentService directly
   getVideosForPerformer(performerId: string): Video[] {
-    return this.webSocketService.getVideosForPerformer(performerId);
+    console.log('📹 Fetching videos for performer:', performerId);
+    return this.contentService.getVideosForPerformer(performerId);
   }
 
   getScenesForVideo(videoId: string): Scene[] {
-    return this.webSocketService.getScenesForVideo(videoId);
+    console.log('🎬 Fetching scenes for video:', videoId);
+    return this.contentService.getScenesForVideo(videoId);
   }
 
-  getCurrentVideo(): Video | undefined {
-    return this.webSocketService.getCurrentVideo();
+  getCurrentVideo(): Video {
+    const video = this.currentVideo();
+    if (!video) {
+      throw new Error('No current video selected');
+    }
+    return video;
   }
 
-  getCurrentScene(): Scene | undefined {
-    return this.webSocketService.getCurrentScene();
+  getCurrentScene(): Scene {
+    const scene = this.currentScene();
+    if (!scene) {
+      throw new Error('No current scene selected');
+    }
+    return scene;
   }
 
   // Video control methods
   sendControlCommand(command: string) {
     console.log('🎮 Control command:', command);
-    const currentVideo = this.webSocketService.getCurrentVideo();
-    const currentScene = this.webSocketService.getCurrentScene();
+    const video = this.currentVideo();
+    const scene = this.currentScene();
     
     // Check if we have video/scene context for commands that need it
-    if (!currentVideo || !currentScene) {
+    if (!video || !scene) {
       console.warn('Cannot control playback - no video/scene context');
       // Some commands (like go-home) don't need video context
       if (command !== 'go-home') {
@@ -387,24 +357,24 @@ export class App implements OnInit, OnDestroy {
   }
 
   hasPreviousScene(): boolean {
-    const currentVideo = this.webSocketService.getCurrentVideo();
-    const currentScene = this.webSocketService.getCurrentScene();
+    const video = this.currentVideo();
+    const scene = this.currentScene();
     
-    if (!currentVideo || !currentScene) return false;
+    if (!video || !scene) return false;
     
-    const scenes = this.webSocketService.getScenesForVideo(currentVideo.id);
-    const idx = scenes.findIndex((s: Scene) => s.id === currentScene.id);
+    const scenes = this.contentService.getScenesForVideo(video.id);
+    const idx = scenes.findIndex((s: Scene) => s.id === scene.id);
     return idx > 0;
   }
 
   hasNextScene(): boolean {
-    const currentVideo = this.webSocketService.getCurrentVideo();
-    const currentScene = this.webSocketService.getCurrentScene();
+    const video = this.currentVideo();
+    const scene = this.currentScene();
     
-    if (!currentVideo || !currentScene) return false;
+    if (!video || !scene) return false;
     
-    const scenes = this.webSocketService.getScenesForVideo(currentVideo.id);
-    const idx = scenes.findIndex((s: Scene) => s.id === currentScene.id);
+    const scenes = this.contentService.getScenesForVideo(video.id);
+    const idx = scenes.findIndex((s: Scene) => s.id === scene.id);
     return idx >= 0 && idx < scenes.length - 1;
   }
 
