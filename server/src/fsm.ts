@@ -142,10 +142,12 @@ export class Fsm {
         break;
       }
       case 'navigate_to_video': {
-        if (targetId && nav.videoId !== targetId) {
+        if (targetId) {
           nav.currentLevel = 'scenes';
-            nav.videoId = targetId;
-            delete nav.sceneId;
+          nav.videoId = targetId;
+          delete nav.sceneId;
+          // Stop playback when exiting to scenes list
+          this.state.player.isPlaying = false;
         }
         break;
       }
