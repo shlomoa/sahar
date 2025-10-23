@@ -2,7 +2,7 @@
 
 ## Use Best-Known-Methods (BKM)
 
-- Always prefer established patterns documented official documentation, for example use @if and not *ngIf as it is deprecated.
+- Always prefer established patterns documented in the latest official  documentation, for example use @if and not *ngIf as it is deprecated, another example is the deprication of APP_INITIALIZER in favor of standalone providers with factory functions.
 
 ## Update
 
