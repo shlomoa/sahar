@@ -118,7 +118,7 @@ test('Fsm: controlCommand play/pause/seek/volume/mute toggles with no-op suppres
         isMuted: false,
         currentTime: 0,
         volume: 100}  as PlayerState;
-    fsm.controlCommand({ action: 'play', ...playerState0 } as ControlCommandPayload);
+    fsm.controlCommand({...playerState0 } as ControlCommandPayload);
     const s1 = fsm.getSnapshot();
     expectVersionBump(s0, s1);
     assert.equal(s1.player.isPlaying, true);
@@ -131,11 +131,16 @@ test('Fsm: controlCommand play/pause/seek/volume/mute toggles with no-op suppres
       currentTime: 10,
       volume: 100}  as PlayerState;
     // no-op repeat
-    fsm.controlCommand({ action: 'play', ...playerState1 } as ControlCommandPayload);
+    fsm.controlCommand({ ...playerState1 } as ControlCommandPayload);
     const s1b = fsm.getSnapshot();
     expectNoVersionChange(s1, s1b);
 
-    fsm.controlCommand({ action: 'pause' } as ControlCommandPayload);
+    const playerState2: PlayerState = { isPlaying: false,
+      isFullscreen: false,
+      isMuted: false,
+      currentTime: 0,
+      volume: 100}  as PlayerState;
+    fsm.controlCommand({ ...playerState2 } as ControlCommandPayload);
     const s2 = fsm.getSnapshot();
     expectVersionBump(s1b, s2);
     assert.equal(s2.player.isPlaying, false);
@@ -145,7 +150,7 @@ test('Fsm: controlCommand play/pause/seek/volume/mute toggles with no-op suppres
       isMuted: false,
       currentTime: 0,
       volume: 42}  as PlayerState;
-    fsm.controlCommand({ action: 'seek', ...playerState3 } as ControlCommandPayload);
+    fsm.controlCommand({ ...playerState3 } as ControlCommandPayload);
     const s3 = fsm.getSnapshot();
     expectVersionBump(s2, s3);
     assert.equal(s3.player.currentTime, 42);
@@ -155,7 +160,7 @@ test('Fsm: controlCommand play/pause/seek/volume/mute toggles with no-op suppres
       isMuted: false,
       currentTime: 42,
       volume: 30}  as PlayerState;
-    fsm.controlCommand({ action: 'set_volume', ...playerState4 } as ControlCommandPayload);
+    fsm.controlCommand({ ...playerState4 } as ControlCommandPayload);
     const s4 = fsm.getSnapshot();
     expectVersionBump(s3, s4);
     assert.equal(s4.player.volume, 30);
@@ -165,7 +170,7 @@ test('Fsm: controlCommand play/pause/seek/volume/mute toggles with no-op suppres
       isMuted: true,
       currentTime: 42,
       volume: 30}  as PlayerState;
-    fsm.controlCommand({ action: 'mute', ...playerState5 } as ControlCommandPayload);
+    fsm.controlCommand({  ...playerState5 } as ControlCommandPayload);
     const s5 = fsm.getSnapshot();
     expectVersionBump(s4, s5);
     assert.equal(s5.player.isMuted, true);
@@ -175,7 +180,7 @@ test('Fsm: controlCommand play/pause/seek/volume/mute toggles with no-op suppres
       isMuted: true,
       currentTime: 42,
       volume: 30}  as PlayerState;
-    fsm.controlCommand({ action: 'unmute', ...playerState6 } as ControlCommandPayload);
+    fsm.controlCommand({ ...playerState6 } as ControlCommandPayload);
     const s6 = fsm.getSnapshot();
     expectVersionBump(s5, s6);
     assert.equal(s6.player.isMuted, false);

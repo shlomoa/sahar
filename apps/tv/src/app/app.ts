@@ -15,8 +15,8 @@ import { ControlCommandMessage,
          WEBSOCKET_CONFIG,
          NavigationLevel,
          SharedNavigationRootComponent,
-         CatalogHelperService,
-         ControlCommandPayload} from 'shared';
+         CatalogHelperService,         
+         PlayerState} from 'shared';
 import { WebSocketService } from './services/websocket.service';
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
 
@@ -44,6 +44,7 @@ export class App implements OnInit, OnDestroy {
   
   // Server state - single source of truth
   private applicationState: ApplicationState | null = null;
+  protected playerState: PlayerState = {} as PlayerState;  // Protected to allow template binding
   private subscriptions: Subscription[] = [];
 
   // Service injections
@@ -74,27 +75,8 @@ export class App implements OnInit, OnDestroy {
     return scene?.startTime ?? null;
   }
 
-  get playbackIsPlaying(): boolean {
-    return this.videoPlayer?.isPlaying ?? false;
-  }
-
-  // Player state getters - derive from server's authoritative state
-  get isPlaying(): boolean {
-    return this.applicationState?.player.isPlaying ?? false;
-  }
-
-  get isMuted(): boolean {
-    return this.applicationState?.player.isMuted ?? false;
-  }
-
-  get isFullscreen(): boolean {
-    return this.applicationState?.player.isFullscreen ?? false;
-  }
-
-  get volumeLevel(): number {
-    return this.applicationState?.player.volume ?? 50;
-  }
-
+  // Player state getters - derive from server's authoritative state  
+  
   // Connection state getters - derive from server's authoritative state
   get bothConnected(): boolean {
     return (
@@ -175,57 +157,6 @@ export class App implements OnInit, OnDestroy {
     });
     this.subscriptions.push(mainStateSub);
 
-    // Initialize WebSocket connections 
-    this.initializeWebSocket();
-
-    // wire control commands to YouTube player
-    const controlSub = this.webSocketService.messages.subscribe((msg) => {
-      console.log('📺 TV: WebSocket message received:', msg);
-      if (!msg || msg.msgType !== 'control_command') return;
-      const { action } = (msg as ControlCommandMessage).payload;
-      const payload = (msg as ControlCommandMessage).payload;
-      console.log('📺 TV: Received control command via WebSocket:', action, payload);
-      switch (action) {
-        case 'play':
-          this.videoPlayer?.play();
-          break;
-        case 'pause':
-          this.videoPlayer?.pause();
-          break;
-        case 'seek': {
-          const time = payload.currentTime;
-          this.videoPlayer?.seekTo(time);
-          break;
-        }
-        case 'set_volume': {
-          if (typeof payload.volume === 'number') {
-            this.videoPlayer?.setVolume(payload.volume);
-          }
-          break;
-        }
-        case 'mute':
-          this.videoPlayer?.mute();
-          break;
-        case 'unmute':
-          this.videoPlayer?.unmute();
-          break;
-        case 'enter_fullscreen':
-        case 'exit_fullscreen':
-          this.videoPlayer?.toggleFullscreen();
-          break;
-        default:
-          console.error('📺 TV: Unknown control command action:', action);
-          break;
-      }
-    });
-    this.subscriptions.push(controlSub);
-  }
-
-  ngOnDestroy(): void {
-    this.subscriptions.forEach(sub => sub.unsubscribe());
-  }
-
-  private initializeWebSocket(): void {
     // Subscribe to application state for connection status
     const connectionSub = this.webSocketService.state$.subscribe(appState => {
       if (!appState) return;
@@ -244,6 +175,20 @@ export class App implements OnInit, OnDestroy {
     });
     this.subscriptions.push(connectionSub);
 
+    // Substribe to player state updates
+    const playerStateSub = this.webSocketService.appPlayerState.subscribe(updatedPlayerState => {
+      
+      if (!updatedPlayerState) {
+        console.log('📺 TV: Player state update received: null playerState');
+        return;
+      }
+      console.log('📺 TV: Player state update received:', updatedPlayerState);
+
+      // Update local player state
+      this.playerState = updatedPlayerState;
+    });
+    this.subscriptions.push(playerStateSub);
+
     // Subscribe to WebSocket errors
     const errorSub = this.webSocketService.errors.subscribe(error => {
       console.error('📺 TV: WebSocket error:', error);
@@ -251,7 +196,11 @@ export class App implements OnInit, OnDestroy {
     });
 
     this.subscriptions.push(errorSub);
-    
+
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.forEach(sub => sub.unsubscribe());
   }
 
   // Connected device

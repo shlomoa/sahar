@@ -2,7 +2,7 @@ import { Component, Input, Output, EventEmitter, OnInit, ViewChild, OnChanges, S
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { YouTubePlayerModule, YouTubePlayer } from '@angular/youtube-player';
-import { Video, Scene, YouTubeThumbnailImageQuality } from 'shared';
+import { Video, Scene, YouTubeThumbnailImageQuality, PlayerState } from 'shared';
 import { getYoutubeVideoId, getYoutubeThumbnailUrl } from 'shared';
 
 @Component({
@@ -22,12 +22,8 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   
   // New protocol-oriented inputs (optional): prefer these when provided
   @Input() videoId?: string;             // YouTube video id (11 chars)
-  @Input() isPlaying?: boolean | null;   // desired play/pause state
+  @Input() playerState!: PlayerState;    // Complete player state
   @Input() positionSec?: number | null;  // desired seek position (seconds)
-  @Input() volume?: number | null;       // 0..1 (preferred) or 0..100
-  @Input() isFullscreen?: boolean | null; // desired fullscreen state
-  @Input() isMuted?: boolean | null;     // desired mute state
-
   @Input() currentVideo?: Video;
   @Input() currentScene?: Scene;
   @Input() autoplay = true;
@@ -43,7 +39,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   playerHeight = 720;
   isPlayerReady = false;
   currentTime = 0;
-  duration = 0;
+  duration = 0;  
 
   // Inform YouTube IFrame API about our hosting origin to avoid postMessage targetOrigin warnings
   origin = typeof window !== 'undefined' ? window.location.origin : '';
@@ -51,6 +47,13 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   ngOnInit(): void {
     // Angular YouTubePlayerModule handles API loading automatically
     console.log('📺 Video player component initialized');
+    this.setupFullscreenListener();
+  }
+
+  private setupFullscreenListener() {
+    document.addEventListener('fullscreenchange', () => {
+      this.playerState.isFullscreen = !!document.fullscreenElement;
+    });
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -65,15 +68,15 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
     }
 
     // Handle fullscreen changes (independent of player readiness)
-    if ('isFullscreen' in changes && typeof this.isFullscreen === 'boolean') {
+    if ('isFullscreen' in changes && typeof this.playerState === 'boolean') {
       this.toggleFullscreen();
     }
 
     // Map protocol-oriented playback inputs into player API when ready
     if (this.isPlayerReady) {
-      if ('isPlaying' in changes && this.isPlaying !== undefined && this.isPlaying !== null) {
-        if (this.isPlaying) 
-           this.play();
+      if ('isPlaying' in changes && this.playerState.isPlaying !== undefined && this.playerState.isPlaying !== null) {
+        if (this.playerState.isPlaying) 
+          this.play();
         else
           this.pause();
       }
@@ -82,12 +85,12 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
         this.seekTo(this.positionSec);
       }
 
-      if ('volume' in changes && typeof this.volume === 'number' && !Number.isNaN(this.volume)) {
+      if ('volume' in changes && typeof this.playerState.volume === 'number' && !Number.isNaN(this.playerState.volume)) {
         // Server now sends 0-100 range directly, which matches YouTube API expectations
-        this.setVolume(this.volume);
+        this.setVolume(this.playerState.volume);
       }
-      if ('isMuted' in changes && typeof this.isMuted === 'boolean') {
-        this.isMuted ? this.mute() : this.unmute();
+      if ('isMuted' in changes && typeof this.playerState.isMuted === 'boolean') {
+        this.playerState.isMuted ? this.mute() : this.unmute();
       }
     }
   }
@@ -96,7 +99,6 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
     // Use shared utility function
     return getYoutubeVideoId(url);
   }
-
 
   getYouTubeId(): string | null {
     // Prefer explicit input when provided, otherwise derive from currentVideo.url
@@ -113,7 +115,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   }
 
   onPlayerReady(event: YT.PlayerEvent): void {
-    console.log('📺 YouTube player ready recieved event', event);
+    console.log('📺 YouTube player ready received event', event);
     this.isPlayerReady = true;
     this.playerReady.emit(event.target);
     
@@ -125,12 +127,13 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
     }
 
     // If autoplay or isPlaying is desired, attempt to start playback once ready
-    if (this.autoplay || this.isPlaying) {
+    if (this.autoplay || this.playerState.isPlaying) {
       setTimeout(() => this.tryAutoplay(), 0);
     }
   }
 
   onStateChange(event: YT.OnStateChangeEvent) {
+    console.log('📺 YouTube player state changed:', event);
     const playerState = event.data;
     
     // Use YouTube API constants for player states
@@ -161,7 +164,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
       case 3: // YT.PlayerState.BUFFERING
         console.log('🔄 Video buffering');
         // If buffering persists while we intend to play, retry a nudge after a short delay
-        if (this.autoplay || this.isPlaying) {
+        if (this.autoplay || this.playerState.isPlaying) {
           setTimeout(() => {
             try {
               if (this.youtubePlayer && this.youtubePlayer.getPlayerState && this.youtubePlayer.getPlayerState() === 3) {
@@ -177,7 +180,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
       case 5: // YT.PlayerState.CUED
         console.log('🎬 Video cued and ready');
         // If we intend to play, attempt to start playback
-        if (this.autoplay || this.isPlaying) {
+        if (this.autoplay || this.playerState.isPlaying) {
           this.tryAutoplay();
         }
         break;
@@ -190,6 +193,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
    * For user-initiated play commands, attempt unmuted playback.
    */
   private tryAutoplay() {
+    console.log('🔇 Attempting autoplay');
     if (!this.isPlayerReady || !this.youtubePlayer) return;
     try {
       // Always start muted for autoplay to comply with browser policies
@@ -204,6 +208,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   private timeTrackingInterval?: number;
 
   private startTimeTracking() {
+    console.log('⏱️ Starting time tracking');
     this.stopTimeTracking(); // Clear any existing interval
     
     this.timeTrackingInterval = window.setInterval(() => {
@@ -216,6 +221,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   }
 
   private stopTimeTracking() {
+    console.log('⏱️ Stopping time tracking');
     if (this.timeTrackingInterval) {
       clearInterval(this.timeTrackingInterval);
       this.timeTrackingInterval = undefined;
@@ -223,6 +229,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   }
 
   private loadVideo() {
+    console.log('📺 Loading video in player');
     const providedId = this.getYouTubeId();
     if (!providedId) {
       // Fall back to currentVideo.url if present, otherwise bail
@@ -249,6 +256,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   }
 
   private seekToScene() {
+    console.log('🎯 Seeking to scene:', this.currentScene);
     if (!this.isPlayerReady || !this.currentScene || !this.youtubePlayer) {
       console.warn('⚠️ Cannot seek to scene: player not ready or scene/player missing');
       return;
@@ -411,13 +419,13 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
     console.log('🔲 Toggling fullscreen');
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().then(() => {
-        this.isFullscreen = true;
+        this.playerState.isFullscreen = true;
       }).catch(err => {
         console.error('Error attempting to enable fullscreen:', err);
       });
     } else {
       document.exitFullscreen().then(() => {
-        this.isFullscreen = false;
+        this.playerState.isFullscreen = false;
       });
     }
   }

@@ -71,8 +71,7 @@ export interface NavigationCommandMessage {
 
 export const CONTROL_ACTIONS = [
   'play',
-  'pause',
-  'seek',
+  'pause',  
   'set_volume',
   'mute',
   'unmute',
@@ -82,9 +81,11 @@ export const CONTROL_ACTIONS = [
 
 export type ControlAction = typeof CONTROL_ACTIONS[number];
 
-export interface ControlCommandPayload extends BasePayload, PlayerState {
-  action: ControlAction;
-}
+//export interface PlayerCommand extends PlayerState {
+//  action: ControlAction;
+//}
+
+export interface ControlCommandPayload extends BasePayload, PlayerState { }
 export interface ControlCommandMessage {
   msgType: 'control_command';
   timestamp: number;

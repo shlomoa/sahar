@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { BehaviorSubject } from 'rxjs/internal/BehaviorSubject';
 import {
   RegisterPayload,
   ApplicationState,
@@ -22,19 +23,22 @@ import {
 export class WebSocketService extends WebSocketBaseService {
   // TV duplicate connection management - inherited from base class
 
-
   // Lightweight playback state used for action confirmations
-  private playerState: PlayerState = {
+  protected playerState$ = new BehaviorSubject<PlayerState>({
     isPlaying: false,
     isFullscreen: false,
     currentTime: 0,
     volume: 100,
     isMuted: false,
-  };
+  } as PlayerState );
 
   private lastConnectedUrl: string | null = null;
   protected override logMessagePrefix = '📺 TV: ';
   
+  get appPlayerState() {
+    return this.playerState$.asObservable();
+  }
+
   constructor() {    
     super();
     this.debugLog(`WebSocket Service initializing`);
@@ -129,28 +133,9 @@ export class WebSocketService extends WebSocketBaseService {
 
   private handleControlCommand(message: ControlCommandMessage): void {
     this.debugLog('Control command received:', message.payload);
-    const { action } = message.payload;
+    const { msgType, ...playerState } = message.payload;    
     try {
-      switch (action) {
-        case 'play':
-          this.playerState.isPlaying = true;
-          break;
-        case 'pause':
-          this.playerState.isPlaying = false;
-          break;
-        case 'seek':
-          this.playerState.currentTime = message.payload.currentTime ?? this.playerState.currentTime;
-          break;
-        case 'set_volume':
-          if (typeof message.payload.volume === 'number') this.playerState.volume = message.payload.volume;
-          break;
-        case 'mute':
-          this.playerState.isMuted = true;
-          break;
-        case 'unmute':
-          this.playerState.isMuted = false;
-          break;
-      }
+      this.playerState$.next(playerState);
       this.sendActionConfirmation('success');
     } catch (e) {
       this.sendActionConfirmation('failure', e instanceof Error ? e.message : 'control failed');

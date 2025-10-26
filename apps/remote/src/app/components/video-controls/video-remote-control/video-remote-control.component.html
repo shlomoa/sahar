@@ -17,9 +17,9 @@
               class="vrc-control-button vrc-nav-button vrc-fullscreen-button"
               (click)="onControlCommand('toggle-fullscreen')"
               aria-label="Fullscreen"
-              [attr.aria-label]="isFullscreen ? 'Exit full screen' : 'Enter full screen'"
-              [attr.aria-pressed]="isFullscreen">
-              <mat-icon>{{ isFullscreen ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+              [attr.aria-label]="playerState.isFullscreen ? 'Exit full screen' : 'Enter full screen'"
+              [attr.aria-pressed]="playerState.isFullscreen">
+              <mat-icon>{{ playerState.isFullscreen ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
               <span class="vrc-button-label">מסך מלא</span>
             </button>
             <button
@@ -47,8 +47,8 @@
               mat-fab
               class="vrc-control-button vrc-play-pause-button"
               (click)="onControlCommand('play-pause')"              
-              [attr.aria-label]="isPlaying ? 'Pause' : 'Play'">
-              <mat-icon>{{ isPlaying ? 'pause' : 'play_arrow' }}</mat-icon>
+              [attr.aria-label]="playerState.isPlaying ? 'Pause' : 'Play'">
+              <mat-icon>{{ playerState.isPlaying ? 'pause' : 'play_arrow' }}</mat-icon>
             </button>
             <button
               mat-fab
@@ -73,11 +73,11 @@
             <button
               mat-fab
               class="vrc-control-button vrc-mute-button"
-              [class.muted]="isMuted"
+              [class.muted]="playerState"
               (click)="onControlCommand('toggle-mute')"
-              [attr.aria-label]="isMuted ? 'Unmute' : 'Mute'">
-              <mat-icon>{{ isMuted ? 'volume_off' : 'volume_up' }}</mat-icon>
-              <span class="volume-display">{{ isMuted ? 'OFF' : volumeLevel }}</span>
+              [attr.aria-label]="playerState.isMuted ? 'Unmute' : 'Mute'">
+              <mat-icon>{{ playerState.isMuted ? 'volume_off' : 'volume_up' }}</mat-icon>
+              <span class="volume-display">{{ playerState.isMuted ? 'OFF' : playerState.volume }}</span>
             </button>
             <button
               mat-fab

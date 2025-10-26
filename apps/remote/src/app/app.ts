@@ -41,7 +41,7 @@ export class App implements OnInit, OnDestroy {
   protected title = 'Sahar TV Remote';
   
   // Server state - single source of truth
-  private applicationState: ApplicationState | null = null;
+  protected applicationState: ApplicationState = {} as ApplicationState;
   private subscriptions: Subscription[] = [];
 
   // Service injections
@@ -78,15 +78,14 @@ export class App implements OnInit, OnDestroy {
     const scene = this.currentScene();
     const playerState: PlayerState  = {
       currentTime: scene?.startTime || 0,
-      volume: this.volumeLevel,
-      isMuted: this.isMuted,
-      isFullscreen: this.isFullscreen,
+      volume: this.applicationState?.player.volume ?? 50,
+      isMuted: this.applicationState?.player.isMuted ?? false,
+      isFullscreen: this.applicationState?.player.isFullscreen ?? false,
       isPlaying: this.applicationState?.player.isPlaying ?? false
     }
     // Send play command with scene context
     this.webSocketService.sendControlCommand({
-        msgType: 'control_command',
-        action: 'play',
+        msgType: 'control_command',        
         ...playerState        
       } as ControlCommandPayload
     );
@@ -130,24 +129,7 @@ export class App implements OnInit, OnDestroy {
     const level = this.currentLevel;
     return level !== 'performers';
   }
-
-  // Player state getters - derive from server's authoritative state
-  get isPlaying(): boolean {
-    return this.applicationState?.player.isPlaying ?? false;
-  }
-
-  get isMuted(): boolean {
-    return this.applicationState?.player.isMuted ?? false;
-  }
-
-  get isFullscreen(): boolean {
-    return this.applicationState?.player.isFullscreen ?? false;
-  }
-
-  get volumeLevel(): number {
-    return this.applicationState?.player.volume ?? 50;
-  }
-
+  
   // Connection state getters - derive from server's authoritative state
   get bothConnected(): boolean {
     return (
@@ -174,8 +156,7 @@ export class App implements OnInit, OnDestroy {
         level: state?.navigation.currentLevel,
         performerId: state?.navigation.performerId,
         videoId: state?.navigation.videoId,
-        sceneId: state?.navigation.sceneId,
-        isPlaying: this.isPlaying,
+        sceneId: state?.navigation.sceneId,        
         bothConnected: this.bothConnected
       });
     });
@@ -300,19 +281,17 @@ export class App implements OnInit, OnDestroy {
     }
     const playerState: PlayerState  = {
       currentTime: scene?.startTime || 0,
-      volume: this.volumeLevel,
-      isMuted: this.isMuted,
-      isFullscreen: this.isFullscreen,
+      volume: this.applicationState?.player.volume ?? 50,
+      isMuted: this.applicationState?.player.isMuted ?? false,
+      isFullscreen: this.applicationState?.player.isFullscreen ?? false,
       isPlaying: this.applicationState?.player.isPlaying ?? false
     }
     switch (command) {
       case 'play-pause': {
-        console.log('📱 Remote: Play-pause button clicked, current isPlaying:', this.isPlaying);
-        const actionToSend = this.isPlaying ? 'pause' : 'play';
-        console.log('📱 Remote: Sending action:', actionToSend);
+        console.log('📱 Remote: Play-pause button clicked, current isPlaying:', this.applicationState?.player.isPlaying);
+        playerState.isPlaying = !playerState.isPlaying;
         this.webSocketService.sendControlCommand({
-          msgType: 'control_command',
-          action: actionToSend,
+          msgType: 'control_command',          
           ...playerState
         });
         // Don't optimistically update isPlaying - wait for server state_sync
@@ -330,15 +309,14 @@ export class App implements OnInit, OnDestroy {
       case 'toggle-fullscreen':
         playerState.isFullscreen = !playerState.isFullscreen;
         this.webSocketService.sendControlCommand({
-          msgType: 'control_command',
-          action: this.isFullscreen ? 'exit_fullscreen' : 'enter_fullscreen',
+          msgType: 'control_command',          
           ...playerState
         });
         break;
       case 'toggle-mute':
+        playerState
         this.webSocketService.sendControlCommand({
-          msgType: 'control_command',
-          action: this.isMuted ? 'unmute' : 'mute',
+          msgType: 'control_command',          
           ...playerState
         });
         break;
@@ -356,14 +334,13 @@ export class App implements OnInit, OnDestroy {
     const playerState: PlayerState  = {
       currentTime: this.applicationState?.player.currentTime ?? 0,
       volume: value,
-      isMuted: this.isMuted,
-      isFullscreen: this.isFullscreen,
+      isMuted: this.applicationState?.player.isMuted,
+      isFullscreen: this.applicationState?.player.isFullscreen,
       isPlaying: this.applicationState?.player.isPlaying ?? false
     }
     // Send volume control command - server will update state
     this.webSocketService.sendControlCommand({
-      msgType: 'control_command',
-      action: 'set_volume',
+      msgType: 'control_command',      
       ...playerState,      
     });
     console.log('🔊 Volume change requested:', value);

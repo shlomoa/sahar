@@ -7,7 +7,7 @@ import {
   ClientType, 
   ClientsConnectionState, 
   ControlCommandPayload, 
-  CatalogData 
+  CatalogData
 } from 'shared';
 import { catalogData } from './mock-data';
 
@@ -168,43 +168,40 @@ export class Fsm {
   controlCommand(payload: ControlCommandPayload) {
     logInfo('fsm_control_command', { payload }, 'Processing control command');
     const before = JSON.stringify(this.state.player);
-    const { msgType, action, ...playerState } = payload;
-    switch (action) {
-      case 'play': {
-        // youtubeId removed from PlayerState - derived from navigation.videoId in apps
-        if (!this.state.player.isPlaying) this.state.player.isPlaying = true;
-        if (typeof playerState.currentTime === 'number' && this.state.player.currentTime !== playerState.currentTime) this.state.player.currentTime = playerState.currentTime;
-        break; }
-      case 'pause': {
-        if (this.state.player.isPlaying) this.state.player.isPlaying = false;
-        break; }
-      case 'seek': {
-        if (typeof playerState.currentTime === 'number' && this.state.player.currentTime !== playerState.currentTime) this.state.player.currentTime = playerState.currentTime;
-        break; }
-      case 'set_volume': {
-        if (typeof playerState.volume === 'number') {
-          if (this.state.player.volume !== playerState.volume) {
-            this.state.player.volume = playerState.volume;
-          }
-        }
-        break; }
-      case 'mute': {
-        if (!this.state.player.isMuted) this.state.player.isMuted = true;
-        break; }
-      case 'unmute': {
-        if (this.state.player.isMuted) this.state.player.isMuted = false;
-        break; }
-      case 'enter_fullscreen': {
-        // Note: Fullscreen state is managed by the TV client, but we can track it for consistency
-        this.state.player.isFullscreen = true;
-        logInfo('fsm_fullscreen_enter', {}, 'Entering fullscreen mode');
-        break; }
-      case 'exit_fullscreen': {
-        // Note: Fullscreen state is managed by the TV client, but we can track it for consistency
-        this.state.player.isFullscreen = false;
-        logInfo('fsm_fullscreen_exit', {}, 'Exiting fullscreen mode');
-        break; }
+    const { msgType, ...playerState } = payload;
+    this.state.player = playerState
+    /*
+    // Code for handling individual change:
+    const changed = diffProps(this.state.player, playerState);
+    if (Object.keys(changed).length > 1) {
+      logError('fsm_control_command', { changed }, 'Multiple player state properties changed');
     }
+    for (const key of typedKeys(changed)) {
+      const rec = changed[key];
+      if (!rec) continue; // because it's Partial<...>
+    
+      switch (key) {
+        case 'isPlaying': {
+          const { previous, current } = rec as Change<PlayerState['isPlaying']>;
+          if (previous)
+            // ...handle isPlaying change
+          break;
+        }
+        case 'isMuted': {
+          const { previous, current } = rec as Change<PlayerState['isMuted']>;
+          // ...handle isMuted change
+          break;
+        }
+        case 'volume': {
+          const { previous, current } = rec as Change<PlayerState['volume']>;
+          // ...handle volume change
+          break;
+        }
+      
+      }
+      */
+    
+  
     if (JSON.stringify(this.state.player) !== before) {
       this.dirty = true;
       this.commit();
@@ -251,3 +248,20 @@ export class Fsm {
     }
   }
 }
+/*
+type Change<T> = { previous: T; current: T };
+type ChangesOf<T> = Partial<Record<keyof T, { previous: T[keyof T]; current: T[keyof T] }>>;
+const typedKeys = <T extends object>(o: T) => Object.keys(o) as (keyof T)[];
+
+export function diffProps<T extends object>(prev: T | null | undefined, curr: T | null | undefined): ChangesOf<T> {
+  const result: ChangesOf<T> = {};
+  if (!prev || !curr) return result;
+
+  (Object.keys(curr) as (keyof T)[]).forEach(k => {
+    if (prev[k] !== curr[k]) {
+      result[k] = { previous: prev[k], current: curr[k] };
+    }
+  });
+  return result;
+}
+  */

@@ -304,8 +304,7 @@ export class ServerWebSocketService {
     const tvClient = this.findTvClient();
     
     if (!tvClient) {
-      logError('control_command_no_tv', { 
-        action: ctl.payload.action, 
+      logError('control_command_no_tv', {          
         from: senderMeta.deviceId,
         tvConnectionState: this.fsm.getSnapshot().clientsConnectionState.tv
       });
@@ -318,8 +317,7 @@ export class ServerWebSocketService {
     
     // Forward the control command to TV
     tvClient.send(JSON.stringify(this.makeControlCommand('server', ctl.payload)));
-    logInfo('control_command_forwarded_to_tv', { 
-      action: ctl.payload.action,
+    logInfo('control_command_forwarded_to_tv', {       
       from: senderMeta.deviceId,
       to: this.clients.get(tvClient)?.deviceId
     });

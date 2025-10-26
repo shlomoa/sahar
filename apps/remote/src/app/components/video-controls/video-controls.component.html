@@ -12,10 +12,7 @@
 
   <!-- Remote control buttons -->
   <video-remote-control
-    [isPlaying]="isPlaying"
-    [isMuted]="isMuted"
-    [isFullscreen]="isFullscreen"
-    [volumeLevel]="volumeLevel"
+    [playerState]="playerState"
     [hasPreviousScene]="hasPreviousScene"
     [hasNextScene]="hasNextScene"
     (controlCommand)="onControlCommand($event)"

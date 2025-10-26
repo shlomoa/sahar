@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Scene, Video } from 'shared';
+import { PlayerState, Scene, Video } from 'shared';
 import { VideoControlNavigationComponent } from './video-control-navigation/video-control-navigation.component';
 import { CurrentVideoSceneInfoComponent } from './current-video-scene-info/current-video-scene-info.component';
 import { VideoRemoteControlComponent } from './video-remote-control/video-remote-control.component';
@@ -22,10 +22,7 @@ export class VideoControlsComponent {
   @Input() currentVideo?: Video;
   @Input() currentScene?: Scene;
   @Input() sceneId?: string;
-  @Input() isPlaying = false;
-  @Input() isMuted = false;
-  @Input() isFullscreen = false;
-  @Input() volumeLevel = 50;
+  @Input() playerState!: PlayerState;
   @Input() hasPreviousScene = false;
   @Input() hasNextScene = false;
   

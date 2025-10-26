@@ -81,7 +81,7 @@ export abstract class WebSocketBaseService implements OnDestroy {
   // Common observables
   protected messages$ = new Subject<WebSocketMessage>();
   protected errors$ = new Subject<string>();
-  protected applicationState$ = new BehaviorSubject<ApplicationState | null>(null);
+  protected applicationState$ = new BehaviorSubject<ApplicationState>({} as ApplicationState );
 
   // Device - to be set by subclasses
   protected networkDevice: NetworkDevice = {} as NetworkDevice;
