@@ -1,6 +1,6 @@
 # Copilot Instructions — SAHAR TV Remote
 
-Quick-start operating manual for this repo. Keep it stupid simple (KISS), respect single sources of truth, follow the collaboration rules (CHAT-_RULES.md) to the letter.
+Quick-start operating manual for this repo. Keep it stupid simple (KISS), respect single sources of truth, follow the collaboration rules (CHAT_RULES.md) to the letter.
 
 ## Big picture
 - Architecture: Unified Node.js server (Express + ws) owns the Finite State Machine (FSM) and serves Angular apps (TV, Remote). Clients are stateless and render authoritative `state_sync` snapshots.
