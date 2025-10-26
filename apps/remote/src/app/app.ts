@@ -13,7 +13,9 @@ import { ClientType,
          Video,
          Scene,
          ContentService,
-         CatalogHelperService} from 'shared';
+         CatalogHelperService,
+         ControlCommandPayload,
+         PlayerState} from 'shared';
 import { SharedNavigationRootComponent } from 'shared';
 import { VideoControlsComponent } from './components/video-controls/video-controls.component';
 import { WebSocketService } from './services/websocket.service';
@@ -74,14 +76,20 @@ export class App implements OnInit, OnDestroy {
     console.log('📱 Remote: Scene selected:', sceneId);
     const video = this.currentVideo();
     const scene = this.currentScene();
-    
+    const playerState: PlayerState  = {
+      currentTime: scene?.startTime || 0,
+      volume: this.volumeLevel,
+      isMuted: this.isMuted,
+      isFullscreen: this.isFullscreen,
+      isPlaying: this.applicationState?.player.isPlaying ?? false
+    }
     // Send play command with scene context
     this.webSocketService.sendControlCommand({
-      msgType: 'control_command',
-      action: 'play',
-      youtubeId: video?.url,
-      startTime: scene?.startTime
-    });
+        msgType: 'control_command',
+        action: 'play',
+        ...playerState        
+      } as ControlCommandPayload
+    );
   }
 
   onBackToPerformers(): void {
@@ -290,7 +298,13 @@ export class App implements OnInit, OnDestroy {
         return;
       }
     }
-    
+    const playerState: PlayerState  = {
+      currentTime: scene?.startTime || 0,
+      volume: this.volumeLevel,
+      isMuted: this.isMuted,
+      isFullscreen: this.isFullscreen,
+      isPlaying: this.applicationState?.player.isPlaying ?? false
+    }
     switch (command) {
       case 'play-pause': {
         console.log('📱 Remote: Play-pause button clicked, current isPlaying:', this.isPlaying);
@@ -298,7 +312,8 @@ export class App implements OnInit, OnDestroy {
         console.log('📱 Remote: Sending action:', actionToSend);
         this.webSocketService.sendControlCommand({
           msgType: 'control_command',
-          action: actionToSend
+          action: actionToSend,
+          ...playerState
         });
         // Don't optimistically update isPlaying - wait for server state_sync
         break;
@@ -312,16 +327,19 @@ export class App implements OnInit, OnDestroy {
       case 'next-scene':
         this.navigateToNextScene();
         break;
-      case 'toggle-fullscreen':        
+      case 'toggle-fullscreen':
+        playerState.isFullscreen = !playerState.isFullscreen;
         this.webSocketService.sendControlCommand({
           msgType: 'control_command',
-          action: this.isFullscreen ? 'exit_fullscreen' : 'enter_fullscreen'
+          action: this.isFullscreen ? 'exit_fullscreen' : 'enter_fullscreen',
+          ...playerState
         });
         break;
       case 'toggle-mute':
         this.webSocketService.sendControlCommand({
           msgType: 'control_command',
-          action: this.isMuted ? 'unmute' : 'mute'
+          action: this.isMuted ? 'unmute' : 'mute',
+          ...playerState
         });
         break;
       default:
@@ -335,11 +353,18 @@ export class App implements OnInit, OnDestroy {
       console.error('Volume value out of range (0-100):', value);
       return;
     }
+    const playerState: PlayerState  = {
+      currentTime: this.applicationState?.player.currentTime ?? 0,
+      volume: value,
+      isMuted: this.isMuted,
+      isFullscreen: this.isFullscreen,
+      isPlaying: this.applicationState?.player.isPlaying ?? false
+    }
     // Send volume control command - server will update state
     this.webSocketService.sendControlCommand({
       msgType: 'control_command',
       action: 'set_volume',
-      volume: value
+      ...playerState,      
     });
     console.log('🔊 Volume change requested:', value);
   }

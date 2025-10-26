@@ -15,7 +15,8 @@ import { ControlCommandMessage,
          WEBSOCKET_CONFIG,
          NavigationLevel,
          SharedNavigationRootComponent,
-         CatalogHelperService} from 'shared';
+         CatalogHelperService,
+         ControlCommandPayload} from 'shared';
 import { WebSocketService } from './services/websocket.service';
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
 
@@ -179,6 +180,7 @@ export class App implements OnInit, OnDestroy {
 
     // wire control commands to YouTube player
     const controlSub = this.webSocketService.messages.subscribe((msg) => {
+      console.log('📺 TV: WebSocket message received:', msg);
       if (!msg || msg.msgType !== 'control_command') return;
       const { action } = (msg as ControlCommandMessage).payload;
       const payload = (msg as ControlCommandMessage).payload;
@@ -191,7 +193,7 @@ export class App implements OnInit, OnDestroy {
           this.videoPlayer?.pause();
           break;
         case 'seek': {
-          const time = payload.seekTime ?? 0;
+          const time = payload.currentTime;
           this.videoPlayer?.seekTo(time);
           break;
         }
@@ -202,10 +204,10 @@ export class App implements OnInit, OnDestroy {
           break;
         }
         case 'mute':
-          this.videoPlayer?.setVolume(0);
+          this.videoPlayer?.mute();
           break;
         case 'unmute':
-          this.videoPlayer?.setVolume(100);
+          this.videoPlayer?.unmute();
           break;
         case 'enter_fullscreen':
         case 'exit_fullscreen':
@@ -252,13 +254,13 @@ export class App implements OnInit, OnDestroy {
     
   }
 
-    // Connected device
+  // Connected device
   deviceInfo(): NetworkDevice {
     const networkDevice = this.webSocketService.deviceInfo;
     console.log('🔌 Connecting to device:', networkDevice);
     return networkDevice
   }
-
+  
   // Event handlers for shared components - TV is display-only, these are stubs for local testing
   onPerformerSelected(performerId: string): void {
     console.log('📺 TV: Performer selected (local event, no-op):', performerId);

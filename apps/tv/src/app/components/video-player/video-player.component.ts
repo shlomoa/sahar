@@ -25,6 +25,8 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   @Input() isPlaying?: boolean | null;   // desired play/pause state
   @Input() positionSec?: number | null;  // desired seek position (seconds)
   @Input() volume?: number | null;       // 0..1 (preferred) or 0..100
+  @Input() isFullscreen?: boolean | null; // desired fullscreen state
+  @Input() isMuted?: boolean | null;     // desired mute state
 
   @Input() currentVideo?: Video;
   @Input() currentScene?: Scene;
@@ -40,7 +42,6 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   playerWidth = 1280;
   playerHeight = 720;
   isPlayerReady = false;
-  isFullscreen = false;
   currentTime = 0;
   duration = 0;
 
@@ -63,6 +64,11 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
       this.seekToScene();
     }
 
+    // Handle fullscreen changes (independent of player readiness)
+    if ('isFullscreen' in changes && typeof this.isFullscreen === 'boolean') {
+      this.toggleFullscreen();
+    }
+
     // Map protocol-oriented playback inputs into player API when ready
     if (this.isPlayerReady) {
       if ('isPlaying' in changes && this.isPlaying !== undefined && this.isPlaying !== null) {
@@ -79,6 +85,9 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
       if ('volume' in changes && typeof this.volume === 'number' && !Number.isNaN(this.volume)) {
         // Server now sends 0-100 range directly, which matches YouTube API expectations
         this.setVolume(this.volume);
+      }
+      if ('isMuted' in changes && typeof this.isMuted === 'boolean') {
+        this.isMuted ? this.mute() : this.unmute();
       }
     }
   }
@@ -289,6 +298,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
 
   // Public control methods
   play() {
+    console.log('▶️ Playing video');
     if (this.isPlayerReady && this.youtubePlayer) {
       try {
         // For user-initiated play commands, don't force mute
@@ -301,9 +311,35 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
     }
   }
 
-  pause() {
+  unmute() {
+    console.log('🔊 Unmuting video');
     if (this.isPlayerReady && this.youtubePlayer) {
       try {
+        console.log('🔊 Unmuting video (user-initiated)');
+        this.youtubePlayer.unMute();
+      } catch (error) {
+        console.error('❌ Error pausing video:', error);
+      }
+    }
+  }
+
+  mute() {
+    console.log('🔇 Muting video');
+    if (this.isPlayerReady && this.youtubePlayer) {
+      try {
+        console.log('🔇 Muting video (user-initiated)');
+        this.youtubePlayer.mute();
+      } catch (error) {
+        console.error('❌ Error pausing video:', error);
+      }
+    }
+  }
+
+  pause() {
+    console.log('⏸️ Pausing video');
+    if (this.isPlayerReady && this.youtubePlayer) {
+      try {
+        console.log('⏸️ Pausing video (user-initiated)');
         this.youtubePlayer.pauseVideo();
       } catch (error) {
         console.error('❌ Error pausing video:', error);
@@ -312,8 +348,10 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   }
 
   stop() {
+    console.log('⏹️ Stopping video');
     if (this.isPlayerReady && this.youtubePlayer) {
       try {
+        console.log('⏹️ Stopping video (user-initiated)');
         this.youtubePlayer.stopVideo();
       } catch (error) {
         console.error('❌ Error stopping video:', error);
@@ -322,8 +360,10 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   }
 
   seekTo(seconds: number) {
+    console.log('🎯 Seeking to seconds:', seconds);
     if (this.isPlayerReady && this.youtubePlayer) {
       try {
+        console.log('🎯 Seeking to seconds (user-initiated):', seconds);
         this.youtubePlayer.seekTo(seconds, true);
       } catch (error) {
         console.error('❌ Error seeking video:', error);
@@ -332,8 +372,10 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   }
 
   setVolume(volume: number) {
+    console.log('🔊 Setting volume to:', volume);
     if (this.isPlayerReady && this.youtubePlayer) {
       try {
+        console.log('🔊 Setting volume to (user-initiated):', volume);
         this.youtubePlayer.setVolume(volume);
       } catch (error) {
         console.error('❌ Error setting volume:', error);
@@ -366,45 +408,18 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   }
 
   toggleFullscreen() {
-    console.log('📺 Toggling fullscreen mode');
-    if (!this.isFullscreen) {
-      this.openFullscreen();
+    console.log('🔲 Toggling fullscreen');
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().then(() => {
+        this.isFullscreen = true;
+      }).catch(err => {
+        console.error('Error attempting to enable fullscreen:', err);
+      });
     } else {
-      this.closeFullscreen();
+      document.exitFullscreen().then(() => {
+        this.isFullscreen = false;
+      });
     }
-    this.youtubePlayer?.requestFullscreen();
-  }   
-
-  closeFullscreen() {
-    const doc = document as Document & {
-      webkitExitFullscreen?: () => Promise<void>;
-      msExitFullscreen?: () => Promise<void>;
-    };
-
-    if (doc.exitFullscreen) {
-      doc.exitFullscreen();
-    } else if (doc.webkitExitFullscreen) { // Safari
-      doc.webkitExitFullscreen();
-    } else if (doc.msExitFullscreen) { // IE11
-      doc.msExitFullscreen();
-    }
-
-    this.isFullscreen = false;
-  }
-
-  openFullscreen() {
-    const elem = document.documentElement as HTMLElement & {
-      webkitRequestFullscreen?: () => Promise<void>;
-      msRequestFullscreen?: () => Promise<void>;
-    };
-    if (elem.requestFullscreen) {
-      elem.requestFullscreen();
-    } else if (elem.webkitRequestFullscreen) { /* Safari */
-      elem.webkitRequestFullscreen();
-    } else if (elem.msRequestFullscreen) { /* IE11 */
-      elem.msRequestFullscreen();
-    }
-    this.isFullscreen = true;
   }
 
 }

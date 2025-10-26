@@ -16,9 +16,7 @@
               mat-fab
               class="vrc-control-button vrc-nav-button vrc-fullscreen-button"
               (click)="onControlCommand('toggle-fullscreen')"
-              [disabled]="!isPlaying"
               aria-label="Fullscreen"
-              [attr.aria-disabled]="!isPlaying"
               [attr.aria-label]="isFullscreen ? 'Exit full screen' : 'Enter full screen'"
               [attr.aria-pressed]="isFullscreen">
               <mat-icon>{{ isFullscreen ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>

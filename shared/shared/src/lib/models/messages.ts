@@ -1,7 +1,7 @@
 // Canonical WebSocket message types for Sahar protocol
 // This file is auto-generated to ensure all protocol messages are covered and up-to-date
 
-import { ApplicationState } from '../models/application-state';
+import { ApplicationState, PlayerState } from '../models/application-state';
 import { ClientType } from './websocket-protocol';
 
 export type MessageSource = 'tv' | 'remote' | 'server';
@@ -82,12 +82,8 @@ export const CONTROL_ACTIONS = [
 
 export type ControlAction = typeof CONTROL_ACTIONS[number];
 
-export interface ControlCommandPayload extends BasePayload {
+export interface ControlCommandPayload extends BasePayload, PlayerState {
   action: ControlAction;
-  youtubeId?: string;
-  startTime?: number;
-  seekTime?: number;
-  volume?: number;
 }
 export interface ControlCommandMessage {
   msgType: 'control_command';

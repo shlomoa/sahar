@@ -6,13 +6,13 @@
 // - snapshots: getSnapshot() returns a deep copy; tests rely on comparing snapshots, not internal state
 // - navigation back behavior: backing from 'scenes' to 'videos' clears sceneId but retains videoId
 // - control: play/pause/seek/volume/mute update only if values actually change (no-op suppressed)
-// - actionConfirmation: failure sets error + fsmState='error'; success clears error and re-evaluates to 'ready' when both clients present
-// - fsmState: Tracks system readiness only ('initializing' | 'ready' | 'error'); playback state tracked in PlayerState.isPlaying
+// - actionConfirmation: failure sets error + serverState='error'; success clears error and re-evaluates to 'ready' when both clients present
+// - serverState: Tracks system readiness only ('initializing' | 'ready' | 'error'); playback state tracked in PlayerState.isPlaying
 
 import test from 'node:test';
 import { strict as assert } from 'node:assert';
 import { Fsm } from '../src/fsm';
-import { ApplicationState } from 'shared';
+import { ApplicationState, PlayerState } from 'shared';
 import { ControlCommandPayload } from 'shared';
 
 type Snapshot = ApplicationState;
@@ -112,16 +112,26 @@ test('Fsm: navigationCommand updates levels with no-op suppression', () => {
 test('Fsm: controlCommand play/pause/seek/volume/mute toggles with no-op suppression', () => {
     const fsm = new Fsm();
     const s0 = fsm.getSnapshot();
-
-    fsm.controlCommand({ action: 'play', youtubeId: 'yt1', startTime: 10 } as ControlCommandPayload);
+    const playerState0: PlayerState = { 
+        isPlaying: true,
+        isFullscreen: false,    
+        isMuted: false,
+        currentTime: 0,
+        volume: 100}  as PlayerState;
+    fsm.controlCommand({ action: 'play', ...playerState0 } as ControlCommandPayload);
     const s1 = fsm.getSnapshot();
     expectVersionBump(s0, s1);
     assert.equal(s1.player.isPlaying, true);
     // youtubeId removed from PlayerState - now derived from navigation.videoId in apps
     assert.equal(s1.player.currentTime, 10);
 
+    const playerState1: PlayerState = { isPlaying: true,
+      isFullscreen: false,
+      isMuted: false,
+      currentTime: 10,
+      volume: 100}  as PlayerState;
     // no-op repeat
-    fsm.controlCommand({ action: 'play', youtubeId: 'yt1', startTime: 10 } as ControlCommandPayload);
+    fsm.controlCommand({ action: 'play', ...playerState1 } as ControlCommandPayload);
     const s1b = fsm.getSnapshot();
     expectNoVersionChange(s1, s1b);
 
@@ -130,22 +140,42 @@ test('Fsm: controlCommand play/pause/seek/volume/mute toggles with no-op suppres
     expectVersionBump(s1b, s2);
     assert.equal(s2.player.isPlaying, false);
 
-    fsm.controlCommand({ action: 'seek', seekTime: 42 } as ControlCommandPayload);
+    const playerState3: PlayerState = { isPlaying: false,
+      isFullscreen: false,
+      isMuted: false,
+      currentTime: 0,
+      volume: 42}  as PlayerState;
+    fsm.controlCommand({ action: 'seek', ...playerState3 } as ControlCommandPayload);
     const s3 = fsm.getSnapshot();
     expectVersionBump(s2, s3);
     assert.equal(s3.player.currentTime, 42);
 
-    fsm.controlCommand({ action: 'set_volume', volume: 0.2 } as ControlCommandPayload);
+    const playerState4: PlayerState = { isPlaying: false,
+      isFullscreen: false,
+      isMuted: false,
+      currentTime: 42,
+      volume: 30}  as PlayerState;
+    fsm.controlCommand({ action: 'set_volume', ...playerState4 } as ControlCommandPayload);
     const s4 = fsm.getSnapshot();
     expectVersionBump(s3, s4);
-    assert.equal(s4.player.volume, 0.2);
+    assert.equal(s4.player.volume, 30);
 
-    fsm.controlCommand({ action: 'mute' } as ControlCommandPayload);
+    const playerState5: PlayerState = { isPlaying: false,
+      isFullscreen: false,
+      isMuted: true,
+      currentTime: 42,
+      volume: 30}  as PlayerState;
+    fsm.controlCommand({ action: 'mute', ...playerState5 } as ControlCommandPayload);
     const s5 = fsm.getSnapshot();
     expectVersionBump(s4, s5);
     assert.equal(s5.player.isMuted, true);
 
-    fsm.controlCommand({ action: 'unmute' } as ControlCommandPayload);
+    const playerState6: PlayerState = { isPlaying: false,
+      isFullscreen: false,
+      isMuted: true,
+      currentTime: 42,
+      volume: 30}  as PlayerState;
+    fsm.controlCommand({ action: 'unmute', ...playerState6 } as ControlCommandPayload);
     const s6 = fsm.getSnapshot();
     expectVersionBump(s5, s6);
     assert.equal(s6.player.isMuted, false);

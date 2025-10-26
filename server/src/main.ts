@@ -11,6 +11,7 @@ import {
   RegisterMessage,
   NavigationCommandMessage,
   ControlCommandMessage,
+  ControlCommandPayload,
   ActionConfirmationMessage,
   StateSyncMessage,
   AckMessage,
@@ -22,7 +23,8 @@ import {
   ClientType
 } from 'shared';
 import { Fsm } from './fsm';
-import { networkInterfaces } from 'os';
+import { getBestHostIP } from './utils/host-ip';
+import { HttpService } from './services/http.service';
 
 // --- Structured Logger (shared) ---------------------------------------------------------------
 const logger = createLogger({ component: 'server' });
@@ -43,59 +45,6 @@ logInfo('server_starting', { dir: __dirname }, 'Server starting up');
 
 // Create Express application
 const app = express();
-
-// ---------------------------------------------------------------------------------
-// Host IP Selection (integrated from validation/tests/get_host_ip/host-ip.ts)
-// Provides a best-effort externally usable IP for QR codes / remote pairing.
-// ---------------------------------------------------------------------------------
-type _Family = 'IPv4' | 'IPv6';
-interface _Addr { address: string; family: _Family | number; internal: boolean; cidr?: string | null }
-
-function _isLoopback(addr: string): boolean { return addr === '::1' || addr.startsWith('127.'); }
-function _isLinkLocal(addr: string): boolean { return addr.startsWith('169.254.') || addr.toLowerCase().startsWith('fe80:'); }
-function _isPrivateIPv4(addr: string): boolean {
-  return addr.startsWith('10.') || addr.startsWith('192.168.') || /^172\.(1[6-9]|2\d|3[0-1])\./.test(addr);
-}
-function _isGlobalIPv6(addr: string): boolean {
-  const lower = addr.toLowerCase();
-  return !lower.startsWith('fe80:') && !(lower.startsWith('fc') || lower.startsWith('fd')) && addr.includes(':');
-}
-function _normalizeFamily(f: _Family | number): _Family { return (f === 6 || f === 'IPv6') ? 'IPv6' : 'IPv4'; }
-
-let _cachedHostIP: { ip: string; ts: number } | null = null;
-const HOST_IP_CACHE_TTL_MS = 30_000; // refresh every 30s at most
-
-export function getBestHostIP(): string {
-  const now = Date.now();
-  if (_cachedHostIP && (now - _cachedHostIP.ts) < HOST_IP_CACHE_TTL_MS) {
-    return _cachedHostIP.ip;
-  }
-  const nets = networkInterfaces();
-  const candidates: { iface: string; addr: _Addr; score: number }[] = [];
-  for (const [ifname, infos] of Object.entries(nets)) {
-    for (const info of (infos ?? []) as _Addr[]) {
-      const fam = _normalizeFamily(info.family);
-      const address = info.address;
-      if (info.internal || _isLoopback(address) || _isLinkLocal(address)) continue;
-      let score = 0;
-      if (fam === 'IPv4') {
-        score += 5;
-        if (_isPrivateIPv4(address)) score += 5; // prefer private LAN over public/other
-      } else if (fam === 'IPv6') {
-        if (_isGlobalIPv6(address)) score += 3; else continue; // skip ULA / link-local
-      }
-      if (/^(en|eth|wlan|wifi|lan|Ethernet|Wi-?Fi)/i.test(ifname)) score += 1;
-      candidates.push({ iface: ifname, addr: info, score });
-    }
-  }
-  if (candidates.length === 0) {
-    _cachedHostIP = { ip: '127.0.0.1', ts: now };
-    return _cachedHostIP.ip;
-  }
-  candidates.sort((a, b) => b.score - a.score);
-  _cachedHostIP = { ip: candidates[0].addr.address, ts: now };
-  return _cachedHostIP.ip;
-}
 
 // ----------------------------------------------------------------------------
 // Task 1.6 / 1.7 Support: Dev reverse proxies & static asset passthrough
@@ -155,6 +104,7 @@ const markReady = () => { isReady = true; };
 // --- Message helpers ---
 const makeAck = (source: 'server'): AckMessage => ({ msgType: 'ack', timestamp: Date.now(), source, payload: {msgType: 'ack'} });
 const makeStateSync = (source: 'server'): StateSyncMessage => ({ msgType: 'state_sync', timestamp: Date.now(), source, payload: {msgType: 'ack', ...fsm.getSnapshot() }});
+const makeControlCommand = (source: 'server', payload: ControlCommandPayload): ControlCommandMessage => ({ msgType: 'control_command', timestamp: Date.now(), source, payload });
 const makeError = (source: 'server', code: string, message: string): ErrorMessage => ({ msgType: 'error', timestamp: Date.now(), source, payload: {msgType: 'error', code, message }});
 
 // --- Error sending helper ---
@@ -285,6 +235,7 @@ function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebS
     }
 
     case 'control_command': {
+      logInfo('validating control_command');
       const payload = (raw as any).payload;
       if (!isPlainObject(payload)) {
         logError('invalid_message', { code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Control missing payload' });
@@ -295,19 +246,21 @@ function validateMessage(raw: any, isRegistered: boolean): { ok: true; msg: WebS
         logError('invalid_message', { code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid control action' });
         return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid control action' };
       }
-      const startTime = typeof payload.startTime === 'number' ? payload.startTime : undefined;
-      const seekTime = typeof payload.seekTime === 'number' ? payload.seekTime : undefined;
+
+      const currentTime = typeof payload.currentTime === 'number' ? payload.currentTime : undefined;
+      if (currentTime !== undefined && currentTime < 0) {
+        logError('invalid_message', { code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid currentTime' });
+        return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid currentTime' };
+      }
       const volume = typeof payload.volume === 'number' ? payload.volume : undefined;
       if (volume !== undefined && (volume < 0 || volume > 100)) {
         logError('invalid_message', { code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid volume' });
         return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid volume' };
       }
-      const safePayload: any = { action };
-      if (startTime !== undefined) safePayload.startTime = startTime;
-      if (seekTime !== undefined) safePayload.seekTime = seekTime;
-      if (volume !== undefined) safePayload.volume = volume;
-      logInfo('control_command', { action, ...(startTime !== undefined ? { startTime } : {}), ...(seekTime !== undefined ? { seekTime } : {}), ...(volume !== undefined ? { volume } : {}) });
-      return { ok: true, msg: { ...base, payload: safePayload } as WebSocketMessage };
+
+      logInfo('validated control_command', { action, ...payload });
+      const controlMsg = { ...base, action, source: 'server', timestamp: Date.now(), payload: payload } as ControlCommandMessage;
+      return { ok: true, msg: controlMsg as WebSocketMessage };
     }
 
     case 'action_confirmation': {
@@ -508,7 +461,7 @@ wss.on('connection', (ws: WebSocket) => {
         sendError(ws, ERROR_CODES.CLIENT_TYPE_MISMATCH, 'A Remote client is already connected.', { close: true, meta: { attempted: 'remote' } });
         return;
       }
-  clients.set(ws, { clientType, deviceId, missedAckVersions: new Set<number>(), ackRetryCount: 0 });
+      clients.set(ws, { clientType, deviceId, missedAckVersions: new Set<number>(), ackRetryCount: 0 });
       fsm.registerClient(clientType, deviceId);
       // Ack the registration and send an immediate authoritative state_sync
       // directly to the registering client. This guarantees newly-joined
@@ -606,10 +559,49 @@ wss.on('connection', (ws: WebSocket) => {
       }
       case 'control_command': {
         const ctl = msg as ControlCommandMessage;
-        fsm.controlCommand(ctl.payload);
+        
+        // Verify sender is Remote client
+        const senderMeta = clients.get(ws);
+        if (!senderMeta || senderMeta.clientType !== 'remote') {
+          sendError(ws, ERROR_CODES.CLIENT_TYPE_MISMATCH, 'Only remote may send control_command');
+          logError('control_command_from_non_remote', { from: senderMeta?.deviceId, clientType: senderMeta?.clientType });
+          throw new Error('Only remote may send control_command');
+        }
+        
+        // Find TV client to forward the command
+        let tvClient: WebSocket | null = null;
+        for (const [socket, meta] of clients.entries()) {
+          if (meta.clientType === 'tv' && socket.readyState === WebSocket.OPEN) {
+            tvClient = socket;
+            break;
+          }
+        }
+        
+        if (!tvClient) {
+          // TV is not connected - this is a validation error by the Remote client
+          // The Remote should have checked applicationState.clientsConnectionState.tv before sending
+          logError('control_command_no_tv', { 
+            action: ctl.payload.action, 
+            from: senderMeta.deviceId,
+            tvConnectionState: fsm.getSnapshot().clientsConnectionState.tv
+          });
+          sendError(ws, ERROR_CODES.INVALID_COMMAND, 'TV client not connected - cannot execute control command');
+          break;
+        }
+        
+        // Ack the Remote client
         ws.send(JSON.stringify(makeAck('server')));
-        broadcastStateIfChanged();
-        logInfo('control_command_handled', { action: ctl.payload.action });
+        
+        // Forward the control command to TV using the helper
+        tvClient.send(JSON.stringify(makeControlCommand('server', ctl.payload)));
+        logInfo('control_command_forwarded_to_tv', { 
+          action: ctl.payload.action,
+          from: senderMeta.deviceId,
+          to: clients.get(tvClient)?.deviceId
+        });
+        
+        // TODO: Wait for action_confirmation from TV before updating FSM
+        // For now, keeping current behavior for compatibility
         break;
       }
       case 'action_confirmation': {
@@ -718,61 +710,9 @@ wss.on('connection', (ws: WebSocket) => {
 app.use(express.json());
 
 // Health endpoints must be registered early so they are not captured by Angular catch-all routes
-// Liveness endpoint (process up)
-app.get('/live', (req: Request, res: Response) => {
-  logInfo('http_request', { path: req.path, method: req.method });
-  res.status(200).json({ status: 'live' });
-});
-
-// Readiness endpoint (infrastructure ready to accept clients)
-app.get('/ready', (req: Request, res: Response) => {
-  logInfo('http_request', { path: req.path, method: req.method });
-  if (isReady) return res.status(200).json({ status: 'ready' });
-  return res.status(503).json({ status: 'not_ready' });
-});
-
-// Enriched health snapshot (debug / monitoring)
-app.get('/health', (req: Request, res: Response) => {
-  logInfo('http_request', { path: req.path, method: req.method });
-  const wsConnections = [...wss.clients].length;
-  const registered = [...clients.values()].map(c => ({ clientType: c.clientType, deviceId: c.deviceId, lastHeartbeat: c.lastHeartbeat ?? null }));
-  const fsmSnap = fsm.getSnapshot();
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptimeSeconds: process.uptime(),    
-    wsConnections,
-    registeredClients: registered,
-    navigationLevel: fsmSnap.navigation.currentLevel,
-    playerState: {
-      isPlaying: fsmSnap.player.isPlaying,
-      isFullscreen: fsmSnap.player.isFullscreen,
-      currentTime: fsmSnap.player.currentTime,
-      version: fsmSnap.version
-    }
-  });
-});
-
-// Host IP endpoint for clients needing a resolvable LAN address (e.g., QR generation)
-app.get('/host-ip', (req: Request, res: Response) => {
-  logInfo('http_request', { path: req.path, method: req.method });
-  const ip = getBestHostIP();
-  res.json({ ip, port: WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT });
-});
-
-// Content API endpoint - Phase 1: HTTP Content Delivery Separation
-// Returns the flat catalog structure (performers, videos, scenes)
-// This allows clients to fetch content once via HTTP instead of receiving it in every state_sync
-app.get('/api/content/catalog', (req: Request, res: Response) => {
-  logInfo('http_request', { path: req.path, method: req.method });
-  const catalog = fsm.getCatalogData();
-  logInfo('catalog_served', { 
-    performers: catalog.performers.length, 
-    videos: catalog.videos.length, 
-    scenes: catalog.scenes.length 
-  });
-  res.json(catalog);
-});
+// HTTP Service handles: /live, /ready, /health, /host-ip, /api/content/catalog
+const httpService = new HttpService(fsm, wss, clients, () => isReady);
+httpService.setupRoutes(app);
 
 app.use('/.well-known', express.static('public/.well-known', { dotfiles: 'allow' }))
 app.use(express.static('public'));

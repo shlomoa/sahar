@@ -139,7 +139,7 @@ export class WebSocketService extends WebSocketBaseService {
           this.playerState.isPlaying = false;
           break;
         case 'seek':
-          this.playerState.currentTime = message.payload.seekTime ?? this.playerState.currentTime;
+          this.playerState.currentTime = message.payload.currentTime ?? this.playerState.currentTime;
           break;
         case 'set_volume':
           if (typeof message.payload.volume === 'number') this.playerState.volume = message.payload.volume;

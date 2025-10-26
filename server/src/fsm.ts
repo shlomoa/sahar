@@ -11,7 +11,7 @@ import {
 } from 'shared';
 import { catalogData } from './mock-data';
 
-export type FsmState = 'initializing' | 'ready' | 'error';
+export type ServerState = 'initializing' | 'ready' | 'error';
 
 const logger = createLogger({ component: 'server-fsm' });
 const logInfo = (event: string, meta?: any, msg?: string) => logger.info(event, meta, msg);
@@ -25,8 +25,8 @@ const logError = (event: string, meta?: any, msg?: string) => logger.error(event
  * - Provides pure snapshot (defensive copy) so callers cannot mutate internal state
  * - Central place to extend future invariants (heartbeat, recovery, etc.) without leaking details
  * 
- * Note: FsmState tracks system readiness only. Playback state (playing/paused) is tracked
- * in ApplicationState.player.isPlaying and should not be duplicated in FsmState.
+ * Note: ServerState tracks system readiness only. Playback state (playing/paused) is tracked
+ * in ApplicationState.player.isPlaying and should not be duplicated in ServerState.
  */
 
 interface ConnectedClients {
@@ -38,7 +38,7 @@ export class Fsm {
   private state: ApplicationState;
   private dirty = false; // tracks whether a mutation occurred in current handler
   private connectedClients: ConnectedClients = {};
-  fsmState: FsmState = 'initializing';
+  serverState: ServerState = 'initializing';
   
   // Phase 3: Catalog stored separately, not in ApplicationState
   private catalogData: CatalogData;
@@ -168,23 +168,23 @@ export class Fsm {
   controlCommand(payload: ControlCommandPayload) {
     logInfo('fsm_control_command', { payload }, 'Processing control command');
     const before = JSON.stringify(this.state.player);
-    const { action, startTime, seekTime, volume } = payload;
+    const { msgType, action, ...playerState } = payload;
     switch (action) {
       case 'play': {
         // youtubeId removed from PlayerState - derived from navigation.videoId in apps
         if (!this.state.player.isPlaying) this.state.player.isPlaying = true;
-        if (typeof startTime === 'number' && this.state.player.currentTime !== startTime) this.state.player.currentTime = startTime;
+        if (typeof playerState.currentTime === 'number' && this.state.player.currentTime !== playerState.currentTime) this.state.player.currentTime = playerState.currentTime;
         break; }
       case 'pause': {
         if (this.state.player.isPlaying) this.state.player.isPlaying = false;
         break; }
       case 'seek': {
-        if (typeof seekTime === 'number' && this.state.player.currentTime !== seekTime) this.state.player.currentTime = seekTime;
+        if (typeof playerState.currentTime === 'number' && this.state.player.currentTime !== playerState.currentTime) this.state.player.currentTime = playerState.currentTime;
         break; }
       case 'set_volume': {
-        if (typeof volume === 'number') {
-          if (this.state.player.volume !== volume) {
-            this.state.player.volume = volume;
+        if (typeof playerState.volume === 'number') {
+          if (this.state.player.volume !== playerState.volume) {
+            this.state.player.volume = playerState.volume;
           }
         }
         break; }
@@ -214,17 +214,17 @@ export class Fsm {
   actionConfirmation(status: ActionConfirmationStatus, errorMessage?: string) {
     logInfo('fsm_action_confirmation', { status, errorMessage }, 'Processing action confirmation');
     const beforeErr = this.state.error ? this.state.error.code + this.state.error.message : 'none';
-    const beforeState = this.fsmState;
+    const beforeState = this.serverState;
     if (status === 'failure') {
       logError('fsm_action_confirmation', { errorMessage }, 'Action confirmation indicates failure');
       this.state.error = { code: 'COMMAND_FAILED', message: errorMessage || 'Unknown failure' };
-      this.fsmState = 'error';
+      this.serverState = 'error';
     } else if (status === 'success' && this.state.error) {
       delete this.state.error;
-      if (this.fsmState === 'error') this.fsmState = 'ready'; // revert to ready if both clients present
+      if (this.serverState === 'error') this.serverState = 'ready'; // revert to ready if both clients present
       this.recalcFsm();
     }
-    if ((this.state.error ? this.state.error.code + this.state.error.message : 'none') !== beforeErr || beforeState !== this.fsmState) {
+    if ((this.state.error ? this.state.error.code + this.state.error.message : 'none') !== beforeErr || beforeState !== this.serverState) {
       this.dirty = true;
       this.commit();
     }
@@ -234,13 +234,13 @@ export class Fsm {
     logInfo('fsm_recalc', {}, 'Recalculating FSM state based on connected clients');
     const both = this.state.clientsConnectionState.tv === 'connected' && 
                  this.state.clientsConnectionState.remote === 'connected';
-    if (both && this.fsmState === 'initializing') {
+    if (both && this.serverState === 'initializing') {
       logInfo('fsm_recalc', {}, 'Both clients connected, transitioning to ready state');
-      this.fsmState = 'ready';
-    } else if (!both && this.fsmState !== 'initializing' && this.fsmState !== 'error') {
+      this.serverState = 'ready';
+    } else if (!both && this.serverState !== 'initializing' && this.serverState !== 'error') {
       logInfo('fsm_recalc', {}, 'One or more clients disconnected, transitioning to initializing state');
       // Only regress to initializing if not in an error state (preserve error until cleared)
-      this.fsmState = 'initializing';
+      this.serverState = 'initializing';
     }
   }
 
