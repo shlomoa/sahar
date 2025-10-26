@@ -56,15 +56,24 @@ See the canonical architecture details in ARCHITECTURE.md:
 ```
 server/
 ├── src/
-│   ├── main.ts           # Express + WebSocket server entry point
-│   ├── fsm.ts            # Finite State Machine (authoritative state)
-│   └── mock-data.ts      # Catalog initialization data
+│   ├── main.ts                              # Server bootstrap & orchestration
+│   ├── fsm.ts                               # Finite State Machine (authoritative state)
+│   ├── mock-data.ts                         # Catalog initialization data
+│   ├── services/
+│   │   ├── http.service.ts                  # HTTP endpoint handlers
+│   │   └── server-websocket.service.ts      # WebSocket connection & message handling
+│   └── utils/
+│       └── host-ip.ts                       # Host IP resolution utility
 ├── tests/
-│   ├── fsm.test.ts       # FSM unit tests
-│   └── host-ip.test.ts   # Host IP helper tests
-├── package.json          # Dependencies and scripts
-└── tsconfig.*.json       # TypeScript configurations
+│   ├── fsm.test.ts                          # FSM unit tests
+│   └── host-ip.test.ts                      # Host IP helper tests
+├── package.json                             # Dependencies and scripts
+└── tsconfig.*.json                          # TypeScript configurations
 ```
+
+**For detailed service architecture, implementation specifics, and usage examples, see:**
+- [IMPLEMENTATION.md - Server Architecture](../IMPLEMENTATION.md#server-architecture---service-extraction-completed-2025-10-26)
+- [ARCHITECTURE.md - System Components](../ARCHITECTURE.md#2-system-components--architecture-diagram)
 
 ## 🔌 Endpoints
 

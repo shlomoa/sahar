@@ -141,6 +141,115 @@ Prerequisites
 - TV/Remote dev: When developing with SSR, each app runs `ng serve --ssr` on its own dev port (TV: 4203, Remote: 4202).
 - TV/Remote prod: `ng build` produces `apps/<app>/dist/<name>/{browser,server}`.
 
+### Server Architecture - Service Extraction (Completed 2025-10-26)
+
+The server has been refactored into clean, well-separated services following **Single Responsibility Principle**:
+
+#### **main.ts** - Bootstrap & Orchestration (256 lines)
+**Responsibilities:**
+- Initialize FSM with application state
+- Configure Express application  
+- Instantiate and wire services (HttpService, ServerWebSocketService)
+- Serve static files for TV and Remote apps
+- Graceful shutdown handling
+
+**Does NOT contain:** Business logic, endpoint handlers, or protocol implementation
+
+```typescript
+// Service initialization
+const fsm = new Fsm();
+const clients = new Map<WebSocket, ClientMetadata>();
+
+const wsService = new ServerWebSocketService(wss, fsm, clients);
+wsService.initialize();
+
+const httpService = new HttpService(fsm, wss, clients, () => isReady);
+httpService.setupRoutes(app);
+```
+
+#### **services/http.service.ts** - HTTP Endpoint Handlers (107 lines)
+**Responsibilities:**
+- Health/readiness probes: `/live`, `/ready`, `/health`
+- Utility endpoints: `/host-ip` (for QR code generation)
+- API endpoints: `/api/content/catalog`
+
+**Dependencies:** Fsm (read-only), WebSocketServer (for client stats), clients Map
+
+#### **services/server-websocket.service.ts** - WebSocket Handling (639 lines)
+**Responsibilities:**
+- Connection lifecycle management (accept, track, disconnect)
+- Message routing and validation (9 message types: register, navigation_command, control_command, action_confirmation, ack, heartbeat, state_sync, error, data-deprecated)
+- State broadcasting with ACK-gated queue
+- Protocol enforcement (registration, uniqueness, "Perform or Exit" ACK policy)
+
+**Key Features:**
+- **"Perform or Exit" ACK Policy**: Clients MUST ACK `state_sync` within 5s or face forced disconnect (WebSocket close code 1008: Policy Violation per RFC 6455)
+- **ACK-gated broadcast queue**: Waits for all clients to ACK before sending next state update
+- **Pending collapse mechanism**: Intermediate state changes collapse during in-flight broadcasts (ensures state convergence)
+- **Version tracking**: Monotonic counter ensures state consistency and enables idempotency
+
+**ClientMetadata** (Simplified 2025-10-26):
+```typescript
+interface ClientMetadata {
+  clientType: 'tv' | 'remote';
+  deviceId: string;
+  lastHeartbeat?: number;  // Only for health monitoring
+}
+// Removed fields: lastStateAckVersion, missedAckVersions, ackRetryCount (graceful degradation artifacts)
+```
+
+**Dependencies:** Fsm (read-write), WebSocketServer, clients Map
+
+**Message Flow Pattern** (Mirrors WebSocketBaseService structure as internal BKM):
+```typescript
+class ServerWebSocketService {
+  // Connection Management
+  private setupConnectionHandling() { ... }
+  private handleNewConnection(ws: WebSocket) { ... }
+  private handleDisconnect(ws: WebSocket) { ... }
+  
+  // Message Routing (dispatch to protocol handlers)
+  private handleMessage(ws: WebSocket, data: RawData) { ... }
+  
+  // Protocol Handlers
+  private handleRegister(ws: WebSocket, msg: RegisterMessage) { ... }
+  private handleNavigationCommand(ws: WebSocket, msg: NavigationCommandMessage) { ... }
+  private handleControlCommand(ws: WebSocket, msg: ControlCommandMessage) { ... }
+  private handleActionConfirmation(ws: WebSocket, msg: ActionConfirmationMessage) { ... }
+  private handleAck(ws: WebSocket, msg: AckMessage) { ... }
+  private handleHeartbeat(ws: WebSocket) { ... }
+  
+  // Broadcast Logic (ACK-gated queue)
+  private broadcastStateIfChanged() { ... }
+  private performBroadcast(version: number) { ... }
+  private flushPending() { ... }
+}
+```
+
+#### **fsm.ts** - Finite State Machine (Unchanged)
+**Responsibilities:**
+- Owns authoritative ApplicationState with versioned snapshots
+- Provides mutation methods for navigation, player control, client registration
+- Stores catalog privately (not part of ApplicationState)
+
+**Key Methods:**
+- `registerClient(clientType, deviceId)` - Client registration
+- `deregisterClient(clientType)` - Client cleanup  
+- `navigationCommand(action, targetId?)` - Navigation mutations
+- `controlPlayer(payload)` - Player control mutations
+- `actionConfirmation(status, errorMessage?)` - TV feedback handling
+- `getSnapshot()` - Returns current ApplicationState with version
+- `getCatalogData()` - Returns catalog (HTTP-only, not in state)
+
+**Refactoring Benefits:**
+- ✅ **Improved Maintainability**: Each service has clear, focused responsibilities
+- ✅ **Better Testability**: Services can be tested independently
+- ✅ **Reduced Complexity**: main.ts reduced from ~960 lines to 256 lines
+- ✅ **Code Reusability**: Services follow established patterns (WebSocketBaseService structure)
+- ✅ **100% Backward Compatible**: All functionality preserved, no breaking changes
+
+---
+
 ### ApplicationState definition and implementation
 The state is maintained and managed in the server FSM. Clients receive authoritative state snapshots via `state_sync` messages after each committed change.
 
