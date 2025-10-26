@@ -21,7 +21,7 @@ export class HttpService {
   constructor(
     private fsm: Fsm,
     private wss: WebSocketServer,
-    private clients: Map<WebSocket, { clientType: ClientType; deviceId: string; lastStateAckVersion?: number; lastHeartbeat?: number; missedAckVersions?: Set<number>; ackRetryCount?: number }>,
+    private clients: Map<WebSocket, { clientType: ClientType; deviceId: string; lastHeartbeat?: number }>,
     private isReadyGetter: () => boolean
   ) {}
 
