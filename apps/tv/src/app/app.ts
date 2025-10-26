@@ -150,30 +150,6 @@ export class App implements OnInit, OnDestroy {
       // Update player state from state_sync (create new object for change detection)
       if (state?.player) {
         this.playerState = { ...state.player };
-        
-        // Also directly call video player methods for immediate execution
-        if (this.videoPlayer && this.videoPlayer.isPlayerReady) {
-          if (state.player.isPlaying) {
-            this.videoPlayer.play();
-          } else {
-            this.videoPlayer.pause();
-          }
-          
-          if (typeof state.player.volume === 'number') {
-            this.videoPlayer.setVolume(state.player.volume);
-          }
-          
-          if (state.player.isMuted) {
-            this.videoPlayer.mute();
-          } else {
-            this.videoPlayer.unmute();
-          }
-
-          if (state.player.isFullscreen) {
-            this.videoPlayer.toggleFullscreen();
-          }
-          
-        }
       }
       
       console.log('📺 TV: Application state updated:', {
@@ -217,28 +193,6 @@ export class App implements OnInit, OnDestroy {
       // Update local player state - create NEW object to trigger Angular change detection
       this.playerState = { ...updatedPlayerState };
       
-      // Directly call video player methods to ensure immediate execution
-      if (this.videoPlayer && this.videoPlayer.isPlayerReady) {
-        if (updatedPlayerState.isPlaying) {
-          this.videoPlayer.play();
-        } else {
-          this.videoPlayer.pause();
-        }
-        
-        if (typeof updatedPlayerState.volume === 'number') {
-          this.videoPlayer.setVolume(updatedPlayerState.volume);
-        }
-        
-        if (updatedPlayerState.isMuted) {
-          this.videoPlayer.mute();
-        } else {
-          this.videoPlayer.unmute();
-        }
-        
-        if (typeof updatedPlayerState.currentTime === 'number') {
-          this.videoPlayer.seekTo(updatedPlayerState.currentTime);
-        }
-      }
     });
     this.subscriptions.push(playerStateSub);
 
