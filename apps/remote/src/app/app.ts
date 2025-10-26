@@ -314,7 +314,7 @@ export class App implements OnInit, OnDestroy {
         });
         break;
       case 'toggle-mute':
-        playerState
+        playerState.isMuted = !playerState.isMuted;
         this.webSocketService.sendControlCommand({
           msgType: 'control_command',          
           ...playerState

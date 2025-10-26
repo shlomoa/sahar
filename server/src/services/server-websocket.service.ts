@@ -12,8 +12,7 @@ import {
   ControlCommandPayload,
   WEBSOCKET_CONFIG,
   ERROR_CODES,
-  NAVIGATION_ACTION_SET,
-  CONTROL_ACTION_SET,
+  NAVIGATION_ACTION_SET,  
   ClientType
 } from 'shared';
 import { Fsm } from '../fsm';
@@ -312,15 +311,27 @@ export class ServerWebSocketService {
       return;
     }
     
+    // ✅ Update FSM state (optimistic update)
+    this.fsm.controlCommand(ctl.payload);
+
     // Ack the Remote client
     ws.send(JSON.stringify(this.makeAck('server')));
-    
+
+    logInfo('control_command_acknowledged', { from: senderMeta.deviceId });
+
     // Forward the control command to TV
     tvClient.send(JSON.stringify(this.makeControlCommand('server', ctl.payload)));
+
     logInfo('control_command_forwarded_to_tv', {       
       from: senderMeta.deviceId,
       to: this.clients.get(tvClient)?.deviceId
     });
+    
+    const after = this.fsm.getSnapshot();
+    logInfo('fsm_after_control', { version: after.version, player: after.player });
+    
+    // ✅ Broadcast updated state to all clients
+    this.broadcastStateIfChanged();
   }
 
   private handleActionConfirmation(ws: WebSocket, confirm: ActionConfirmationMessage): void {
@@ -644,19 +655,16 @@ export class ServerWebSocketService {
       }
 
       case 'control_command': {
-        const payload = (raw as any).payload;
+        const payload = (raw as any).payload as ControlCommandPayload;
         if (!isPlainObject(payload)) {
           return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid control payload' };
         }
-        const action = asString(payload.action, 100);
-        if (!action || !CONTROL_ACTION_SET.has(action as any)) {
-          return { ok: false, code: ERROR_CODES.INVALID_COMMAND, reason: 'Invalid control action' };
-        }
-        const sanitized: any = { action };
-        if (payload.seekTime !== undefined) sanitized.seekTime = asNumber(payload.seekTime);
-        if (payload.volumeLevel !== undefined) sanitized.volumeLevel = asNumber(payload.volumeLevel);
+        const sanitized: any = { };
+        if (payload.currentTime !== undefined) sanitized.currentTime = asNumber(payload.currentTime);
+        if (payload.volume !== undefined) sanitized.volume = asNumber(payload.volume);
         if (payload.isMuted !== undefined) sanitized.isMuted = asBoolean(payload.isMuted);
         if (payload.isFullscreen !== undefined) sanitized.isFullscreen = asBoolean(payload.isFullscreen);
+        if (payload.isPlaying !== undefined) sanitized.isPlaying = asBoolean(payload.isPlaying);
         base.payload = sanitized;
         return { ok: true, msg: base as WebSocketMessage };
       }

@@ -168,43 +168,13 @@ export class Fsm {
   controlCommand(payload: ControlCommandPayload) {
     logInfo('fsm_control_command', { payload }, 'Processing control command');
     const before = JSON.stringify(this.state.player);
-    const { msgType, ...playerState } = payload;
-    this.state.player = playerState
-    /*
-    // Code for handling individual change:
-    const changed = diffProps(this.state.player, playerState);
-    if (Object.keys(changed).length > 1) {
-      logError('fsm_control_command', { changed }, 'Multiple player state properties changed');
-    }
-    for (const key of typedKeys(changed)) {
-      const rec = changed[key];
-      if (!rec) continue; // because it's Partial<...>
+    const { msgType, ...playerState } = payload; 
+    this.state.player = playerState;
     
-      switch (key) {
-        case 'isPlaying': {
-          const { previous, current } = rec as Change<PlayerState['isPlaying']>;
-          if (previous)
-            // ...handle isPlaying change
-          break;
-        }
-        case 'isMuted': {
-          const { previous, current } = rec as Change<PlayerState['isMuted']>;
-          // ...handle isMuted change
-          break;
-        }
-        case 'volume': {
-          const { previous, current } = rec as Change<PlayerState['volume']>;
-          // ...handle volume change
-          break;
-        }
-      
-      }
-      */
-    
-  
     if (JSON.stringify(this.state.player) !== before) {
       this.dirty = true;
       this.commit();
+      logInfo('fsm_control_command_complete', { playerState: this.state.player });
     }
   }
 
@@ -248,20 +218,3 @@ export class Fsm {
     }
   }
 }
-/*
-type Change<T> = { previous: T; current: T };
-type ChangesOf<T> = Partial<Record<keyof T, { previous: T[keyof T]; current: T[keyof T] }>>;
-const typedKeys = <T extends object>(o: T) => Object.keys(o) as (keyof T)[];
-
-export function diffProps<T extends object>(prev: T | null | undefined, curr: T | null | undefined): ChangesOf<T> {
-  const result: ChangesOf<T> = {};
-  if (!prev || !curr) return result;
-
-  (Object.keys(curr) as (keyof T)[]).forEach(k => {
-    if (prev[k] !== curr[k]) {
-      result[k] = { previous: prev[k], current: curr[k] };
-    }
-  });
-  return result;
-}
-  */

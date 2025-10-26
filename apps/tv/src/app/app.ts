@@ -176,7 +176,7 @@ export class App implements OnInit, OnDestroy {
     this.subscriptions.push(connectionSub);
 
     // Substribe to player state updates
-    const playerStateSub = this.webSocketService.appPlayerState.subscribe(updatedPlayerState => {
+    const playerStateSub = (this.webSocketService as any).playerState$.subscribe((updatedPlayerState: PlayerState) => {
       
       if (!updatedPlayerState) {
         console.log('📺 TV: Player state update received: null playerState');
