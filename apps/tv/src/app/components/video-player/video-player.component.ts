@@ -109,7 +109,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   }
   
   // Get YouTube thumbnail for current video
-  getVideoThumbnail(quality: YouTubeThumbnailImageQuality = 'hqdefault'): string | null {
+  getVideoThumbnail(quality: YouTubeThumbnailImageQuality = 'default'): string | null {
     const videoId = this.getYouTubeId();
     return videoId ? getYoutubeThumbnailUrl(videoId, quality) : null;
   }

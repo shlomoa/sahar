@@ -98,6 +98,7 @@ export type ActionConfirmationStatus = 'success' | 'failure';
 export interface ActionConfirmationPayload extends BasePayload {
   status: ActionConfirmationStatus;
   errorMessage?: string;
+  playerState?: PlayerState;  // ✅ Actual player state after executing command
 }
 export interface ActionConfirmationMessage {
   msgType: 'action_confirmation';

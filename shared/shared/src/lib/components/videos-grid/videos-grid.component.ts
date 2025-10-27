@@ -4,7 +4,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Video } from '../../models/video-navigation';
-import { getYoutubeVideoId, getYoutubeThumbnailUrl } from '../../utils/youtube-helpers';
+import { getYoutubeVideoId, getYoutubeThumbnailUrl, YouTubeThumbnailImageQuality } from '../../utils/youtube-helpers';
 import { ClientType } from '../../models';
 
 @Component({
@@ -62,7 +62,7 @@ export class SharedVideosGridComponent {
   }
 
   // Calculate YouTube thumbnail URL from video URL
-  getVideoThumbnail(video: Video, quality: 'default' | 'mqdefault' | 'hqdefault' | 'sddefault' | 'maxresdefault' = 'hqdefault'): string | null {
+  getVideoThumbnail(video: Video, quality: YouTubeThumbnailImageQuality = 'default'): string | null {
     const videoId = getYoutubeVideoId(video.url);
     return videoId ? getYoutubeThumbnailUrl(videoId, quality) : null;
   }

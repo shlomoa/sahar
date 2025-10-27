@@ -200,6 +200,14 @@ export class WebSocketService extends WebSocketBaseService {
   }
 
   public sendActionConfirmation(status: ActionConfirmationStatus, errorMessage?: string): void {
-    this.sendByType('action_confirmation', { status, ...(errorMessage ? { errorMessage } : {}) } as ActionConfirmationPayload);
+    // Include current player state in confirmation so server can update FSM
+    const currentState = this.playerState$.value;
+    const payload: ActionConfirmationPayload = { 
+      msgType: 'action_confirmation',
+      status, 
+      ...(errorMessage ? { errorMessage } : {}),
+      ...(currentState ? { playerState: currentState } : {})
+    };
+    this.sendByType('action_confirmation', payload);
   }
 }

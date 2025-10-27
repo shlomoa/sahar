@@ -335,10 +335,22 @@ export class ServerWebSocketService {
   }
 
   private handleActionConfirmation(ws: WebSocket, confirm: ActionConfirmationMessage): void {
+    // Update FSM with actual player state from TV (if provided)
+    if (confirm.payload.playerState) {
+      this.fsm.controlCommand({
+        msgType: 'control_command',
+        ...confirm.payload.playerState
+      });
+    }
+    
+    // Handle error state
     this.fsm.actionConfirmation(confirm.payload.status, confirm.payload.errorMessage);
     ws.send(JSON.stringify(this.makeAck('server')));
     this.broadcastStateIfChanged();
-    logInfo('action_confirmation_received', { status: confirm.payload.status });
+    logInfo('action_confirmation_received', { 
+      status: confirm.payload.status,
+      playerStateUpdated: !!confirm.payload.playerState
+    });
   }
 
   private handleAck(ws: WebSocket, _ackMsg: AckMessage): void {
