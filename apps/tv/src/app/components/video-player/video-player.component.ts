@@ -1,9 +1,10 @@
-import { Component, Input, Output, EventEmitter, OnInit, ViewChild, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, ViewChild, OnChanges, SimpleChanges, SimpleChange } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { YouTubePlayerModule, YouTubePlayer } from '@angular/youtube-player';
-import { Video, Scene, YouTubeThumbnailImageQuality, PlayerState } from 'shared';
+import { Video, Scene, PlayerState, isEqualPlayerState } from 'shared';
 import { getYoutubeVideoId, getYoutubeThumbnailUrl } from 'shared';
+import { formatTime } from 'shared';
 
 @Component({
   // eslint-disable-next-line @angular-eslint/component-selector
@@ -18,19 +19,16 @@ import { getYoutubeVideoId, getYoutubeThumbnailUrl } from 'shared';
   styleUrls: ['./video-player.component.scss']
 })
 export class VideoPlayerComponent implements OnInit, OnChanges {
+
   @ViewChild('youtubePlayer') youtubePlayer!: YouTubePlayer;
   
-  // New protocol-oriented inputs (optional): prefer these when provided
-  @Input() videoId?: string;             // YouTube video id (11 chars)
-  @Input() playerState!: PlayerState;    // Complete player state
-  @Input() positionSec?: number | null;  // desired seek position (seconds)
-  @Input() currentVideo?: Video;
-  @Input() currentScene?: Scene;
-  @Input() autoplay = true;
-  @Input() showControls = true;
+  // New protocol-oriented inputs (optional): prefer these when provided  
+  @Input() playerState!: PlayerState;    // Complete player state  
+  @Input() currentVideo?: Video | null;
+  @Input() currentScene?: Scene | null;
   
   @Output() playerReady = new EventEmitter<YT.Player>();
-  @Output() videoStarted = new EventEmitter<void>();
+  @Output() isPlaying = new EventEmitter<void>();
   @Output() videoPaused = new EventEmitter<void>();
   @Output() videoEnded = new EventEmitter<void>();
   @Output() timeUpdate = new EventEmitter<number>();
@@ -41,8 +39,9 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   currentTime = 0;
   duration = 0;  
 
+  formatTime = formatTime;
   // Inform YouTube IFrame API about our hosting origin to avoid postMessage targetOrigin warnings
-  origin = typeof window !== 'undefined' ? window.location.origin : '';
+  readonly origin = window.location.origin;
 
   ngOnInit(): void {
     // Angular YouTubePlayerModule handles API loading automatically
@@ -57,95 +56,101 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    console.log('📺 Video player component on change callback', changes);
+    console.log('📺 Video player component ngOnChanges called', changes);    
     // Handle video source change via either explicit videoId or currentVideo.url
-    if ((changes['videoId'] || changes['currentVideo']) && (this.videoId || this.currentVideo?.url)) {
+    if (!this.isPlayerReady) {
+      console.log('📺 Player not ready yet, skipping ngOnChanges handling');
+      return;
+    }
+    if ('playerState' in changes) {
+      if (isEqualPlayerState(changes['playerState'].previousValue, changes['playerState'].currentValue)) {
+        console.log('📺 PlayerState change detected but no effective difference');
+        // could have changed but is effectively the same
+      } else {
+        const prev: PlayerState = changes['playerState'].previousValue;
+        const curr: PlayerState = changes['playerState'].currentValue;
+
+        // Do not handle currentTime change at this point
+        //if (typeof curr.currentTime === 'number' && curr.currentTime !== prev.currentTime) {
+        //  this.seekTo(curr.currentTime);
+        //}
+
+        // Handle volume change
+        if (typeof curr.volume === 'number' && curr.volume !== prev.volume) {
+          this.setVolume(curr.volume);
+        }
+        if (typeof curr.isMuted === 'boolean' && curr.isMuted !== prev.isMuted) {
+          curr.isMuted ? this.mute() : this.unmute();
+        }
+        if (typeof curr.isFullscreen === 'boolean' && curr.isFullscreen !== prev.isFullscreen) {
+          this.toggleFullscreen();
+        }
+        if (typeof curr.isPlaying === 'boolean' && curr.isPlaying !== prev.isPlaying) {
+          curr.isPlaying ? this.play() : this.pause();
+        }
+      }
+    }
+    if (changes['currentVideo'] && this.currentVideo) {
       this.loadVideo();
     }
     
-    if (changes['currentScene'] && this.currentScene && this.isPlayerReady) {
+    if (changes['currentScene'] && this.currentScene) {
       this.seekToScene();
     }
-
-    // Handle fullscreen changes (independent of player readiness)
-    if ('isFullscreen' in changes && typeof this.playerState === 'boolean') {
-      this.toggleFullscreen();
-    }
-
-    // Map protocol-oriented playback inputs into player API when ready
-    if (this.isPlayerReady) {
-      if ('isPlaying' in changes && this.playerState.isPlaying !== undefined && this.playerState.isPlaying !== null) {
-        if (this.playerState.isPlaying) 
-          this.play();
-        else
-          this.pause();
-      }
-
-      if ('positionSec' in changes && typeof this.positionSec === 'number' && !Number.isNaN(this.positionSec)) {
-        this.seekTo(this.positionSec);
-      }
-
-      if ('volume' in changes && typeof this.playerState.volume === 'number' && !Number.isNaN(this.playerState.volume)) {
-        // Server now sends 0-100 range directly, which matches YouTube API expectations
-        this.setVolume(this.playerState.volume);
-      }
-      if ('isMuted' in changes && typeof this.playerState.isMuted === 'boolean') {
-        this.playerState.isMuted ? this.mute() : this.unmute();
-      }
-    }
+ 
   }
 
-  private extractYouTubeId(url: string): string | null {
-    // Use shared utility function
-    return getYoutubeVideoId(url);
-  }
-
-  getYouTubeId(): string | null {
-    // Prefer explicit input when provided, otherwise derive from currentVideo.url
-    if (this.videoId) {
-      return this.videoId;
+  // Extract YouTube ID from current video URL
+  get youtubeId(): string {
+    if (!this.currentVideo) {
+      throw new Error('No current video for youtubeId');
     }
-    return this.currentVideo?.url ? this.extractYouTubeId(this.currentVideo.url) : null;
+    return getYoutubeVideoId(this.currentVideo.url); 
   }
   
   // Get YouTube thumbnail for current video
-  getVideoThumbnail(quality: YouTubeThumbnailImageQuality = 'default'): string | null {
-    const videoId = this.getYouTubeId();
-    return videoId ? getYoutubeThumbnailUrl(videoId, quality) : null;
+  get getVideoThumbnail(): string {
+    const videoId = this.youtubeId;
+    return getYoutubeThumbnailUrl(videoId);
   }
 
-  onPlayerReady(event: YT.PlayerEvent): void {
-    console.log('📺 YouTube player ready received event', event);
+  onYTError($event: YT.OnErrorEvent) {
+    console.error('📺 YouTube player error:', $event);
+  }
+
+  onTBReady(event: YT.PlayerEvent): void {
+    console.log('📺 YouTube onPlayerReady event received', event);
+
     this.isPlayerReady = true;
     this.playerReady.emit(event.target);
     
     // If we have a position or scene, seek to it after the player is ready
-    if (this.positionSec !== null && this.positionSec !== undefined || this.currentScene) {
+    if (this.playerState.currentTime !== null && this.playerState.currentTime !== undefined || this.currentScene) {
       setTimeout(() => {
         this.seekToPosition();
       }, 1000); // Wait for video to load
     }
 
     // If autoplay or isPlaying is desired, attempt to start playback once ready
-    if (this.autoplay || this.playerState.isPlaying) {
+    if (this.playerState.isPlaying) {
       setTimeout(() => this.tryAutoplay(), 0);
     }
   }
 
-  onStateChange(event: YT.OnStateChangeEvent) {
+  onYTStateChange(event: YT.OnStateChangeEvent) {
     console.log('📺 YouTube player state changed:', event);
-    const playerState = event.data;
+    const ytPlayerState = event.data;
     
     // Use YouTube API constants for player states
     // YT.PlayerState: UNSTARTED = -1, ENDED = 0, PLAYING = 1, PAUSED = 2, BUFFERING = 3, CUED = 5
-    switch (playerState) {
+    switch (ytPlayerState) {
       case -1: // YT.PlayerState.UNSTARTED
         console.log('⏳ Video unstarted');
         break;
 
       case 1: // YT.PlayerState.PLAYING
         console.log('▶️ Video started playing');
-        this.videoStarted.emit();
+        this.isPlaying.emit();
         this.startTimeTracking();
         break;
         
@@ -164,10 +169,10 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
       case 3: // YT.PlayerState.BUFFERING
         console.log('🔄 Video buffering');
         // If buffering persists while we intend to play, retry a nudge after a short delay
-        if (this.autoplay || this.playerState.isPlaying) {
+        if (this.playerState.isPlaying) {
           setTimeout(() => {
             try {
-              if (this.youtubePlayer && this.youtubePlayer.getPlayerState && this.youtubePlayer.getPlayerState() === 3) {
+              if (this.youtubePlayer.getPlayerState && this.youtubePlayer.getPlayerState() === 3) {
                 this.tryAutoplay();
               }
             } catch (e) {
@@ -180,7 +185,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
       case 5: // YT.PlayerState.CUED
         console.log('🎬 Video cued and ready');
         // If we intend to play, attempt to start playback
-        if (this.autoplay || this.playerState.isPlaying) {
+        if (this.playerState.isPlaying) {
           this.tryAutoplay();
         }
         break;
@@ -194,11 +199,10 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
    */
   private tryAutoplay() {
     console.log('🔇 Attempting autoplay');
-    if (!this.isPlayerReady || !this.youtubePlayer) return;
+    if (!this.isPlayerReady) return;
     try {
       // Always start muted for autoplay to comply with browser policies
-      console.log('🔇 Starting muted autoplay to comply with browser policies');
-      this.setVolume(0);
+      console.log('🔇 Starting muted autoplay to comply with browser policies'); 
       this.youtubePlayer.playVideo();
     } catch (error) {
       console.error('❌ Error attempting autoplay:', error);
@@ -212,7 +216,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
     this.stopTimeTracking(); // Clear any existing interval
     
     this.timeTrackingInterval = window.setInterval(() => {
-      if (this.youtubePlayer && this.isPlayerReady) {
+      if (this.isPlayerReady) {
         this.currentTime = this.youtubePlayer.getCurrentTime();
         this.duration = this.youtubePlayer.getDuration();
         this.timeUpdate.emit(this.currentTime);
@@ -229,35 +233,19 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   }
 
   private loadVideo() {
-    console.log('📺 Loading video in player');
-    const providedId = this.getYouTubeId();
-    if (!providedId) {
-      // Fall back to currentVideo.url if present, otherwise bail
-      if (!this.currentVideo?.url) return;
-    }
-
-    const youtubeId = providedId ?? this.extractYouTubeId(this.currentVideo!.url);
-    if (!youtubeId) {
-      console.error('❌ Invalid YouTube ID/URL:', this.currentVideo?.url ?? '(none)');
-      return;
-    }
-
-    console.log('📺 Loading YouTube video:', youtubeId);
-    
+    console.log('📺 Loading YouTube video:', this.youtubeId);
     // Angular YouTube player handles video loading automatically via videoId binding
-    // If we have a specific position (positionSec) or scene, seek to it after the video loads
-    if ((this.positionSec !== null && this.positionSec !== undefined) || this.currentScene) {
-      if (this.isPlayerReady) {
-        setTimeout(() => {
-          this.seekToPosition();
-        }, 2000); // Wait for video to load
-      }
+    // If we have a specific position (positionSec) or scene, seek to it after the video loads   
+    if (this.isPlayerReady) {
+      setTimeout(() => {
+        this.seekToPosition();
+      }, 2000); // Wait for video to load
     }
   }
 
   private seekToScene() {
     console.log('🎯 Seeking to scene:', this.currentScene);
-    if (!this.isPlayerReady || !this.currentScene || !this.youtubePlayer) {
+    if (!this.isPlayerReady || !this.currentScene) {
       console.warn('⚠️ Cannot seek to scene: player not ready or scene/player missing');
       return;
     }
@@ -274,13 +262,13 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   }
 
   private seekToPosition() {
-    if (!this.isPlayerReady || !this.youtubePlayer) {
+    if (!this.isPlayerReady) {
       console.warn('⚠️ Cannot seek to position: player not ready');
       return;
     }
-
+    console.log('🎯 Seeking to position (input/currentScene):', this.playerState.currentTime, this.currentScene);
     // Prefer explicit positionSec input, fallback to currentScene.startTime
-    const position = this.positionSec ?? this.currentScene?.startTime;
+    const position = this.playerState.currentTime ?? this.currentScene?.startTime;
     
     if (position === null || position === undefined) {
       console.warn('⚠️ No position to seek to');
@@ -297,17 +285,10 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
     }
   }
 
-  // Utility method for formatting time
-  formatTime(seconds: number): string {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  }
-
   // Public control methods
   play() {
     console.log('▶️ Playing video');
-    if (this.isPlayerReady && this.youtubePlayer) {
+    if (this.isPlayerReady) {
       try {
         // For user-initiated play commands, don't force mute
         // Let the Remote control volume separately
@@ -321,7 +302,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
 
   unmute() {
     console.log('🔊 Unmuting video');
-    if (this.isPlayerReady && this.youtubePlayer) {
+    if (this.isPlayerReady) {
       try {
         console.log('🔊 Unmuting video (user-initiated)');
         this.youtubePlayer.unMute();
@@ -333,7 +314,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
 
   mute() {
     console.log('🔇 Muting video');
-    if (this.isPlayerReady && this.youtubePlayer) {
+    if (this.isPlayerReady) {
       try {
         console.log('🔇 Muting video (user-initiated)');
         this.youtubePlayer.mute();
@@ -345,7 +326,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
 
   pause() {
     console.log('⏸️ Pausing video');
-    if (this.isPlayerReady && this.youtubePlayer) {
+    if (this.isPlayerReady) {
       try {
         console.log('⏸️ Pausing video (user-initiated)');
         this.youtubePlayer.pauseVideo();
@@ -357,7 +338,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
 
   stop() {
     console.log('⏹️ Stopping video');
-    if (this.isPlayerReady && this.youtubePlayer) {
+    if (this.isPlayerReady) {
       try {
         console.log('⏹️ Stopping video (user-initiated)');
         this.youtubePlayer.stopVideo();
@@ -369,7 +350,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
 
   seekTo(seconds: number) {
     console.log('🎯 Seeking to seconds:', seconds);
-    if (this.isPlayerReady && this.youtubePlayer) {
+    if (this.isPlayerReady) {
       try {
         console.log('🎯 Seeking to seconds (user-initiated):', seconds);
         this.youtubePlayer.seekTo(seconds, true);
@@ -381,7 +362,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
 
   setVolume(volume: number) {
     console.log('🔊 Setting volume to:', volume);
-    if (this.isPlayerReady && this.youtubePlayer) {
+    if (this.isPlayerReady) {
       try {
         console.log('🔊 Setting volume to (user-initiated):', volume);
         this.youtubePlayer.setVolume(volume);
@@ -392,7 +373,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   }
 
   getCurrentTime(): number {
-    if (this.isPlayerReady && this.youtubePlayer) {
+    if (this.isPlayerReady) {
       try {
         return this.youtubePlayer.getCurrentTime();
       } catch (error) {
@@ -404,7 +385,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
   }
 
   getDuration(): number {
-    if (this.isPlayerReady && this.youtubePlayer) {
+    if (this.isPlayerReady) {
       try {
         return this.youtubePlayer.getDuration();
       } catch (error) {

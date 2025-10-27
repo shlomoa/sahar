@@ -185,6 +185,7 @@ export class ServerWebSocketService {
   // --- Protocol Handlers ---
 
   private handleRegister(ws: WebSocket, reg: RegisterMessage): void {
+    logInfo('register_received', { from: this.clients.get(ws)?.deviceId, payload: reg.payload });
     const { clientType, deviceId } = reg.payload;
     
     // Enforce single TV / Remote uniqueness
@@ -291,6 +292,7 @@ export class ServerWebSocketService {
   }
 
   private handleControlCommand(ws: WebSocket, ctl: ControlCommandMessage): void {
+    logInfo('control_command_received', { from: this.clients.get(ws)?.deviceId, payload: ctl.payload });
     // Verify sender is Remote client
     const senderMeta = this.clients.get(ws);
     if (!senderMeta || senderMeta.clientType !== 'remote') {
@@ -336,6 +338,7 @@ export class ServerWebSocketService {
 
   private handleActionConfirmation(ws: WebSocket, confirm: ActionConfirmationMessage): void {
     // Update FSM with actual player state from TV (if provided)
+    logInfo('action_confirmation_received_raw', { payload: confirm.payload });
     if (confirm.payload.playerState) {
       this.fsm.controlCommand({
         msgType: 'control_command',
@@ -354,6 +357,7 @@ export class ServerWebSocketService {
   }
 
   private handleAck(ws: WebSocket, _ackMsg: AckMessage): void {
+    logInfo('ack_received', { from: this.clients.get(ws)?.deviceId });
     try {
       if (this.currentBroadcastVersion !== null && this.outstandingAckClients && this.outstandingAckClients.has(ws)) {
         this.outstandingAckClients.delete(ws);
@@ -380,6 +384,7 @@ export class ServerWebSocketService {
   }
 
   private handleHeartbeat(ws: WebSocket): void {
+    logInfo('heartbeat_handling_started', { from: this.clients.get(ws)?.deviceId });
     const meta = this.clients.get(ws);
     if (meta) meta.lastHeartbeat = Date.now();
     ws.send(JSON.stringify(this.makeAck('server')));

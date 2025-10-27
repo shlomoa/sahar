@@ -7,8 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { QRCodeComponent } from 'angularx-qrcode';
 import { Subscription } from 'rxjs';
-import { ControlCommandMessage,
-         getYoutubeVideoId,
+import { getYoutubeVideoId,
          NetworkDevice,
          ApplicationState,
          ConnectionState,
@@ -16,7 +15,8 @@ import { ControlCommandMessage,
          NavigationLevel,
          SharedNavigationRootComponent,
          CatalogHelperService,         
-         PlayerState} from 'shared';
+         PlayerState,
+         DEFAULT_APPLICATION_STATE} from 'shared';
 import { WebSocketService } from './services/websocket.service';
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
 
@@ -43,8 +43,7 @@ export class App implements OnInit, OnDestroy {
   protected title = 'Sahar TV';
   
   // Server state - single source of truth
-  private applicationState: ApplicationState | null = null;
-  protected playerState: PlayerState = {} as PlayerState;  // Protected to allow template binding
+  protected applicationState: ApplicationState = DEFAULT_APPLICATION_STATE;
   private subscriptions: Subscription[] = [];
 
   // Service injections
@@ -65,9 +64,12 @@ export class App implements OnInit, OnDestroy {
   remoteUrl = '';
 
   // Derived playback bindings for the video-player component
-  get playbackVideoId(): string | null {
+  get playbackVideoId(): string {
     const video = this.currentVideo();
-    return video?.url ? getYoutubeVideoId(video.url) : null;
+    if (!video) {
+      throw new Error('No current video for playbackVideoId');
+    }
+    return getYoutubeVideoId(video.url);
   }
 
   get playbackPositionSec(): number | null {
@@ -80,19 +82,19 @@ export class App implements OnInit, OnDestroy {
   // Connection state getters - derive from server's authoritative state
   get bothConnected(): boolean {
     return (
-      this.applicationState?.clientsConnectionState.tv === 'connected' &&
-      this.applicationState?.clientsConnectionState.remote === 'connected'
+      this.applicationState?.clientsConnectionState?.tv === 'connected' &&
+      this.applicationState?.clientsConnectionState?.remote === 'connected'
     ) ?? false;
   }
 
   get connectionStatus(): ConnectionState {
-    return this.applicationState?.clientsConnectionState.tv ?? 'disconnected';
+    return this.applicationState?.clientsConnectionState?.tv ?? 'disconnected';
   }
 
   // Current navigation level helpers for templates - derive from server state
   get currentLevel(): NavigationLevel {
     const state = this.applicationState;
-    if (!state) return 'performers';
+    if (!state?.navigation) return 'performers';
     
     return state.navigation.currentLevel;
   }
@@ -140,32 +142,26 @@ export class App implements OnInit, OnDestroy {
 
     // Subscribe to application state from server - single source of truth
     const mainStateSub = this.webSocketService.state$.subscribe(state => {
-      this.applicationState = state;
+      this.applicationState = { ...state };
       
       // CRITICAL: Update CatalogHelperService state (enables all computed signals)
       if (state) {
         this.catalogHelper.setState(state);
       }
-      
-      // Update player state from state_sync (create new object for change detection)
-      if (state?.player) {
-        this.playerState = { ...state.player };
-      }
-      
+
       console.log('📺 TV: Application state updated:', {
-        level: state?.navigation.currentLevel,
-        performerId: state?.navigation.performerId,
-        videoId: state?.navigation.videoId,
-        sceneId: state?.navigation.sceneId,
-        bothConnected: this.bothConnected,
-        playerState: this.playerState
+        level: state?.navigation?.currentLevel,
+        performerId: state?.navigation?.performerId,
+        videoId: state?.navigation?.videoId,
+        sceneId: state?.navigation?.sceneId,
+        bothConnected: this.bothConnected
       });
     });
     this.subscriptions.push(mainStateSub);
 
     // Subscribe to application state for connection status
     const connectionSub = this.webSocketService.state$.subscribe(appState => {
-      if (!appState) return;
+      if (!appState?.clientsConnectionState) return;
       
       const remoteStatus = appState.clientsConnectionState.remote;
       if (remoteStatus === 'connected') {
@@ -191,7 +187,7 @@ export class App implements OnInit, OnDestroy {
       console.log('📺 TV: Player state update received:', updatedPlayerState);
 
       // Update local player state - create NEW object to trigger Angular change detection
-      this.playerState = { ...updatedPlayerState };
+      this.applicationState = { ...this.applicationState, player: { ...updatedPlayerState } };
       
     });
     this.subscriptions.push(playerStateSub);
@@ -248,7 +244,7 @@ export class App implements OnInit, OnDestroy {
     console.log('📺 TV: Video player is ready');
   }
 
-  onVideoStarted(): void {
+  onIsPlaying(): void {
     console.log('📺 TV: Video playback started');
     // Send action confirmation to update server state
     this.webSocketService.sendActionConfirmation('success');
@@ -272,6 +268,7 @@ export class App implements OnInit, OnDestroy {
   onTimeUpdate(currentTime: number): void {
     // Handle time updates if needed for progress tracking
     console.log('📺 TV: Video time update:', currentTime);
+    this.webSocketService.sendActionConfirmation('success');
   }
 
   onBackClick(): void {

@@ -13,17 +13,33 @@ export interface PlayerState {
     // youtubeId removed (2025-10-21) - derived from navigation.videoId lookup
     // playingSceneId removed (2025-10-21) - use navigation.sceneId directly
 }
+export const DEFAULT_PLAYER_STATE: PlayerState = {
+    isPlaying: false,
+    isFullscreen: false,
+    isMuted: true,
+    currentTime: 0,
+    volume: 50
+};
 
 export interface ClientsConnectionState {
     tv?: ConnectionState;
     remote?: ConnectionState;
 }
 
+export const DEFAULT_CLIENTS_CONNECTION_STATE: ClientsConnectionState = {
+    tv: 'disconnected',
+    remote: 'disconnected'
+};
+
 export interface NavigationState {
   currentLevel: NavigationLevel;
   performerId?: string;
   videoId?: string;
   sceneId?: string;
+};
+
+export const DEFAULT_NAVIGATION_STATE: NavigationState = {
+  currentLevel: 'performers'
 };
 
 // Shared authoritative ApplicationState model (with versioning)
@@ -40,6 +56,13 @@ export interface ApplicationState {
     message: string;
   };
 }
+
+export const DEFAULT_APPLICATION_STATE: ApplicationState = {
+  version: 0,
+  clientsConnectionState: DEFAULT_CLIENTS_CONNECTION_STATE,
+  navigation: DEFAULT_NAVIGATION_STATE,
+  player: DEFAULT_PLAYER_STATE
+};
 
 export interface ClientInfo {
   deviceId: string;

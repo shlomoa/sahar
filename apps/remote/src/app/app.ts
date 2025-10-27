@@ -119,7 +119,7 @@ export class App implements OnInit, OnDestroy {
   // Current navigation level helpers for templates - derive from server state
   get currentLevel(): NavigationLevel {
     const state = this.applicationState;
-    if (!state) return 'performers';
+    if (!state?.navigation) return 'performers';
     
     return state.navigation.currentLevel;
   }
@@ -133,30 +133,44 @@ export class App implements OnInit, OnDestroy {
   // Connection state getters - derive from server's authoritative state
   get bothConnected(): boolean {
     return (
-      this.applicationState?.clientsConnectionState.tv === 'connected' &&
-      this.applicationState?.clientsConnectionState.remote === 'connected'
+      this.applicationState?.clientsConnectionState?.tv === 'connected' &&
+      this.applicationState?.clientsConnectionState?.remote === 'connected'
     ) ?? false;
   }
 
   get connectionStatus(): ConnectionState {
-    return this.applicationState?.clientsConnectionState.remote ?? 'disconnected';
+    return this.applicationState?.clientsConnectionState?.remote ?? 'disconnected';
   }
 
   ngOnInit() {    
     // Subscribe to application state from server - single source of truth
     const stateSub = this.webSocketService.state$.subscribe(state => {
-      this.applicationState = state;
+      // Guard against undefined/null state
+      if (!state) {
+        console.error('Received invalid application state from server:', state);
+        return;
+      }
+
+      // Create new object references to trigger Angular change detection
+      this.applicationState = {
+        ...state,
+        player: { ...state.player }
+      };
       
       // CRITICAL: Update CatalogHelperService state (enables all computed signals)
-      if (state) {
-        this.catalogHelper.setState(state);
-      }
+      this.catalogHelper.setState(state);
       
       console.log('📱 Remote: Application state updated:', {
-        level: state?.navigation.currentLevel,
-        performerId: state?.navigation.performerId,
-        videoId: state?.navigation.videoId,
-        sceneId: state?.navigation.sceneId,        
+        level: state.navigation?.currentLevel,
+        performerId: state.navigation?.performerId,
+        videoId: state.navigation?.videoId,
+        sceneId: state.navigation?.sceneId,
+        player: {
+          isPlaying: state.player?.isPlaying,
+          volume: state.player?.volume,
+          isMuted: state.player?.isMuted,
+          currentTime: state.player?.currentTime
+        },
         bothConnected: this.bothConnected
       });
     });

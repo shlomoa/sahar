@@ -14,7 +14,8 @@ import {
   WebSocketBaseService, 
   WebSocketUtils,
   ActionConfirmationStatus,
-  PlayerState
+  PlayerState,
+  DEFAULT_PLAYER_STATE
 } from 'shared';
 
 @Injectable({
@@ -24,13 +25,7 @@ export class WebSocketService extends WebSocketBaseService {
   // TV duplicate connection management - inherited from base class
 
   // Lightweight playback state used for action confirmations
-  protected playerState$ = new BehaviorSubject<PlayerState>({
-    isPlaying: false,
-    isFullscreen: false,
-    currentTime: 0,
-    volume: 100,
-    isMuted: false,
-  } as PlayerState );
+  protected playerState$ = new BehaviorSubject<PlayerState>(DEFAULT_PLAYER_STATE);
 
   private lastConnectedUrl: string | null = null;
   protected override logMessagePrefix = '📺 TV: ';
@@ -152,6 +147,9 @@ export class WebSocketService extends WebSocketBaseService {
       
       // Emit state to observable for App component to subscribe
       this.emitState(state);
+
+      // need to update local player state as well      
+      this.playerState$.next( { ...state.player } as PlayerState);
 
       // After successfully applying the authoritative snapshot, acknowledge the version
       try {

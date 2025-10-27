@@ -6,11 +6,7 @@
     <button mat-icon-button (click)="onHomeClick()">
       <mat-icon>home</mat-icon>
     </button>
-    
-    
-
     <span class="spacer"></span>
-
     <span class="connection-status">
       {{connectionStatus === 'connected' ? '🟢 Connected' : 
         connectionStatus === 'connecting' ? '🟡 Connecting...' : '🔴 Disconnected'}}
@@ -23,14 +19,12 @@
       <!-- Video Player (when scene selected) -->
       @if (isSceneSelected) {
         <div class="video-player-area" >
-          <video-player
-            [videoId]="playbackVideoId || undefined"
-            [playerState]="playerState"
-            [positionSec]="playbackPositionSec"
-            [autoplay]="true"
-            [showControls]="true"
+          <video-player            
+            [playerState]="applicationState.player"
+            [currentVideo]="currentVideo()"
+            [currentScene]="currentScene()"
             (playerReady)="onPlayerReady()"
-            (videoStarted)="onVideoStarted()"
+            (isPlaying)="onIsPlaying()"
             (videoPaused)="onVideoPaused()"
             (videoEnded)="onVideoEnded()"
             (timeUpdate)="onTimeUpdate($event)">

@@ -103,7 +103,7 @@ export class CatalogHelperService {
   readonly currentPerformer = computed(() => {
     const state = this.state();
     const catalog = this.contentService.catalog();
-    if (!catalog || !state.navigation.performerId) {
+    if (!catalog || !state?.navigation?.performerId) {
       return null;
     }
     try {
@@ -122,7 +122,7 @@ export class CatalogHelperService {
   readonly currentVideo = computed(() => {
     const state = this.state();
     const catalog = this.contentService.catalog();
-    if (!catalog || !state.navigation.videoId) {
+    if (!catalog || !state?.navigation?.videoId) {
       return null;
     }
     try {
@@ -141,7 +141,7 @@ export class CatalogHelperService {
   readonly currentScene = computed(() => {
     const state = this.state();
     const catalog = this.contentService.catalog();
-    if (!catalog || !state.navigation.sceneId) {
+    if (!catalog || !state?.navigation?.sceneId) {
       return null;
     }
     try {
@@ -164,7 +164,7 @@ export class CatalogHelperService {
   readonly currentPerformers = computed(() => {
     const state = this.state();
     const catalog = this.contentService.catalog();
-    if (!catalog || state.navigation.currentLevel !== 'performers') {
+    if (!catalog || state?.navigation?.currentLevel !== 'performers') {
       return [];
     }
     return catalog.performers;
@@ -179,10 +179,10 @@ export class CatalogHelperService {
   readonly currentVideos = computed(() => {
     const state = this.state();
     const catalog = this.contentService.catalog();
-    if (!catalog || state.navigation.currentLevel !== 'videos') {
+    if (!catalog || state?.navigation?.currentLevel !== 'videos') {
       return [];
     }
-    if (!state.navigation.performerId) return [];
+    if (!state?.navigation?.performerId) return [];
     return this.contentService.getVideosForPerformer(state.navigation.performerId);
   });
 
@@ -195,10 +195,10 @@ export class CatalogHelperService {
   readonly currentScenes = computed(() => {
     const state = this.state();
     const catalog = this.contentService.catalog();
-    if (!catalog || state.navigation.currentLevel !== 'scenes') {
+    if (!catalog || state?.navigation?.currentLevel !== 'scenes') {
       return [];
     }
-    if (!state.navigation.videoId) return [];
+    if (!state?.navigation?.videoId) return [];
     return this.contentService.getScenesForVideo(state.navigation.videoId);
   });
 

@@ -1,15 +1,17 @@
 // Utility functions for YouTube video handling
 
-export type YouTubeThumbnailImageQuality = 'default' | 'mqdefault' | 'hqdefault' | 'sddefault' | 'maxresdefault';
+export const YOUTUBE_THUMBNAIL_QUALITIES = ['maxresdefault', 'sddefault', 'hqdefault', 'mqdefault', 'default'] as const
+
+export type YouTubeThumbnailImageQuality = typeof YOUTUBE_THUMBNAIL_QUALITIES[number];
 
 /**
  * Extracts the YouTube video ID from various YouTube URL formats.
  * @param url The YouTube URL.
  * @returns The video ID, or null if no valid ID is found.
  */
-export function getYoutubeVideoId(url: string): string | null {
+export function getYoutubeVideoId(url: string): string {
   if (!url) {
-    return null;
+    throw new Error('Invalid YouTube URL');
   }
 
   // This regex is designed to handle various YouTube URL formats robustly.
@@ -21,17 +23,23 @@ export function getYoutubeVideoId(url: string): string | null {
   if (match && match[1]) {
     return match[1];
   } else {
-    console.error('Could not extract YouTube video ID from URL:', url);
-    return null;
+    throw new Error(`Could not extract YouTube video ID from URL: ${url}`);    
   }
 }
 
 /**
- * Generates a YouTube thumbnail URL from a video ID.
- * @param videoId The YouTube video ID.
- * @param quality The desired thumbnail quality.
- * @returns The full URL for the thumbnail image.
+ * Returns the first available thumbnail URL for a YouTube video.
+ * Tries higher resolutions first and falls back if 404 / not available.
+ *
+ * @param videoId YouTube video ID (e.g. 'RLXswLCRG08') 
  */
 export function getYoutubeThumbnailUrl(videoId: string, quality: YouTubeThumbnailImageQuality = 'hqdefault'): string {
-  return `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
+  return `https://i.ytimg.com/vi/${videoId}/${quality}.jpg`;
+}
+
+// Format time in seconds to mm:ss
+export function formatTime(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${minutes}:${secs.toString().padStart(2, '0')}`;
 }
