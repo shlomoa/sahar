@@ -177,21 +177,6 @@ export class App implements OnInit, OnDestroy {
     });
     this.subscriptions.push(connectionSub);
 
-    // Subscribe to player state updates from control_command messages
-    const playerStateSub = (this.webSocketService as any).playerState$.subscribe((updatedPlayerState: PlayerState) => {
-      
-      if (!updatedPlayerState) {
-        console.log('📺 TV: Player state update received: null playerState');
-        return;
-      }
-      console.log('📺 TV: Player state update received:', updatedPlayerState);
-
-      // Update local player state - create NEW object to trigger Angular change detection
-      this.applicationState = { ...this.applicationState, player: { ...updatedPlayerState } };
-      
-    });
-    this.subscriptions.push(playerStateSub);
-
     // Subscribe to WebSocket errors
     const errorSub = this.webSocketService.errors.subscribe(error => {
       console.error('📺 TV: WebSocket error:', error);

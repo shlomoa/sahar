@@ -24,15 +24,8 @@ import {
 export class WebSocketService extends WebSocketBaseService {
   // TV duplicate connection management - inherited from base class
 
-  // Lightweight playback state used for action confirmations
-  protected playerState$ = new BehaviorSubject<PlayerState>(DEFAULT_PLAYER_STATE);
-
   private lastConnectedUrl: string | null = null;
   protected override logMessagePrefix = '📺 TV: ';
-  
-  get appPlayerState() {
-    return this.playerState$.asObservable();
-  }
 
   constructor() {    
     super();
@@ -128,9 +121,20 @@ export class WebSocketService extends WebSocketBaseService {
 
   private handleControlCommand(message: ControlCommandMessage): void {
     this.debugLog('Control command received:', message.payload);
-    const { msgType, ...playerState } = message.payload;    
+    const { msgType, ...playerState } = message.payload;
+    
     try {
-      this.playerState$.next(playerState);
+      // Get current application state
+      const currentState = this.applicationState$.value;
+      
+      if (currentState) {
+        // Emit updated state with new player state via state$
+        this.emitState({
+          ...currentState,
+          player: { ...currentState.player, ...playerState }
+        });
+      }
+      
       this.sendActionConfirmation('success');
     } catch (e) {
       this.sendActionConfirmation('failure', e instanceof Error ? e.message : 'control failed');
@@ -146,10 +150,8 @@ export class WebSocketService extends WebSocketBaseService {
       this.debugLog(`Received state_sync v${state?.version}`);
       
       // Emit state to observable for App component to subscribe
+      // This is the SINGLE source of truth for all state updates
       this.emitState(state);
-
-      // need to update local player state as well      
-      this.playerState$.next( { ...state.player } as PlayerState);
 
       // After successfully applying the authoritative snapshot, acknowledge the version
       try {
@@ -199,12 +201,13 @@ export class WebSocketService extends WebSocketBaseService {
 
   public sendActionConfirmation(status: ActionConfirmationStatus, errorMessage?: string): void {
     // Include current player state in confirmation so server can update FSM
-    const currentState = this.playerState$.value;
+    const currentAppState = this.applicationState$.value;
+    const playerState = currentAppState?.player;
     const payload: ActionConfirmationPayload = { 
       msgType: 'action_confirmation',
       status, 
       ...(errorMessage ? { errorMessage } : {}),
-      ...(currentState ? { playerState: currentState } : {})
+      ...(playerState ? { playerState: playerState } : {})
     };
     this.sendByType('action_confirmation', payload);
   }
