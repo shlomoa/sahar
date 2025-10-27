@@ -9,7 +9,6 @@ export type MessageSource = 'tv' | 'remote' | 'server';
 export type MessageType =
   // Client -> Server
   | 'register'
-  | 'data'
   | 'navigation_command'
   | 'control_command'
   | 'action_confirmation'
@@ -107,17 +106,6 @@ export interface ActionConfirmationMessage {
   payload: ActionConfirmationPayload;
 }
 
-// Data
-export interface DataPayload extends BasePayload {
-  data: Record<string, any> | null;
-}
-export interface DataMessage {
-  msgType: 'data';
-  timestamp: number;
-  source: MessageSource;
-  payload: DataPayload;
-}
-
 // Ack
 export interface AckMessage {
   msgType: 'ack';
@@ -158,7 +146,6 @@ export interface HeartbeatMessage {
 // Union type for all messages
 export type SaharMessage =
   | RegisterMessage
-  | DataMessage
   | NavigationCommandMessage
   | ControlCommandMessage
   | ActionConfirmationMessage

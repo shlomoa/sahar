@@ -1,5 +1,4 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs/internal/BehaviorSubject';
 import {
   RegisterPayload,
   ApplicationState,
@@ -13,9 +12,7 @@ import {
   BasePayload,
   WebSocketBaseService, 
   WebSocketUtils,
-  ActionConfirmationStatus,
-  PlayerState,
-  DEFAULT_PLAYER_STATE
+  ActionConfirmationStatus
 } from 'shared';
 
 @Injectable({

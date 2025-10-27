@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -15,7 +15,6 @@ import { getYoutubeVideoId,
          NavigationLevel,
          SharedNavigationRootComponent,
          CatalogHelperService,         
-         PlayerState,
          DEFAULT_APPLICATION_STATE} from 'shared';
 import { WebSocketService } from './services/websocket.service';
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
@@ -39,7 +38,6 @@ import { VideoPlayerComponent } from './components/video-player/video-player.com
   standalone: true
 })
 export class App implements OnInit, OnDestroy {
-  @ViewChild(VideoPlayerComponent) private videoPlayer?: VideoPlayerComponent;
   protected title = 'Sahar TV';
   
   // Server state - single source of truth

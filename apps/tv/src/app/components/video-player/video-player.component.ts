@@ -1,10 +1,15 @@
-import { Component, Input, Output, EventEmitter, OnInit, ViewChild, OnChanges, SimpleChanges, SimpleChange } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, ViewChild, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { YouTubePlayerModule, YouTubePlayer } from '@angular/youtube-player';
-import { Video, Scene, PlayerState, isEqualPlayerState } from 'shared';
-import { getYoutubeVideoId, getYoutubeThumbnailUrl } from 'shared';
-import { formatTime } from 'shared';
+import { Video,
+         Scene, 
+         PlayerState, 
+         isEqualPlayerState, 
+         getYoutubeVideoId, 
+         getYoutubeThumbnailUrl, 
+         formatTime 
+        } from 'shared';
 
 @Component({
   // eslint-disable-next-line @angular-eslint/component-selector

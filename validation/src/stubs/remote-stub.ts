@@ -151,12 +151,6 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && pathname === '/command') {
     const body = await parseBody(req);
     try {
-      if (body.msgType === 'seed') {
-        const msg = { msgType: 'data', timestamp: Date.now(), source: 'remote', payload: body.payload || {} };
-        ws?.send(JSON.stringify(msg));
-        log('info', 'http.command.seed', { size: JSON.stringify(body.payload || {}).length });
-        return sendJson(res, 200, { ok: true });
-      }
       if (body.msgType !== 'navigation_command' && body.msgType !== 'control_command') {
         return sendJson(res, 400, { error: 'Invalid type' });
       }
@@ -165,10 +159,8 @@ const server = http.createServer(async (req, res) => {
       if (body.msgType === 'navigation_command') {
         const navPayload = payload as Partial<NavigationCommandPayload>;
         if (!navPayload.action) return sendJson(res, 400, { error: 'Missing navigation action' });
-      } else if (body.msgType === 'control_command') {
-        const ctlPayload = payload as Partial<ControlCommandPayload>;
-        if (!ctlPayload.action) return sendJson(res, 400, { error: 'Missing control action' });
       }
+      // For control_command, the payload is PlayerState (no action field to check)
       const msg = { msgType: body.msgType, timestamp: Date.now(), source: 'remote', payload };
       ws?.send(JSON.stringify(msg));
       log('info', 'http.command.sent', { msgType: body.msgType });

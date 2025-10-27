@@ -648,15 +648,6 @@ export class ServerWebSocketService {
         logError('invalid_message', { code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Duplicate register' });
         return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Duplicate register' };
 
-      case 'data': {
-        const payload = (raw as any).payload;
-        if (!isPlainObject(payload)) {
-          return { ok: false, code: ERROR_CODES.INVALID_MESSAGE_FORMAT, reason: 'Invalid data payload' };
-        }
-        base.payload = sanitizeAny(payload);
-        return { ok: true, msg: base as WebSocketMessage };
-      }
-
       case 'navigation_command': {
         const payload = (raw as any).payload;
         if (!isPlainObject(payload)) {

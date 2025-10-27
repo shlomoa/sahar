@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   ErrorMessage,
-  DataPayload,
   WebSocketMessage,
   StateSyncMessage,
   ControlCommandPayload,
@@ -10,7 +9,6 @@ import {
   RegisterPayload,
   NavigationAction,
   NavigationCommandPayload,
-  SaharMessage,
   HeartbeatMessage,
   ActionConfirmationPayload,
   ApplicationState, 
@@ -112,13 +110,6 @@ export class WebSocketService extends WebSocketBaseService {
       register: () => this.generateRegisterMessage(),
       action_confirmation: (payload) => this.generateActionConfirmationMessage(payload as ActionConfirmationPayload),
       heartbeat: () => this.generateHeartbeatMessage(),
-      data: (payload?: BasePayload | null) => ({
-        msgType: 'data',
-        timestamp: Date.now(),
-        source: this.networkDevice.clientType,
-        payload: payload ?? { msgType: 'data',
-                              data: {performerId: 'invalid'}} as DataPayload,
-      } as SaharMessage),
     });
   }
 
