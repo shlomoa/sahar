@@ -16,6 +16,8 @@ import { ClientType,
          CatalogHelperService,
          ControlCommandPayload,
          PlayerState} from 'shared';
+import { NarrationService } from 'shared';
+import { ButtonDescriptionPanelComponent } from 'shared';
 import { SharedNavigationRootComponent } from 'shared';
 import { VideoControlsComponent } from './components/video-controls/video-controls.component';
 import { WebSocketService } from './services/websocket.service';
@@ -31,7 +33,8 @@ import { WebSocketService } from './services/websocket.service';
     MatButtonModule,
     MatIconModule,
     VideoControlsComponent,
-    SharedNavigationRootComponent   
+    SharedNavigationRootComponent,
+    ButtonDescriptionPanelComponent
 ],
   templateUrl: './app.html',
   styleUrls: ['./app.scss'],
@@ -48,6 +51,7 @@ export class App implements OnInit, OnDestroy {
   private readonly webSocketService = inject(WebSocketService);
   private readonly contentService = inject(ContentService);
   private readonly catalogHelper = inject(CatalogHelperService);
+  private readonly narrationService = inject(NarrationService);
   
   // Computed signals from CatalogHelperService - automatic reactivity
   readonly currentPerformer = this.catalogHelper.currentPerformer;
@@ -143,6 +147,10 @@ export class App implements OnInit, OnDestroy {
   }
 
   ngOnInit() {    
+    // Initialize narration service
+    this.narrationService.setLang('he-IL');
+    this.narrationService.enable();
+    
     // Subscribe to application state from server - single source of truth
     const stateSub = this.webSocketService.state$.subscribe(state => {
       // Guard against undefined/null state

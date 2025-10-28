@@ -1,0 +1,27 @@
+.description-panel {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 64px;
+  padding: 12px 20px;
+  font-size: clamp(18px, 2.6vw, 28px);
+  line-height: 1.3;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+  transform: translateY(100%);
+  opacity: 0;
+  transition: transform 160ms ease-out, opacity 160ms ease-out;
+  z-index: 10000;
+  text-align: center;
+  user-select: none;
+
+  &.visible {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

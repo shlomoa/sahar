@@ -5,3 +5,4 @@ export * from './scenes-grid/scenes-grid.component';
 export * from './device-connection/device-connection.component';
 export * from './back-card/back-card.component';
 export * from './navigation/navigation-root.component';
+export * from './button-description-panel/button-description-panel.component';

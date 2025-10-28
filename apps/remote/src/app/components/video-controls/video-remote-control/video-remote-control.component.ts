@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from "@angular/material/card";
 import { PlayerState } from 'shared';
+import { FocusDescDirective } from 'shared';
 
 @Component({
   // eslint-disable-next-line @angular-eslint/component-selector
@@ -13,7 +14,8 @@ import { PlayerState } from 'shared';
     CommonModule,
     MatButtonModule,
     MatIconModule,
-    MatCardModule
+    MatCardModule,
+    FocusDescDirective
 ],
   templateUrl: './video-remote-control.component.html',
   styleUrls: ['./video-remote-control.component.scss']

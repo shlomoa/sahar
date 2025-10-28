@@ -8,7 +8,8 @@
               mat-fab
               class="vrc-control-button vrc-nav-button vrc-home-button"
               (click)="onControlCommand('go-home')"
-              aria-label="Home">
+              aria-label="Home"
+              libFocusDesc="מַעֲבָר לַדַּף הַבַּיִת">
               <mat-icon>home</mat-icon>
               <span class="vrc-button-label">בית</span>
             </button>
@@ -18,7 +19,8 @@
               (click)="onControlCommand('toggle-fullscreen')"
               aria-label="Fullscreen"
               [attr.aria-label]="playerState.isFullscreen ? 'Exit full screen' : 'Enter full screen'"
-              [attr.aria-pressed]="playerState.isFullscreen">
+              [attr.aria-pressed]="playerState.isFullscreen"
+              [libFocusDesc]="playerState.isFullscreen ? 'יְצִיאָה מִמָּסַךְ מָלֵא' : 'מַעֲבָר לְמָסָךְ מָלֵא'">
               <mat-icon>{{ playerState.isFullscreen ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
               <span class="vrc-button-label">מסך מלא</span>
             </button>
@@ -26,7 +28,8 @@
               mat-fab
               class="vrc-control-button vrc-nav-button vrc-exit-button"
               (click)="onBackToScenes()"
-              aria-label="Exit">
+              aria-label="Exit"
+              libFocusDesc="חֲזָרָה לִרְשִׁימַת הַסְּצֵנוֹת">
               <mat-icon>exit_to_app</mat-icon>
               <span class="vrc-button-label">יציאה</span>
             </button>
@@ -40,14 +43,16 @@
               (click)="onControlCommand('previous-scene')"
               [disabled]="!hasPreviousScene"              
               aria-label="Previous clip"
-              [attr.aria-disabled]="!hasPreviousScene">
+              [attr.aria-disabled]="!hasPreviousScene"
+              libFocusDesc="הַסְּצֵנָה הַקּוֹדֶמֶת">
               <mat-icon>skip_previous</mat-icon>
             </button>
             <button
               mat-fab
               class="vrc-control-button vrc-play-pause-button"
               (click)="onControlCommand('play-pause')"              
-              [attr.aria-label]="playerState.isPlaying ? 'Pause' : 'Play'">
+              [attr.aria-label]="playerState.isPlaying ? 'Pause' : 'Play'"
+              [libFocusDesc]="playerState.isPlaying ? 'הַשְׁהֵה אֶת הַוִּידֵאוֹ' : 'נַגֵּן אֶת הַוִּידֵאוֹ'">
               <mat-icon>{{ playerState.isPlaying ? 'pause' : 'play_arrow' }}</mat-icon>
             </button>
             <button
@@ -56,7 +61,8 @@
               (click)="onControlCommand('next-scene')"
               [disabled]="!hasNextScene"
               aria-label="Next clip"
-              [attr.aria-disabled]="!hasNextScene">
+              [attr.aria-disabled]="!hasNextScene"
+              libFocusDesc="הַסְּצֵנָה הַבָּאָה">
               <mat-icon>skip_next</mat-icon>
             </button>
           </div>
@@ -67,7 +73,8 @@
               mat-fab
               class="vrc-control-button vrc-volume-button vrc-volume-down-button"
               (click)="volumeDown()"
-              aria-label="Volume down">
+              aria-label="Volume down"
+              libFocusDesc="הַנְמָכַת עָצְמַת הַקוֹל">
               <mat-icon>remove</mat-icon>
             </button>
             <button
@@ -75,7 +82,8 @@
               class="vrc-control-button vrc-mute-button"
               [class.muted]="playerState"
               (click)="onControlCommand('toggle-mute')"
-              [attr.aria-label]="playerState.isMuted ? 'Unmute' : 'Mute'">
+              [attr.aria-label]="playerState.isMuted ? 'Unmute' : 'Mute'"
+              [libFocusDesc]="playerState.isMuted ? 'בִּטּוּל הַשְׁתָּקָה' : 'הַשְׁתָּקַת הַקוֹל'">
               <mat-icon>{{ playerState.isMuted ? 'volume_off' : 'volume_up' }}</mat-icon>
               <span class="volume-display">{{ playerState.isMuted ? 'OFF' : playerState.volume }}</span>
             </button>
@@ -83,7 +91,8 @@
               mat-fab
               class="vrc-control-button vrc-volume-button vrc-volume-up-button"
               (click)="volumeUp()"
-              aria-label="Volume up">
+              aria-label="Volume up"
+              libFocusDesc="הַגְּבֶּר אֶת עוצְמַת הַקוֹל">
               <mat-icon>add</mat-icon>
             </button>
           </div>
