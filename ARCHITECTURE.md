@@ -176,7 +176,7 @@ Hybrid (optimized):    1MB catalog (once) + 5KB × 100 updates = 1.5MB total
 [See IMEPLEMENTATION.md for authoritative runtime constants.](./IMPLEMENTATION.md#models-and-constants---protocol-constants)
 
 Notes
-- Stop-and-wait allows only one in-flight message per peer; on timeout, the sender treats the connection as lost and reconnects.
+- Stop-and-wait protocol: Client commands get immediate server ACKs (no client-side timeout needed). However, `state_sync` broadcasts require client ACKs within 5 seconds or clients are forcibly disconnected (see "Perform or Exit" policy below).
 - Clients should use same-origin WS/WSS at the fixed path `/ws` unless explicitly configured otherwise.
 
 Configuration Note (2025-08-12)
@@ -192,37 +192,186 @@ Configuration Note (2025-08-12)
 4.  **Initial `state_sync`:** After a client successfully registers, the server sends a `state_sync` message containing the complete, current `ApplicationState`. The client then renders its UI based on this state.
 
 #### Synchronous "Stop-and-Wait" Acknowledgement Model
+
 This protocol enforces a strict, lock-step communication flow to guarantee message delivery and order.
 
+**Asymmetric ACK Pattern:**
+The protocol uses **asymmetric acknowledgement behavior** optimized for different communication patterns:
+
+**Server → Client ACKs (Immediate, No Timeout):**
+- Server ACKs **ALL** valid client commands immediately (register, navigation_command, control_command, action_confirmation, heartbeat)
+- No timeout enforcement needed (server controls protocol and is reliable)
+- Request/response pattern (1-to-1)
+
+**Client → Server ACKs ("Perform or Exit" Policy):**
+- Clients **MUST** ACK `state_sync` broadcasts within **5 seconds** (`WEBSOCKET_CONFIG.ACK_TIMEOUT`)
+- Clients that fail to ACK are **forcibly disconnected** with WebSocket close code **1008 (Policy Violation)**
+- No retry attempts - disconnected clients must reconnect and re-register
+- Broadcast pattern (1-to-many, ACK-gated queue)
+
+**ACK Matrix:**
+
+| Message Type | Direction | Server Sends ACK? | Client Must ACK? | Timeout Enforced? |
+|--------------|-----------|-------------------|------------------|-------------------|
+| `state_sync` | Server → Client(s) | ❌ No | ✅ **YES** | ✅ **YES (5s, Code 1008)** |
+| `register` | Client → Server | ✅ **YES** | ❌ No | ❌ No |
+| `navigation_command` | Client → Server | ✅ **YES** | ❌ No | ❌ No |
+| `control_command` | Remote → Server | ✅ **YES** | ❌ No | ❌ No |
+| `action_confirmation` | TV → Server | ✅ **YES** | ❌ No | ❌ No |
+| `heartbeat` | Client → Server | ✅ **YES** | ❌ No | ❌ No |
+| `ack` | Both directions | ❌ No | ❌ No | ❌ No |
+| `error` | Both directions | ❌ No | ❌ No | ❌ No |
+
+**Why Asymmetric?**
+1. Server is authoritative and reliable (can always ACK immediately)
+2. Clients might be slow, broken, or unresponsive (need enforcement)
+3. Server broadcasts block the ACK-gated queue (critical path requiring timeout)
+4. Client commands don't block anything (courtesy ACKs only)
+
+**Broadcast Queue Mechanism:**
+- Server maintains an **ACK-gated queue** for `state_sync` broadcasts
+- When state changes during an in-flight broadcast, newer versions **collapse** older pending broadcasts (clients only need latest state)
+- After all clients ACK (or timeout), the queue flushes pending broadcasts immediately
+- **Version Tracking:** Every state mutation increments a monotonic version counter for idempotency, ordering, and deduplication
+
+**General Flow:**
 1.  **Message Sent:** A sender (client or server) sends a single message.
-2.  **Wait for Acknowledgement:** The sender enters a "waiting" state and **must not** send any further messages until it receives an `ack` from the receiver.
+2.  **Wait for Acknowledgement:** The sender enters a "waiting" state and **must not** send any further messages until it receives an `ack` from the receiver (applies to client→server messages; server ACKs immediately).
 3.  **Acknowledgement Received:** Upon receiving the `ack`, the sender is unblocked and can send its next message.
-4.  **Timeout:** If the sender does not receive an `ack` within a specified period (`ACK_TIMEOUT`), it must consider the connection lost and initiate reconnection procedures.
-5.  **Exception:** The `ack` message is the *only* message that is not acknowledged, which prevents an infinite loop.
+4.  **Timeout (state_sync only):** If clients do not ACK `state_sync` within 5 seconds, server forcibly disconnects them with close code 1008.
+5.  **Exception:** The `ack` message and `error` messages are not acknowledged, preventing infinite loops.
 
 
 #### Key Message Types & Flow Example (`play` command)
 
 **Supported Message Types:**
-- `register`, `data`, `navigation_command`, `control_command`, `action_confirmation`, `ack`, `state_sync`, `error`, `heartbeat`
+- `register`, `navigation_command`, `control_command`, `action_confirmation`, `ack`, `state_sync`, `error`, `heartbeat`
+- ~~`data`~~ (Removed October 2025 - catalog served via HTTP `GET /api/content/catalog`)
+
+**Flow with Asymmetric ACKs:**
 
 1.  **`control_command` (Remote → Server):** The Remote sends a command to play a video.
     - The Remote is now blocked, awaiting an `ack`.
-2.  **`ack` (Server → Remote):** The Server acknowledges receipt of the command.
+2.  **`ack` (Server → Remote):** The Server **immediately** acknowledges receipt of the command.
     - The Remote is now unblocked.
-3.  **FSM Update:** The Server processes the command, updates its internal FSM, and identifies that the TV client must perform an action.
+    - ⚡ **Server ACKs are immediate** (no timeout needed, server is reliable)
+3.  **FSM Update (Optional):** The Server may update its FSM optimistically or wait for TV confirmation (depends on command type).
 4.  **`control_command` (Server → TV):** The Server forwards the `play` command to the TV.
-    - The Server is now blocked, awaiting an `ack` from the TV.
-5.  **`ack` (TV → Server):** The TV acknowledges receipt of the command.
-    - The Server is now unblocked. The TV begins the action (e.g., loading the video).
-6.  **`action_confirmation` (TV → Server):** Once the video is actually playing, the TV sends a confirmation.
+    - **Note:** Server does NOT wait for TV ACK before continuing (server is not blocked by forwarding)
+5.  **TV Execution:** The TV receives the command and executes the YouTube Player API action (e.g., `player.playVideo()`).
+6.  **`action_confirmation` (TV → Server):** Once the video is actually playing, the TV sends a confirmation with `playerState`.
     - The TV is now blocked, awaiting an `ack`.
-7.  **`ack` (Server → TV):** The Server acknowledges the confirmation.
+7.  **`ack` (Server → TV):** The Server **immediately** acknowledges the confirmation.
     - The TV is now unblocked.
-8.  **`state_sync` (Server → All Clients):** The Server broadcasts the new `ApplicationState` (which now reflects `isPlaying: true`) to all connected clients.
-    - The Server is now blocked, awaiting `ack`s from all clients.
-9.  **`ack` (Remote → Server) & `ack` (TV → Server):** The clients acknowledge the state update.
+    - ⚡ **Server ACKs are immediate** (no timeout)
+8.  **FSM Update:** The Server updates its FSM with the confirmed `playerState` from the TV.
+9.  **`state_sync` (Server → All Clients):** The Server broadcasts the new `ApplicationState` (which now reflects `isPlaying: true`) to all connected clients.
+    - ⏰ **Server waits for ALL client ACKs** (5-second timeout enforced)
+10. **`ack` (Remote → Server) & `ack` (TV → Server):** The clients acknowledge the state update.
+    - 🚨 **Critical:** Clients MUST ACK within 5 seconds or face forced disconnect (close code 1008)
     - The Server is now unblocked. The cycle is complete.
+
+**Timeout Enforcement:**
+- If any client fails to ACK `state_sync` within 5 seconds:
+  - Server logs critical error
+  - Server forcibly closes the client connection: `ws.close(1008, 'Policy Violation: Failed to ACK state_sync within timeout')`
+  - Client must reconnect and re-register to resume
+  - **No retry attempts** - strict "Perform or Exit" policy ensures fast failure detection
+
+### Control Commands Architecture (Implemented October 2025)
+
+**Status**: ✅ Production - Reactive Pattern (Option 2)
+
+The control command infrastructure enables the Remote to send playback control commands (play, pause, mute, volume, seek, fullscreen) to the TV via the server.
+
+#### Design Decision: Reactive Pattern (Option 2)
+
+After analysis of two architectural patterns (see ANALYSIS.md "WebSocket ACK Patterns"), we chose **Reactive Pattern (Option 2)**: TV executes commands and sends back confirmed state.
+
+**Architecture Flow:**
+```
+Remote → control_command → Server (forwards) → TV
+                                                ↓
+                                    TV executes YouTube Player API
+                                                ↓
+                                    TV sends action_confirmation with playerState
+                                                ↓
+                                    Server updates FSM with confirmed playerState
+                                                ↓
+                                    Server broadcasts state_sync with updated state
+                                                ↓
+                            Both apps receive state_sync and update UI
+```
+
+**Rationale:**
+- **Accuracy over Speed**: Confirmed state from actual YouTube Player API vs optimistic updates
+- **Reliability**: Handles API failures gracefully (TV can report errors)
+- **Consistency**: Same pattern for all control commands
+- **Trade-off**: 200-500ms UI delay acceptable for guaranteed accuracy
+
+#### ActionConfirmationPayload Extension
+
+The `action_confirmation` message was extended with an optional `playerState` field:
+
+```typescript
+interface ActionConfirmationPayload {
+  status: 'success' | 'failure';
+  errorMessage?: string;
+  playerState?: PlayerState;  // ✅ Added October 2025
+}
+```
+
+**Purpose**: When TV confirms a player action, it includes the **actual player state** from the YouTube Player API. This ensures:
+- `currentTime` is preserved across pause/play transitions
+- Volume changes are accurately reflected  
+- All player properties (`isPlaying`, `isMuted`, `volume`, `isFullscreen`) stay synchronized
+
+**Server Behavior**: When receiving `action_confirmation` with `playerState`, the server:
+1. Updates `ApplicationState.player` with the confirmed values
+2. Broadcasts `state_sync` to all connected clients
+3. Both TV and Remote UIs update based on confirmed state
+
+#### Supported Control Commands
+
+All commands follow the same reactive pattern:
+
+- `play` - Start/resume video playback
+- `pause` - Pause video playback
+- `toggle-mute` - Mute/unmute audio
+- `volume-up` - Increase volume by 10%
+- `volume-down` - Decrease volume by 10%
+- `seek` - Jump to specific time position (with `targetTime` parameter)
+- `toggle-fullscreen` - Enter/exit fullscreen mode
+
+#### Single Source of Truth Pattern
+
+**Client State Management Principle** (Refined October 2025):
+
+Applications maintain **zero local state copies**. All state is derived from server's `ApplicationState` via getters:
+
+```typescript
+// apps/tv/src/app/app.ts
+export class AppComponent {
+  protected readonly applicationState = this.wsService.applicationState;
+  
+  // Derived state - no local copy
+  get playerState() {
+    return this.applicationState()?.player;
+  }
+  
+  get currentVideoId() {
+    return this.playerState?.currentVideoId;
+  }
+}
+```
+
+**Benefits:**
+- Always reflects current server state
+- No synchronization overhead
+- Impossible to have stale local state
+- Zero-cost abstraction (simple property access)
+
+**Implementation Note**: TV app previously had dual update pattern (`playerState$` + `state$`). This was eliminated in October 2025 - all updates now flow through single `state$` observable.
 
 #### Error Handling and Connection Management
 -   **No Heartbeat:** Client liveness is determined implicitly by the `ack` mechanism. Failure to acknowledge a message within the `ACK_TIMEOUT` window signifies a dead connection.
