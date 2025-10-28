@@ -405,13 +405,13 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
     console.log('🔲 Toggling fullscreen');
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().then(() => {
-        this.playerState.isFullscreen = true;
+        console.log('✅ Entered fullscreen mode');
       }).catch(err => {
         console.error('Error attempting to enable fullscreen:', err);
       });
     } else {
       document.exitFullscreen().then(() => {
-        this.playerState.isFullscreen = false;
+        console.log('✅ Exited fullscreen mode');
       });
     }
   }
