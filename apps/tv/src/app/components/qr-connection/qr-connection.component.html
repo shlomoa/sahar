@@ -1,0 +1,19 @@
+<div class="qr-connection-container" [class.centered]="centered" title="Scan to connect (opens /remote)">
+  
+  <!-- Optional visual cue -->
+  @if (showIcon) {
+    <div class="qr-icon">
+      <mat-icon>arrow_downward</mat-icon>
+    </div>
+  }
+  
+  <!-- QR Code -->
+  <div class="qr-wrapper">
+    <qrcode 
+      [qrdata]="remoteUrl" 
+      [width]="size" 
+      [errorCorrectionLevel]="errorCorrectionLevel">
+    </qrcode>
+  </div>
+  
+</div>

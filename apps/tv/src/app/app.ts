@@ -5,7 +5,6 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
-import { QRCodeComponent } from 'angularx-qrcode';
 import { Subscription } from 'rxjs';
 import { getYoutubeVideoId,
          NetworkDevice,
@@ -18,6 +17,7 @@ import { getYoutubeVideoId,
          DEFAULT_APPLICATION_STATE} from 'shared';
 import { WebSocketService } from './services/websocket.service';
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
+import { QrConnectionComponent } from './components/qr-connection/qr-connection.component';
 
 
 @Component({
@@ -29,9 +29,9 @@ import { VideoPlayerComponent } from './components/video-player/video-player.com
     MatButtonModule,
     MatIconModule,
     MatSnackBarModule,
-    QRCodeComponent,
     VideoPlayerComponent,
-    SharedNavigationRootComponent
+    SharedNavigationRootComponent,
+    QrConnectionComponent
   ],
   templateUrl: './app.html',
   styleUrls: ['./app.scss'],
