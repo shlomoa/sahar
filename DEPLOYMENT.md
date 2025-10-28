@@ -3,20 +3,24 @@
 This guide is the single source of truth for deploying SAHAR system in its final  environment.
 
 
-## 1) Prerequisites
+## 1) Requirements
+
+### SW requirements
+- Linux-based OS (Ubuntu 20.04+ recommended)
 - Node.js 18+
 - Angular CLI 20+
 - Local network (same subnet) for devices
 
+### HW requirements
+- Raspberry Pi 4 or Orange Pi 3 LTS with 4GB+ RAM (for server and TV app)
+- HDMI cable to connect to TV
+- Power supply for the SBC
+- Case/enclosure for the SBC
+
 ## 2) Production environment
 
 - Unified Server:
-  - Host: Dedicated server or cloud VM (e.g., AWS EC2, DigitalOcean Droplet)
-  - OS: Linux (Ubuntu 20.04+ recommended)
-  - Node.js: Installed and configured
   - Firewall: Allow inbound traffic on HTTP (80/8080) and WebSocket ports
-  - TV Device: Is the server device running the TV Angular app on chrome kiosk mode?
-
 - Remote client Device:
   - Smartphone or iPad - capable of running the Remote Angular app via browser
   - Browser: Modern browser (Chrome, Safari, Firefox)
