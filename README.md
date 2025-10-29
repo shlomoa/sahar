@@ -89,7 +89,47 @@ Integrated validation flows: see [VALIDATION.md](./VALIDATION.md).
   - Navigates performers → videos → scenes; touch-optimized UI
   - Sends navigation and control commands to the server and provides all playback controls
   - Enhanced video controls during playback and dynamic thumbnail integration
+  - **Accessibility Features**: Hebrew-language text-to-speech narration and visual button descriptions for users with hearing, mobility, and vision impairments
   - See details: [ARCHITECTURE.md — Remote Application](./ARCHITECTURE.md#remote-application-appsremote)
+
+---
+
+## ♿ Accessibility Features
+
+SAHAR includes comprehensive accessibility features designed for users with hearing, mobility, and vision impairments:
+
+### Hebrew Text-to-Speech Narration
+- **Web Speech API Integration**: Native browser speech synthesis
+- **Hebrew Language Support**: Configured for `he-IL` locale with smart voice selection
+- **Niqqud Handling**: Accurate pronunciation of Hebrew text with vowel point processing
+- **Voice Selection**: Prefers Google Hebrew voice, falls back to system voices
+
+### Visual Button Descriptions
+- **Fixed Bottom Banner**: Large, high-contrast description panel
+- **Responsive Sizing**: `clamp(18px, 2.6vw, 28px)` for optimal readability
+- **ARIA Live Regions**: Screen reader announcements for accessibility
+- **Slide Animation**: Smooth appearance/disappearance of descriptions
+
+### Multi-Modal Interaction
+- **Keyboard Navigation**: Full functionality via Tab and Enter keys
+- **Mouse Hover**: Shows descriptions without speech
+- **Touch Long-Press**: 700ms threshold for description + narration
+- **Focus Management**: Clear visual focus indicators
+
+### Implementation
+- **Signal-Based Architecture**: Modern Angular 20 reactive patterns
+- **Standalone Components**: Tree-shakeable, optimized bundles
+- **Shared Library**: Reusable across TV and Remote apps
+- **10 Control Buttons**: All video controls with Hebrew descriptions
+
+**Example Hebrew Text** (with niqqud):
+- Play: "נַגֵּן אֶת הַוִּידֵאוֹ"
+- Pause: "הַשְׁהֵה אֶת הַוִּידֵאוֹ"
+- Volume Up: "הַגְּבֶּר אֶת עוצְמַת הַקוֹל"
+
+For complete technical details, see:
+- [ARCHITECTURE.md — Accessibility & Narration Features](./ARCHITECTURE.md#accessibility--narration-features)
+- [IMPLEMENTATION.md — Accessibility Features](./IMPLEMENTATION.md#accessibility-features-narration--button-descriptions)
 
 ### Unified Server (`server/`)
 **Role**: Centralized Node.js Server

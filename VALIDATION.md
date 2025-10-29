@@ -304,6 +304,102 @@ These flows validate components independently using the stubs above. They are ca
         9.  Perform a playback control in Remote app (e.g., Play video id).
         10. **Expected**: TV Stub `state_sync` shows the correct video/action.
 
+-   **Flow 11: Accessibility Features (Hebrew Narration & Descriptions)**
+        1.  Start Unified Server.
+        2.  Start Remote app (production build or `ng serve`).
+        3.  Navigate to video controls (select a performer → video → scene).
+        4.  **Expected**: Video remote control panel displays with 10 buttons.
+        
+        **Keyboard Navigation Test**:
+        5.  Press Tab key to navigate between buttons.
+        6.  **Expected**: Each button receives visible focus indicator.
+        7.  **Expected**: Fixed bottom banner appears showing Hebrew description.
+        8.  **Expected**: Hebrew text-to-speech narration plays automatically.
+        9.  Press Tab again to move to next button.
+        10. **Expected**: Previous description disappears, new description appears.
+        11. **Expected**: New Hebrew narration plays.
+        
+        **Mouse Interaction Test**:
+        12. Hover mouse over a button (without clicking).
+        13. **Expected**: Description banner appears (no speech).
+        14. Move mouse away from button.
+        15. **Expected**: Description banner disappears.
+        
+        **Touch Interaction Test** (on tablet/touch device):
+        16. Long-press button for 700ms (touch and hold).
+        17. **Expected**: Description banner appears after 700ms.
+        18. **Expected**: Hebrew narration plays.
+        19. Release touch before 700ms elapsed.
+        20. **Expected**: No description or narration (timer cancelled).
+        
+        **Dynamic Descriptions Test**:
+        21. Focus on Play/Pause button when video is paused.
+        22. **Expected**: Hebrew text "נַגֵּן אֶת הַוִּידֵאוֹ" (Play the video).
+        23. Click to play video, then focus Play/Pause button again.
+        24. **Expected**: Hebrew text "הַשְׁהֵה אֶת הַוִּידֵאוֹ" (Pause the video).
+        25. Focus on Mute button when audio is unmuted.
+        26. **Expected**: Hebrew text "השתקת הקול" (Mute).
+        27. Click to mute, then focus Mute button again.
+        28. **Expected**: Hebrew text "ביטול השתקה" (Unmute).
+        29. Focus on Fullscreen button when not fullscreen.
+        30. **Expected**: Hebrew text "מעבר למסך מלא" (Enter fullscreen).
+        31. Click to enter fullscreen, then focus Fullscreen button again.
+        32. **Expected**: Hebrew text "יציאה ממסך מלא" (Exit fullscreen).
+        
+        **All Buttons Coverage**:
+        33. Tab through all 10 buttons and verify each has Hebrew description:
+            - Home: "מעבר לדף הבית"
+            - Fullscreen: "מעבר למסך מלא" / "יציאה ממסך מלא"
+            - Exit: "חזרה לרשימת סצנות"
+            - Previous: "סצנה קודמת"
+            - Play/Pause: "נַגֵּן אֶת הַוִּידֵאוֹ" / "הַשְׁהֵה אֶת הַוִּידֵאוֹ"
+            - Next: "סצנה הבאה"
+            - Volume Down: "הנמכת עוצמת הקול"
+            - Mute: "השתקת הקול" / "ביטול השתקה"
+            - Volume Up: "הַגְּבֶּר אֶת עוצְמַת הַקוֹל"
+        
+        **Visual Verification**:
+        34. Verify description panel styling:
+            - **Position**: Fixed at bottom of screen
+            - **Font Size**: Responsive (18-28px range)
+            - **Background**: Dark semi-transparent (rgba(0,0,0,.85))
+            - **Animation**: Slides up from bottom smoothly
+            - **Text**: White, centered, readable
+        
+        **ARIA Verification** (using browser DevTools):
+        35. Inspect description panel element.
+        36. **Expected**: `role="status"` attribute present.
+        37. **Expected**: `aria-live="polite"` when visible.
+        38. **Expected**: `aria-hidden="true"` when empty.
+        
+        **Voice Selection Test** (Chrome only):
+        39. Open Chrome DevTools → Application → Speech Synthesis.
+        40. Trigger narration on any button.
+        41. **Expected**: Voice used is Google Hebrew (if available) or system Hebrew.
+        42. **Expected**: No English or other language voices used.
+        
+        **Niqqud Processing Verification**:
+        43. Inspect network/console logs (if available).
+        44. **Expected**: Text sent to Web Speech API has niqqud removed.
+        45. **Expected**: Visual description panel shows text WITH niqqud.
+        
+        **Error Handling**:
+        46. Test in browser without Web Speech API support (older browsers).
+        47. **Expected**: Visual descriptions still work (no crash).
+        48. **Expected**: `isSupported` signal returns `false`.
+        49. **Expected**: No console errors related to speech synthesis.
+
+-   **Flow 12: Accessibility Regression Tests** (Quick validation after changes)
+        1.  Start Remote app.
+        2.  Navigate to video controls.
+        3.  Tab to Play button.
+        4.  **Expected**: Description appears + Hebrew speech plays.
+        5.  Mouse hover Volume Up button.
+        6.  **Expected**: Description appears (no speech).
+        7.  Long-press Mute button on tablet (if available).
+        8.  **Expected**: After 700ms, description + speech appear.
+        9.  **Pass Criteria**: All 3 interaction modes work without errors.
+
 ---
 
 ## Validation Constants and Configuration Separation (reference)
