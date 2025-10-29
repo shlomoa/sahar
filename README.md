@@ -262,16 +262,54 @@ cd ../remote && ng serve
 - **Network**: 5GHz WiFi for optimal performance
 - **Bandwidth**: Minimal (1-10KB per WebSocket message)
 
-## 🚀 Production Deployment & Runtime Modes
+## 🚀 Production Deployment
 
-Deployment guide: [DEPLOYMENT.md](./DEPLOYMENT.md).
+### Cross-Platform Deployment
+SAHAR is designed for cross-platform deployment with portable relative paths:
 
-Runtime Mode Selection Guidelines:
+**Deployment Structure:**
+```
+sahar-deployment/
+├── main.js              # Server executable
+├── tv/
+│   └── browser/         # TV app (Angular production build)
+└── remote/
+    └── browser/         # Remote app (Angular production build)
+```
+
+**Key Features:**
+- ✅ **Platform Independent**: Works on Windows, Linux, macOS
+- ✅ **No Hardcoded Paths**: Uses runtime path resolution
+- ✅ **Simple Deployment**: Copy directory structure and run
+- ✅ **Automatic Discovery**: Server finds Angular apps via relative paths
+
+### Quick Deploy
+```bash
+# Build all components
+npm run rebuild:all
+
+# Create deployment package (see DEPLOYMENT.md for details)
+mkdir sahar-deployment
+cp server/dist/main.js sahar-deployment/
+cp -r apps/tv/dist/tv/browser sahar-deployment/tv/
+cp -r apps/remote/dist/remote/browser sahar-deployment/remote/
+
+# Deploy to target server
+scp -r sahar-deployment/ user@target-server:/path/to/deployment/
+
+# Run on target
+cd /path/to/deployment/sahar-deployment
+node main.js
+```
+
+### Runtime Mode Selection Guidelines:
 1. `mode:prod`: UI integration, end-to-end visual verification.
 2. `tv-stub` / `remote-stub`: Focused testing when iterating on one UI.
 3. `stubs`: Rapid protocol / FSM / server iteration.
 
 Pick the lightest mode that still exercises the layer you are changing.
+
+**Complete deployment guide**: [DEPLOYMENT.md](./DEPLOYMENT.md)
 
 ## 🤝 Contributing
 
