@@ -112,11 +112,11 @@ app.use(express.static('public'));
 
 // --- Angular App Static File Configuration ---
 
-// Define paths to TV and Remote app builds
-const tvAppPath = path.join(__dirname, '../../server/dist/tv');
-const remoteAppPath = path.join(__dirname, '../../server/dist/remote/');
-const tvIndexPath = path.join(tvAppPath, 'browser/index.html');
-const remoteIndexPath = path.join(remoteAppPath, 'browser/index.html');
+// Define paths to TV and Remote app builds - simple relative paths
+const tvAppPath = './tv';
+const remoteAppPath = './remote';
+const tvIndexPath = path.resolve(tvAppPath, 'browser/index.html');
+const remoteIndexPath = path.resolve(remoteAppPath, 'browser/index.html');
 
 // Pre-flight existence checks (helpful diagnostics when static serving fails)
 if (!existsSync(tvIndexPath)) {
@@ -139,17 +139,17 @@ export let SSR_STATUS: { tv: boolean; remote: boolean; tvPath: string; remotePat
   remotePath: ''
 };
 
-// Static file serving for Angular apps
+// Static file serving for Angular apps - simple relative paths
 // Serve TV and Remote browser builds with fallthrough for Angular routing
-app.use('/tv', express.static(path.join(tvAppPath, 'browser'), { fallthrough: true }));
-app.use('/remote', express.static(path.join(remoteAppPath, 'browser'), { fallthrough: true }));
+app.use('/tv', express.static('./tv/browser', { fallthrough: true }));
+app.use('/remote', express.static('./remote/browser', { fallthrough: true }));
 
 // Asset passthrough for Angular builds
-app.use('/remote/assets', express.static(path.join(remoteAppPath, 'browser/assets'), { fallthrough: true }));
-app.use('/tv/assets', express.static(path.join(tvAppPath, 'browser/assets'), { fallthrough: true }));
+app.use('/remote/assets', express.static('./remote/browser/assets', { fallthrough: true }));
+app.use('/tv/assets', express.static('./tv/browser/assets', { fallthrough: true }));
 
 // Root serves TV app (base href '/')
-app.use('/', express.static(path.join(tvAppPath, 'browser'), { fallthrough: true }));
+app.use('/', express.static('./tv/browser', { fallthrough: true }));
 
 // --- Angular Routing Support ---
 
