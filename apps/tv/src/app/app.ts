@@ -2,8 +2,6 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { Subscription } from 'rxjs';
 import { getYoutubeVideoId,
@@ -14,7 +12,8 @@ import { getYoutubeVideoId,
          NavigationLevel,
          SharedNavigationRootComponent,
          CatalogHelperService,         
-         DEFAULT_APPLICATION_STATE} from 'shared';
+         DEFAULT_APPLICATION_STATE,
+         AppToolbarComponent} from 'shared';
 import { WebSocketService } from './services/websocket.service';
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
 import { QrConnectionComponent } from './components/qr-connection/qr-connection.component';
@@ -26,12 +25,11 @@ import { QrConnectionComponent } from './components/qr-connection/qr-connection.
     RouterOutlet,
     CommonModule,
     MatToolbarModule,
-    MatButtonModule,
-    MatIconModule,
     MatSnackBarModule,
     VideoPlayerComponent,
     SharedNavigationRootComponent,
-    QrConnectionComponent
+    QrConnectionComponent,
+    AppToolbarComponent
   ],
   templateUrl: './app.html',
   styleUrls: ['./app.scss'],

@@ -1,0 +1,14 @@
+<!-- Shared Application Toolbar -->
+<mat-toolbar color="primary">
+  <span class="header-title">{{ title() }}</span>
+  
+  <button mat-icon-button (click)="onHomeClick()">
+    <mat-icon>home</mat-icon>
+  </button>
+
+  <span class="spacer"></span>
+
+  <span class="connection-status">
+    {{ getStatusDisplay(connectionStatus()) }}
+  </span>
+</mat-toolbar>

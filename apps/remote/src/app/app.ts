@@ -1,8 +1,5 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatButtonModule } from '@angular/material/button';
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatIconModule } from "@angular/material/icon";
 import { RouterOutlet } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ClientType,
@@ -15,10 +12,11 @@ import { ClientType,
          ContentService,
          CatalogHelperService,
          ControlCommandPayload,
-         PlayerState} from 'shared';
-import { NarrationService } from 'shared';
-import { ButtonDescriptionPanelComponent } from 'shared';
-import { SharedNavigationRootComponent } from 'shared';
+         PlayerState,
+         NarrationService,
+         ButtonDescriptionPanelComponent,
+         SharedNavigationRootComponent,
+         AppToolbarComponent} from 'shared';
 import { VideoControlsComponent } from './components/video-controls/video-controls.component';
 import { WebSocketService } from './services/websocket.service';
 
@@ -29,12 +27,10 @@ import { WebSocketService } from './services/websocket.service';
   imports: [
     RouterOutlet,
     CommonModule,
-    MatToolbarModule,
-    MatButtonModule,
-    MatIconModule,
     VideoControlsComponent,
     SharedNavigationRootComponent,
-    ButtonDescriptionPanelComponent
+    ButtonDescriptionPanelComponent,
+    AppToolbarComponent
 ],
   templateUrl: './app.html',
   styleUrls: ['./app.scss'],

@@ -1,0 +1,27 @@
+// Shared App Toolbar Styles
+// Merged minimal subset from TV and Remote apps
+
+:host {
+  display: contents;
+}
+
+mat-toolbar {
+  // Common styles for both apps (merged to simplest subset)
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);  // Lighter shadow (modern look)
+  flex-shrink: 0;  // Prevent toolbar from shrinking in flex layouts
+  
+  .header-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+  
+  .spacer {
+    flex: 1 1 auto;
+  }
+  
+  .connection-status {
+    font-weight: 500;
+    color: white;
+    font-size: 0.9rem;
+  }
+}

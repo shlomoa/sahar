@@ -1,17 +1,11 @@
 <!-- TV Application Layout -->
 <div class="tv-container">
   <!-- Navigation Bar (10%) -->
-  <mat-toolbar color="primary" class="tv-nav-bar">
-    <span class="header-title">📺 SAHAR TV</span>
-    <button mat-icon-button (click)="onHomeClick()">
-      <mat-icon>home</mat-icon>
-    </button>
-    <span class="spacer"></span>
-    <span class="connection-status">
-      {{connectionStatus === 'connected' ? '🟢 Connected' : 
-        connectionStatus === 'connecting' ? '🟡 Connecting...' : '🔴 Disconnected'}}
-    </span>
-  </mat-toolbar>
+  <shared-app-toolbar
+    [title]="'📺 SAHAR TV'"
+    [connectionStatus]="connectionStatus"
+    (homeClick)="onHomeClick()">
+  </shared-app-toolbar>
 
   <!-- Main Content Area (80%) -->
   <div class="main-content">    

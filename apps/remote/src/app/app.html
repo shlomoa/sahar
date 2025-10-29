@@ -4,20 +4,11 @@
   <lib-button-description-panel></lib-button-description-panel>
   
   <!-- Navigation Bar (10%) -->
-  <mat-toolbar color="primary" class="remote-nav-bar">
-    <span class="header-title">📱 SAHAR TV Remote</span>
-    <button mat-icon-button (click)="onHomeClick()">
-      <mat-icon>home</mat-icon>
-    </button>
-
-    <span class="spacer"></span>
-
-    <span class="connection-status">
-      {{connectionStatus === 'connected' ? '🟢 Connected' : 
-        connectionStatus === 'connecting' ? '🟡 Connecting...' : '🔴 Disconnected'}}
-    </span>
-
-  </mat-toolbar>
+  <shared-app-toolbar
+    [title]="'📱 SAHAR TV Remote'"
+    [connectionStatus]="connectionStatus"
+    (homeClick)="onHomeClick()">
+  </shared-app-toolbar>
 
   <!-- Main Content Area (80%) -->
   <div class="main-content">
