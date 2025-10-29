@@ -1,7 +1,6 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PlayerState, Scene, Video } from 'shared';
-import { VideoControlNavigationComponent } from './video-control-navigation/video-control-navigation.component';
 import { CurrentVideoSceneInfoComponent } from './current-video-scene-info/current-video-scene-info.component';
 import { VideoRemoteControlComponent } from './video-remote-control/video-remote-control.component';
 
@@ -11,7 +10,6 @@ import { VideoRemoteControlComponent } from './video-remote-control/video-remote
   standalone: true,
   imports: [
     CommonModule,
-    VideoControlNavigationComponent,
     CurrentVideoSceneInfoComponent,
     VideoRemoteControlComponent
   ],

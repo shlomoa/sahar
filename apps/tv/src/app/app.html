@@ -46,14 +46,7 @@
     }
   </div>
 
-  <!-- Status Bar (10%) for debug -->
-  <mat-toolbar class="status-bar" color="accent">
-    <span>Level: {{ currentLevel }}</span>
-    @if (currentPerformer(); as performer) {
-      <span class="spacer"></span>
-      <span>Performer: {{ performer.name }}</span>
-    }
-  </mat-toolbar>
+
 </div>
 
 <router-outlet />
