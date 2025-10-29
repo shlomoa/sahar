@@ -22,10 +22,10 @@
   },
   "private": true,
   "devDependencies": {
-    "@angular/build": "^20.1.6",
-    "@angular/cli": "^20.1.6",
-    "@angular/compiler": "^20.1.0",
-    "@angular/compiler-cli": "^20.1.0",
+    "@angular/build": "^20.3.7",
+    "@angular/cli": "^20.3.7",
+    "@angular/compiler": "^20.3.7",
+    "@angular/compiler-cli": "^20.3.7",
     "ng-packagr": "^20.2.0",
     "typescript": "~5.8.2"
   }
