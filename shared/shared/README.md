@@ -84,19 +84,29 @@ The shared library is an Angular library that provides all common code, models, 
 shared/shared/src/lib/
 ├── components/           # Reusable UI components
 │   ├── index.ts         # Component exports
+│   ├── app-toolbar/         # Shared navigation toolbar (TV + Remote)
+│   ├── back-card/           # Back navigation card
+│   ├── button-description-panel/  # Accessibility: Description panel
 │   ├── device-connection/   # Connection status display
+│   ├── navigation/          # Navigation root component
 │   ├── performers-grid/     # Performers grid component
 │   ├── scenes-grid/         # Scenes grid component
 │   └── videos-grid/         # Videos grid component
+├── directives/          # Shared directives
+│   ├── index.ts         # Directive exports
+│   └── focus-desc.directive.ts  # Accessibility: Focus + description
 ├── models/              # TypeScript interfaces and data models
 │   ├── application-state.ts    # Core state interface
 │   ├── messages.ts             # Protocol message types and unions
 │   ├── video-navigation.ts     # Navigation data models
 │   └── websocket-protocol.ts   # Protocol v3.0 definitions
 ├── services/            # Shared services
-│   ├── content.service.ts           # HTTP catalog fetching + caching
-│   ├── video-navigation.service.ts  # Navigation state queries
-│   └── websocket-base.service.ts    # Base WebSocket client
+│   ├── button-description.service.ts  # Accessibility: Description state
+│   ├── catalog-helper.service.ts      # Catalog computed signals
+│   ├── content.service.ts             # HTTP catalog fetching + caching
+│   ├── narration.service.ts           # Accessibility: Text-to-speech
+│   ├── video-navigation.service.ts    # Navigation state queries
+│   └── websocket-base.service.ts      # Base WebSocket client
 └── utils/               # Utility functions
     ├── logging.ts       # Structured logging helpers
     ├── websocket-utils.ts   # Protocol utilities
@@ -150,6 +160,15 @@ import { VideoNavigationService } from 'shared';
 // Import components
 import { PerformersGridComponent, VideosGridComponent, ScenesGridComponent } from 'shared';
 import { DeviceConnectionComponent } from 'shared';
+import { AppToolbarComponent } from 'shared';
+import { ButtonDescriptionPanelComponent } from 'shared';
+import { SharedNavigationRootComponent } from 'shared';
+
+// Import directives
+import { FocusDescDirective } from 'shared';
+
+// Import accessibility services
+import { NarrationService, ButtonDescriptionService } from 'shared';
 
 // Import utilities
 import { createLogger } from 'shared';
@@ -194,10 +213,31 @@ Stateless catalog query service:
 
 All components are Angular 20 standalone components with Material Design:
 
+- **AppToolbarComponent**: Shared navigation toolbar for TV and Remote apps
+  - Signal-based inputs: `title`, `connectionStatus`
+  - Output: `homeClick` event
+  - Automatically styled with Material theming
+  - App-specific height overrides via host styles
 - **PerformersGridComponent**: Grid display of performers with thumbnails
 - **VideosGridComponent**: Grid display of videos for a performer
 - **ScenesGridComponent**: Grid display of scenes for a video
 - **DeviceConnectionComponent**: Real-time connection status indicator
+- **ButtonDescriptionPanelComponent**: Accessibility - Fixed bottom banner for button descriptions
+- **SharedNavigationRootComponent**: Unified navigation component for performers → videos → scenes
+
+## 🎯 Directives
+
+- **FocusDescDirective**: Accessibility - Handles focus/blur, mouse hover, and touch long-press for button descriptions and narration
+
+## ♿ Accessibility Services
+
+- **NarrationService**: Hebrew text-to-speech with Web Speech API
+  - Language support: `he-IL`
+  - Smart voice selection (Google Hebrew preferred)
+  - Niqqud/cantillation handling
+  - Signal-based state: `isSpeaking`, `isSupported`, `isEnabled`
+- **ButtonDescriptionService**: Signal-based state management for button descriptions
+  - Simple API: `description` signal, `setDescription()` method
 
 ## 🔍 Utilities
 

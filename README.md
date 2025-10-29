@@ -226,9 +226,10 @@ Reconnect/backoff parameters centralized in validation config.
 ### Technology Stack
 - **Frontend**: Angular 20+ with Standalone Components
 - **UI Framework**: Angular Material 20.1.3
+- **Shared Components**: Reusable UI components (navigation grids, toolbars, accessibility features)
 - **Communication**: Native WebSocket API
 - **Video**: YouTube Player API (@angular/youtube-player)
-- **Reactive Programming**: RxJS for async operations
+- **Reactive Programming**: RxJS for async operations, Angular Signals for state management
 - **Styling**: SCSS with Material Design theming
 
 ### Development Workflow

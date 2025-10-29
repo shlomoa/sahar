@@ -1381,6 +1381,128 @@ export class VideoRemoteControlComponent {
 
 ---
 
+#### 5. AppToolbarComponent (`shared/shared/src/lib/components/app-toolbar/`)
+
+**Purpose**: Shared navigation toolbar for TV and Remote apps
+
+**Architecture**: Standalone component with signal-based inputs
+
+**Refactor Date**: 2025-10-29 - Extracted from duplicated TV/Remote toolbar code
+
+**Component API**:
+```typescript
+@Component({
+  selector: 'shared-app-toolbar',
+  standalone: true,
+  imports: [CommonModule, MatToolbarModule, MatButtonModule, MatIconModule],
+  templateUrl: './app-toolbar.component.html',
+  styleUrls: ['./app-toolbar.component.scss']
+})
+export class AppToolbarComponent {
+  // Signal-based inputs
+  title = input.required<string>();                    // "📺 SAHAR TV" or "📱 SAHAR TV Remote"
+  connectionStatus = input.required<ConnectionState>(); // 'connected' | 'connecting' | 'disconnected'
+  
+  // Output events
+  homeClick = output<void>();
+  
+  // Helper method
+  protected getStatusDisplay(status: ConnectionState): string {
+    // Returns: '🟢 Connected' | '🟡 Connecting...' | '🔴 Disconnected'
+  }
+}
+```
+
+**Template Structure** (app-toolbar.component.html):
+```html
+<mat-toolbar color="primary">
+  <span class="header-title">{{ title() }}</span>
+  <button mat-icon-button (click)="onHomeClick()">
+    <mat-icon>home</mat-icon>
+  </button>
+  <span class="spacer"></span>
+  <span class="connection-status">
+    {{ getStatusDisplay(connectionStatus()) }}
+  </span>
+</mat-toolbar>
+```
+
+**Shared Styles** (app-toolbar.component.scss) - Merged minimal subset:
+```scss
+:host {
+  display: contents;
+}
+
+mat-toolbar {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);  // Lighter shadow (modern)
+  flex-shrink: 0;  // Prevent shrinking in flex layouts
+  
+  .header-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+  
+  .spacer {
+    flex: 1 1 auto;
+  }
+  
+  .connection-status {
+    font-weight: 500;
+    color: white;
+    font-size: 0.9rem;
+  }
+}
+```
+
+**App-Specific Overrides**:
+
+*TV App* (`apps/tv/src/app/app.scss`):
+```scss
+// TV-specific: Make toolbar 10% of viewport height
+shared-app-toolbar mat-toolbar {
+  height: 10vh;
+  min-height: 64px;
+}
+```
+
+*Remote App*: No overrides needed (uses default Material toolbar height)
+
+**Usage**:
+
+*TV App* (`apps/tv/src/app/app.html`):
+```html
+<shared-app-toolbar
+  [title]="'📺 SAHAR TV'"
+  [connectionStatus]="connectionStatus"
+  (homeClick)="onHomeClick()">
+</shared-app-toolbar>
+```
+
+*Remote App* (`apps/remote/src/app/app.html`):
+```html
+<shared-app-toolbar
+  [title]="'📱 SAHAR TV Remote'"
+  [connectionStatus]="connectionStatus"
+  (homeClick)="onHomeClick()">
+</shared-app-toolbar>
+```
+
+**Benefits**:
+- ✅ **DRY Principle**: Eliminated ~50 lines of duplicated toolbar code
+- ✅ **Single Source of Truth**: Toolbar behavior/styling defined once
+- ✅ **Type Safety**: Signal-based inputs with strong typing
+- ✅ **Maintainability**: Changes only need to happen in one place
+- ✅ **Consistency**: Guaranteed identical behavior across apps
+- ✅ **App Flexibility**: Each app can override styles locally if needed
+
+**Location**: `shared/shared/src/lib/components/app-toolbar/` (3 files: .ts, .html, .scss)
+
+**Code Eliminated**:
+- TV: Removed `MatButtonModule`, `MatIconModule` imports, removed `.tv-nav-bar` styles
+- Remote: Removed `MatToolbarModule`, `MatButtonModule`, `MatIconModule` imports, removed `.remote-nav-bar` styles
+
+---
+
 ### Files Modified/Created
 
 **Created** (`shared/shared/src/lib/`):
@@ -1390,18 +1512,25 @@ export class VideoRemoteControlComponent {
 4. `components/button-description-panel/button-description-panel.component.scss` - 25 lines
 5. `components/button-description-panel/button-description-panel.component.html` - 8 lines
 6. `directives/focus-desc.directive.ts` - 56 lines
+7. `components/app-toolbar/app-toolbar.component.ts` - 50 lines (2025-10-29)
+8. `components/app-toolbar/app-toolbar.component.html` - 12 lines (2025-10-29)
+9. `components/app-toolbar/app-toolbar.component.scss` - 25 lines (2025-10-29)
 
 **Modified**:
 1. `shared/shared/src/lib/services/index.ts` - Added exports
-2. `shared/shared/src/lib/components/index.ts` - Added export
+2. `shared/shared/src/lib/components/index.ts` - Added exports (button-description-panel, app-toolbar)
 3. `shared/shared/src/lib/directives/index.ts` - Created with export
 4. `shared/shared/src/public-api.ts` - Added directives export
-5. `apps/remote/src/app/app.ts` - Service initialization
-6. `apps/remote/src/app/app.html` - Component placement
-7. `apps/remote/src/app/components/video-controls/video-remote-control/video-remote-control.component.ts` - Directive import
-8. `apps/remote/src/app/components/video-controls/video-remote-control/video-remote-control.component.html` - Directive usage (10 buttons)
+5. `apps/remote/src/app/app.ts` - Service initialization, AppToolbarComponent import (2025-10-29)
+6. `apps/remote/src/app/app.html` - Component placement, toolbar refactored (2025-10-29)
+7. `apps/remote/src/app/app.scss` - Removed .remote-nav-bar styles (2025-10-29)
+8. `apps/remote/src/app/components/video-controls/video-remote-control/video-remote-control.component.ts` - Directive import
+9. `apps/remote/src/app/components/video-controls/video-remote-control/video-remote-control.component.html` - Directive usage (9 buttons)
+10. `apps/tv/src/app/app.ts` - AppToolbarComponent import (2025-10-29)
+11. `apps/tv/src/app/app.html` - Toolbar refactored (2025-10-29)
+12. `apps/tv/src/app/app.scss` - Replaced .tv-nav-bar with height override (2025-10-29)
 
-**Total Lines of Code**: ~280 lines (services + components + directive + integration)
+**Total Lines of Code**: ~370 lines (services + components + directive + toolbar + integration)
 
 ---
 
