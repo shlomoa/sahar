@@ -1,8 +1,9 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZoneChangeDetection, provideAppInitializer, inject } from '@angular/core';
+import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
-import { ContentService } from 'shared';
-
+import { ContentService, initSharedIcons } from 'shared';
 import { routes } from './app.routes';
+import { provideHttpClient } from '@angular/common/http';
 
 /**
  * Initialize catalog before app bootstrap
@@ -16,9 +17,18 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
+    provideHttpClient(),
+    provideAnimations(),    
+
     provideAppInitializer(() => {
       const contentService = inject(ContentService);
       return contentService.fetchCatalog();
-    })
+    }),
+    provideAppInitializer(() => {
+      // This runs inside an injection context, so initSaharIcons()
+      // may safely call `inject(MatIconRegistry)` and `inject(DomSanitizer)`.
+      initSharedIcons();
+      // return void (sync) – boot continues immediately
+    }),
   ]
 };
