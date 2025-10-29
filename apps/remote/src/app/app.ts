@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -42,6 +42,9 @@ export class App implements OnInit, OnDestroy {
   // Server state - single source of truth
   protected applicationState: ApplicationState = {} as ApplicationState;
   private subscriptions: Subscription[] = [];
+
+  // ViewChild to access the toolbar component
+  @ViewChild('appToolbar') appToolbar!: AppToolbarComponent;
 
   // Service injections
   private readonly webSocketService = inject(WebSocketService);
@@ -404,6 +407,14 @@ export class App implements OnInit, OnDestroy {
 
   onHomeClick(): void {
     this.webSocketService.sendNavigationCommand('navigate_home');
+  }
+
+  // Touch area method to show toolbar temporarily
+  showToolbarTemporarily(): void {
+    if (this.appToolbar && this.connectionStatus === 'connected') {
+      this.appToolbar.showTemporarily();
+      console.log('📱 Remote: Toolbar shown temporarily via touch area');
+    }
   }
 
 }

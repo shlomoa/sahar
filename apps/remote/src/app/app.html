@@ -5,10 +5,18 @@
   
   <!-- Navigation Bar (10%) -->
   <shared-app-toolbar
+    #appToolbar
     [title]="'📱 SAHAR TV Remote'"
     [connectionStatus]="connectionStatus"
+    [bothConnected]="bothConnected"
     (homeClick)="onHomeClick()">
   </shared-app-toolbar>
+
+  <!-- Touch Area for Toolbar Show (upper-right invisible area) -->
+  <div class="toolbar-touch-area" 
+       (click)="showToolbarTemporarily()"
+       (touchstart)="showToolbarTemporarily()">
+  </div>
 
   <!-- Main Content Area (80%) -->
   <div class="main-content">

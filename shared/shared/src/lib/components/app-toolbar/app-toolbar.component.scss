@@ -10,6 +10,14 @@ mat-toolbar {
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);  // Lighter shadow (modern look)
   flex-shrink: 0;  // Prevent toolbar from shrinking in flex layouts
   
+  // Auto-hide animation
+  transition: transform 300ms ease-in-out;
+  transform: translateY(0);
+  
+  &.toolbar-hidden {
+    transform: translateY(-100%);
+  }
+  
   .header-title {
     font-size: 1.2rem;
     font-weight: 600;

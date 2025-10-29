@@ -4,6 +4,30 @@
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   flex-direction: column;
+  position: relative; // Enable absolute positioning for touch area
+}
+
+// Touch area for showing toolbar (upper-right corner)
+.toolbar-touch-area {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 80px;
+  height: 80px;
+  z-index: 1000;
+  background: transparent;
+  cursor: pointer;
+  
+  // Optional: Add subtle visual hint (can be removed for completely invisible)
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 0 0 0 20px;
+  }
+  
+  // Touch feedback for mobile devices
+  &:active {
+    background: rgba(255, 255, 255, 0.2);
+  }
 }
 
 .navigation-content {
