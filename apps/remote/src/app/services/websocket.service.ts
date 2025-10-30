@@ -123,7 +123,7 @@ export class WebSocketService extends WebSocketBaseService {
   // Public methods for sending commands (protocol-aligned)
   sendNavigationCommand(
     action: NavigationAction,
-    targetId?: string,
+    targetId?: number,
     _targetType?: string
   ): void {
     this.debugLog(`Sending navigation command: ${action} ${targetId ?? ''}`);

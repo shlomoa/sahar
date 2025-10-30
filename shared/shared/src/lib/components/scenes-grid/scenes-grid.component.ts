@@ -20,13 +20,13 @@ import { ClientType } from '../../models';
 })
 export class SharedScenesGridComponent {
   @Input() scenes: Scene[] = [];
-  @Input() selectedSceneId?: string;
+  @Input() selectedSceneId?: number;
   @Input() clientType: ClientType = 'remote';
   
-  @Output() sceneSelected = new EventEmitter<string>();
+  @Output() sceneSelected = new EventEmitter<number>();
   @Output() backToVideos = new EventEmitter<void>();
 
-  onSceneSelected(sceneId: string) {
+  onSceneSelected(sceneId: number) {
     console.log('📱 Scene selected with ID:', sceneId);
     this.sceneSelected.emit(sceneId);
   }

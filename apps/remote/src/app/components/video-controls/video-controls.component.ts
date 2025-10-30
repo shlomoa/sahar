@@ -17,7 +17,7 @@ import { VideoRemoteControlComponent } from './video-remote-control/video-remote
 export class VideoControlsComponent {
   @Input() currentVideo?: Video;
   @Input() currentScene?: Scene;
-  @Input() sceneId?: string;
+  @Input() sceneId?: number;
   @Input() playerState!: PlayerState;
   @Input() hasPreviousScene = false;
   @Input() hasNextScene = false;

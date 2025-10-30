@@ -195,17 +195,17 @@ export class App implements OnInit, OnDestroy {
   }
   
   // Event handlers for shared components - TV is display-only, these are stubs for local testing
-  onPerformerSelected(performerId: string): void {
+  onPerformerSelected(performerId: number): void {
     console.log('📺 TV: Performer selected (local event, no-op):', performerId);
     // TV is display-only: navigation commands should come from Remote via server
   }
 
-  onVideoSelected(videoId: string): void {
+  onVideoSelected(videoId: number): void {
     console.log('📺 TV: Video selected (local event, no-op):', videoId);
     // TV is display-only: navigation commands should come from Remote via server
   }
 
-  onSceneSelected(sceneId: string): void {
+  onSceneSelected(sceneId: number): void {
     console.log('📺 TV: Scene selected (local event, no-op):', sceneId);
     // TV is display-only: navigation commands should come from Remote via server
     const video = this.currentVideo();
@@ -213,8 +213,8 @@ export class App implements OnInit, OnDestroy {
     
     if (video && scene) {
       console.log('📺 TV: Would start video playback:', {
-        video: video.title,
-        scene: scene.title,
+        video: video.name,
+        scene: scene.name,
         url: video.url
       });
     }

@@ -31,17 +31,17 @@ export class SharedNavigationRootComponent {
   @Input() performers: Performer[] = [];
   @Input() videos: Video[] = [];
   @Input() scenes: Scene[] = [];
-  @Input() selectedPerformerId?: string;
-  @Input() selectedVideoId?: string;
+  @Input() selectedPerformerId?: number;
+  @Input() selectedVideoId?: number;
   @Input() sceneSelected = false;
   @Input() clientType: ClientType = 'remote';
 
   // Outputs (bubbled to host apps)
   @Output() back = new EventEmitter<void>();
   @Output() home = new EventEmitter<void>();
-  @Output() selectPerformer = new EventEmitter<string>();
-  @Output() selectVideo = new EventEmitter<string>();
-  @Output() selectScene = new EventEmitter<string>();
+  @Output() selectPerformer = new EventEmitter<number>();
+  @Output() selectVideo = new EventEmitter<number>();
+  @Output() selectScene = new EventEmitter<number>();
 
   get disabledBack(): boolean {
     return !this.level || this.level === 'performers';

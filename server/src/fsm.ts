@@ -109,7 +109,7 @@ export class Fsm {
     }
   }
 
-  navigationCommand(action: NavigationAction, targetId?: string) {
+  navigationCommand(action: NavigationAction, targetId?: number) {
     logInfo('fsm_navigation_command', { action, targetId }, 'Processing navigation command');
     const before = JSON.stringify(this.state.navigation);
     const nav = this.state.navigation;
@@ -132,7 +132,7 @@ export class Fsm {
         break;
       }
       case 'navigate_to_performer': {
-        if (targetId && nav.performerId !== targetId) {
+        if (typeof targetId === 'number' && nav.performerId !== targetId) {
           nav.currentLevel = 'videos';
           nav.performerId = targetId;
           // Clear deeper selections
@@ -142,7 +142,7 @@ export class Fsm {
         break;
       }
       case 'navigate_to_video': {
-        if (targetId) {
+        if (typeof targetId === 'number') {
           nav.currentLevel = 'scenes';
           nav.videoId = targetId;
           delete nav.sceneId;
@@ -152,7 +152,7 @@ export class Fsm {
         break;
       }
       case 'navigate_to_scene': {
-        if (targetId && nav.sceneId !== targetId) {
+        if (typeof targetId === 'number' && nav.sceneId !== targetId) {
           // Keep currentLevel at 'scenes' - playback state tracked by PlayerState.isPlaying
           nav.sceneId = targetId;
         }

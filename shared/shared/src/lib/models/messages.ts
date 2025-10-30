@@ -55,7 +55,7 @@ export const NAVIGATION_ACTIONS =  [
 
 export interface NavigationCommandPayload extends BasePayload {
   action: NavigationAction;
-  targetId?: string;
+  targetId?: number;
 }
 
 export interface NavigationCommandMessage {

@@ -260,7 +260,7 @@ export class VideoPlayerComponent implements OnInit, OnChanges {
     
     try {
       this.youtubePlayer.seekTo(startTime, true);
-      console.log('✅ Successfully seeked to scene:', this.currentScene.title);
+      console.log('✅ Successfully seeked to scene:', this.currentScene.name);
     } catch (error) {
       console.error('❌ Error seeking to scene:', error);
     }

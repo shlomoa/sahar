@@ -20,12 +20,12 @@ import { ClientType } from '../../models/websocket-protocol';
 })
 export class SharedPerformersGridComponent {
   @Input() performers: Performer[] = [];
-  @Input() selectedPerformerId?: string;
+  @Input() selectedPerformerId?: number;
   @Input() clientType: ClientType = 'remote'; // New: Support different display modes
   
-  @Output() performerSelected = new EventEmitter<string>();
+  @Output() performerSelected = new EventEmitter<number>();
 
-  selectPerformer(performerId: string) {
+  selectPerformer(performerId: number) {
     this.performerSelected.emit(performerId);
   }
 

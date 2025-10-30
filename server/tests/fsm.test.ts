@@ -83,22 +83,22 @@ test('Fsm: navigationCommand updates levels with no-op suppression', () => {
     const fsm = new Fsm();
     const s0 = fsm.getSnapshot();
 
-    fsm.navigationCommand('navigate_to_performer', 'p1');
+    fsm.navigationCommand('navigate_to_performer', 1);
     const s1 = fsm.getSnapshot();
     expectVersionBump(s0, s1);
     assert.equal(s1.navigation.currentLevel, 'videos');
-    assert.equal(s1.navigation.performerId, 'p1');
+    assert.equal(s1.navigation.performerId, 1);
 
     // no-op repeat
-    fsm.navigationCommand('navigate_to_performer', 'p1');
+    fsm.navigationCommand('navigate_to_performer', 1);
     const s1b = fsm.getSnapshot();
     expectNoVersionChange(s1, s1b);
 
-    fsm.navigationCommand('navigate_to_video', 'v1');
+    fsm.navigationCommand('navigate_to_video', 12);
     const s2 = fsm.getSnapshot();
     expectVersionBump(s1b, s2);
     assert.equal(s2.navigation.currentLevel, 'scenes');
-    assert.equal(s2.navigation.videoId, 'v1');
+    assert.equal(s2.navigation.videoId, 12);
 
     fsm.navigationCommand('navigate_back');
     const s3 = fsm.getSnapshot();

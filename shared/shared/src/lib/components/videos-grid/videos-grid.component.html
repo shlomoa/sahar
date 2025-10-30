@@ -9,11 +9,11 @@
         <img 
           mat-card-image 
           [src]="video.thumbnail" 
-          [alt]="video.title"
+          [alt]="video.name"
           loading="lazy">
           
         <mat-card-content>
-          <h3>{{ video.title }}</h3>
+          <h3>{{ video.name }}</h3>
           @if (video.duration) {
             <p>{{ formatDuration(video.duration) }} min</p>
           }

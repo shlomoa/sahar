@@ -33,9 +33,9 @@ export const DEFAULT_CLIENTS_CONNECTION_STATE: ClientsConnectionState = {
 
 export interface NavigationState {
   currentLevel: NavigationLevel;
-  performerId?: string;
-  videoId?: string;
-  sceneId?: string;
+  performerId?: number;
+  videoId?: number;
+  sceneId?: number;
 };
 
 export const DEFAULT_NAVIGATION_STATE: NavigationState = {

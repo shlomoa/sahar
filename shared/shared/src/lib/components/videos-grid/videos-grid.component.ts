@@ -21,13 +21,13 @@ import { ClientType } from '../../models';
 })
 export class SharedVideosGridComponent {
   @Input() videos: Video[] = [];
-  @Input() selectedVideoId?: string;
+  @Input() selectedVideoId?: number;
   @Input() clientType: ClientType = 'remote';
   
-  @Output() videoSelected = new EventEmitter<string>();
+  @Output() videoSelected = new EventEmitter<number>();
   @Output() backToPerformers = new EventEmitter<void>();
 
-  onVideoSelected(videoId: string) {
+  onVideoSelected(videoId: number) {
     this.videoSelected.emit(videoId);
   }
 

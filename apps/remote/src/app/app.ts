@@ -65,17 +65,17 @@ export class App implements OnInit, OnDestroy {
   clientType: ClientType = 'remote';
 
   // Event handlers - send commands to server only, don't update local state
-  onPerformerSelected(performerId: string): void {
+  onPerformerSelected(performerId: number): void {
     console.log('📱 Remote: Performer selected:', performerId);
     this.webSocketService.sendNavigationCommand('navigate_to_performer', performerId, 'performer');
   }
 
-  onVideoSelected(videoId: string): void {
+  onVideoSelected(videoId: number): void {
     console.log('📱 Remote: Video selected:', videoId);
     this.webSocketService.sendNavigationCommand('navigate_to_video', videoId, 'video');
   }
 
-  onSceneSelected(sceneId: string): void {
+  onSceneSelected(sceneId: number): void {
     console.log('📱 Remote: Scene selected:', sceneId);
     const video = this.currentVideo();
     const scene = this.currentScene();
@@ -96,7 +96,7 @@ export class App implements OnInit, OnDestroy {
 
   onBackToPerformers(): void {
     console.log('📱 Remote: Back to performers');
-    this.webSocketService.sendNavigationCommand('navigate_to_performer', 'Home', 'performer');
+    this.webSocketService.sendNavigationCommand('navigate_home');
   }
 
   onBackToVideos(): void {
@@ -104,7 +104,7 @@ export class App implements OnInit, OnDestroy {
     this.webSocketService.sendNavigationCommand('navigate_back');
   }
 
-  onItemClick(item: { itemType: string; id: string }): void {
+  onItemClick(item: { itemType: string; id: number }): void {
     // Handle item clicks - send commands to server
     switch (item.itemType) {
       case 'performer':
@@ -199,34 +199,34 @@ export class App implements OnInit, OnDestroy {
   }
 
   // Navigation methods - send commands to server only
-  navigateToPerformer(performerId: string) {
+  navigateToPerformer(performerId: number) {
     console.log('👤 Navigate to performer:', performerId);
-    this.webSocketService.sendNavigationCommand('navigate_to_performer', performerId.toString(), 'performer');
+    this.webSocketService.sendNavigationCommand('navigate_to_performer', Number(performerId), 'performer');
   }
 
   navigateToPerformers() {
     console.log('🏠 Navigate to performers');
-    this.webSocketService.sendNavigationCommand('navigate_to_performer', 'Home', 'performer');
+    this.webSocketService.sendNavigationCommand('navigate_home');
   }
 
-  navigateToVideo(videoId: string) {
+  navigateToVideo(videoId: number) {
     console.log('🎬 Navigate to video:', videoId);
-    this.webSocketService.sendNavigationCommand('navigate_to_video', videoId.toString(), 'video');
+    this.webSocketService.sendNavigationCommand('navigate_to_video', Number(videoId), 'video');
   }
 
-  navigateToVideos(performerId: string) {
+  navigateToVideos(performerId: number) {
     console.log('📹 Navigate to videos for performer:', performerId);
-    this.webSocketService.sendNavigationCommand('navigate_to_performer', performerId.toString(), 'performer');
+    this.webSocketService.sendNavigationCommand('navigate_to_performer', Number(performerId), 'performer');
   }
 
-  navigateToScene(sceneId: string) {
+  navigateToScene(sceneId: number) {
     console.log('🎯 Navigate to scene:', sceneId);
-    this.webSocketService.sendNavigationCommand('navigate_to_scene', sceneId, 'segment');
+    this.webSocketService.sendNavigationCommand('navigate_to_scene', Number(sceneId), 'segment');
   }
 
-  navigateToScenes(videoId: string) {
+  navigateToScenes(videoId: number) {
     console.log('🎬 Navigate to scenes for video:', videoId);
-    this.webSocketService.sendNavigationCommand('navigate_to_video', videoId.toString(), 'video');
+    this.webSocketService.sendNavigationCommand('navigate_to_video', Number(videoId), 'video');
   }
 
   navigateToPreviousScene() {
@@ -260,12 +260,12 @@ export class App implements OnInit, OnDestroy {
   }
 
   // Data access methods - use contentService directly
-  getVideosForPerformer(performerId: string): Video[] {
+  getVideosForPerformer(performerId: number): Video[] {
     console.log('📹 Fetching videos for performer:', performerId);
     return this.contentService.getVideosForPerformer(performerId);
   }
 
-  getScenesForVideo(videoId: string): Scene[] {
+  getScenesForVideo(videoId: number): Scene[] {
     console.log('🎬 Fetching scenes for video:', videoId);
     return this.contentService.getScenesForVideo(videoId);
   }

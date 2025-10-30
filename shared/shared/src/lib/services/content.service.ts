@@ -108,7 +108,7 @@ export class ContentService {
    * @returns Performer
    * @throws Error if performer not found in catalog
    */
-  getPerformer(id: string): Performer {
+  getPerformer(id: number): Performer {
     const catalog = this.catalog()!;  // Non-null assertion - guaranteed by provideAppInitializer
     const performer = catalog.performers.find(p => p.id === id);
     if (!performer) {
@@ -123,7 +123,7 @@ export class ContentService {
    * @param performerId Performer ID
    * @returns Array of videos (may be empty if no videos found)
    */
-  getVideosForPerformer(performerId: string): Video[] {
+  getVideosForPerformer(performerId: number): Video[] {
     const catalog = this.catalog()!;  // Non-null assertion - guaranteed by provideAppInitializer
     return catalog.videos.filter(v => v.performerId === performerId);
   }
@@ -135,7 +135,7 @@ export class ContentService {
    * @returns Video
    * @throws Error if video not found in catalog
    */
-  getVideo(id: string): Video {
+  getVideo(id: number): Video {
     const catalog = this.catalog()!;  // Non-null assertion - guaranteed by provideAppInitializer
     const video = catalog.videos.find(v => v.id === id);
     if (!video) {
@@ -150,7 +150,7 @@ export class ContentService {
    * @param videoId Video ID
    * @returns Array of scenes for this video (may be empty if no scenes found)
    */
-  getScenesForVideo(videoId: string): Scene[] {
+  getScenesForVideo(videoId: number): Scene[] {
     const catalog = this.catalog()!;  // Non-null assertion - guaranteed by provideAppInitializer
     return catalog.scenes.filter(s => s.videoId === videoId);
   }
@@ -162,7 +162,7 @@ export class ContentService {
    * @returns Scene
    * @throws Error if scene not found in catalog
    */
-  getScene(id: string): Scene {
+  getScene(id: number): Scene {
     const catalog = this.catalog()!;  // Non-null assertion - guaranteed by provideAppInitializer
     const scene = catalog.scenes.find(s => s.id === id);
     if (!scene) {

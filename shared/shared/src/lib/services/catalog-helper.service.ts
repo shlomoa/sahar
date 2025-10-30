@@ -55,7 +55,7 @@ import type { ApplicationState } from '../models';
  * }
  * 
  * @for (video of currentVideos(); track video.id) {
- *   <div>{{ video.title }}</div>
+ *   <div>{{ video.name }}</div>
  * }
  * ```
  */

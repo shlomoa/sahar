@@ -250,9 +250,9 @@ export class ServerWebSocketService {
       const videos = catalogData.videos || [];
       const scenes = catalogData.scenes || [];
 
-      const existsPerformer = (id?: string) => !!id && performers.some((p: any) => p.id === id);
-      const existsVideo = (id?: string) => !!id && videos.some((v: any) => v.id === id);
-      const existsScene = (id?: string) => !!id && scenes.some((s: any) => s.id === id);
+  const existsPerformer = (id?: number) => typeof id === 'number' && performers.some((p: any) => p.id === id);
+  const existsVideo = (id?: number) => typeof id === 'number' && videos.some((v: any) => v.id === id);
+  const existsScene = (id?: number) => typeof id === 'number' && scenes.some((s: any) => s.id === id);
 
       let validTarget = true;
       switch (action) {
@@ -275,7 +275,7 @@ export class ServerWebSocketService {
         return;
       }
 
-      this.fsm.navigationCommand(nav.payload.action, nav.payload.targetId);
+          this.fsm.navigationCommand(nav.payload.action, nav.payload.targetId);
       const after = this.fsm.getSnapshot();
       logInfo('fsm_after_navigation', { version: after.version, navigation: after.navigation });
       ws.send(JSON.stringify(this.makeAck('server')));
@@ -657,7 +657,7 @@ export class ServerWebSocketService {
         if (!action || !NAVIGATION_ACTION_SET.has(action as any)) {
           return { ok: false, code: ERROR_CODES.INVALID_COMMAND, reason: 'Invalid navigation action' };
         }
-        const targetId = payload.targetId !== undefined ? asString(payload.targetId, 200) : undefined;
+        const targetId = payload.targetId !== undefined ? asNumber(payload.targetId) : undefined;
         base.payload = { action, targetId };
         return { ok: true, msg: base as WebSocketMessage };
       }
