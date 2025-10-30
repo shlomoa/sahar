@@ -12,6 +12,7 @@ import {
 import { Fsm } from './fsm';
 import { getBestHostIP } from './utils/host-ip';
 import { HttpService } from './services/http.service';
+import { CatalogDataService } from './services/catalog-data.service';
 import { ServerWebSocketService, ClientMetadata } from './services/server-websocket.service';
 
 /**
@@ -82,8 +83,10 @@ logInfo('websocket_server', { server: server.address(), path: WEBSOCKET_CONFIG.W
 
 // --- Application State & Services ---
 
+// S2: Introduce CatalogDataService before FSM and inject into FSM
+const catalogService = new CatalogDataService();
 // FSM encapsulating authoritative application state (versioned)
-const fsm = new Fsm();
+const fsm = new Fsm(catalogService);
 
 // Track client connections and their type (managed by ServerWebSocketService)
 const clients = new Map<WebSocket, ClientMetadata>();
@@ -94,7 +97,7 @@ const markReady = () => { isReady = true; };
 
 // WebSocket Service handles all connection/message/broadcast logic
 // Service instantiation has side effects (sets up connection handlers)
-const wsService = new ServerWebSocketService(wss, fsm, clients);
+const wsService = new ServerWebSocketService(wss, fsm, catalogService, clients);
 wsService.initialize();
 
 // --- Express Middleware & Routes ---
@@ -103,7 +106,7 @@ wsService.initialize();
 app.use(express.json());
 
 // HTTP Service handles: /live, /ready, /health, /host-ip, /api/content/catalog
-const httpService = new HttpService(fsm, wss, clients, () => isReady);
+const httpService = new HttpService(fsm, catalogService, wss, clients, () => isReady);
 httpService.setupRoutes(app);
 
 // Static file serving

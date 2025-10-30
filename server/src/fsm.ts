@@ -9,7 +9,7 @@ import {
   ControlCommandPayload, 
   CatalogData
 } from 'shared';
-import { catalogData } from './mock-data';
+import { CatalogDataService } from './services/catalog-data.service';
 
 export type ServerState = 'initializing' | 'ready' | 'error';
 
@@ -40,13 +40,8 @@ export class Fsm {
   private connectedClients: ConnectedClients = {};
   serverState: ServerState = 'initializing';
   
-  // Phase 3: Catalog stored separately, not in ApplicationState
-  private catalogData: CatalogData;
-
-  constructor() {
-    // Phase 3: Initialize catalog from mock data (not part of state)
-    this.catalogData = catalogData;
-    
+  // Phase 3/S2: Catalog owned by CatalogDataService (not in FSM/ApplicationState)
+  constructor(private readonly catalogService: CatalogDataService) {
     this.state = {
       version: 1,      
       clientsConnectionState: { tv: 'disconnected', remote: 'disconnected' } as ClientsConnectionState,
@@ -80,8 +75,8 @@ export class Fsm {
 
   /** Return catalog data for HTTP API endpoint (Phase 3: Content Delivery Separation) */
   getCatalogData(): CatalogData {
-    // Phase 3: Return catalog from internal field, not ApplicationState
-    return this.catalogData;
+    // S2: Delegate to CatalogDataService
+    return this.catalogService.getCatalog();
   }
 
   registerClient(clientType: ClientType, deviceId: string): { ok: boolean; reason?: string } {

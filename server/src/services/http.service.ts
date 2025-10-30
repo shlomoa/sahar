@@ -2,6 +2,7 @@ import { Express, Request, Response } from 'express';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createLogger, ClientType } from 'shared';
 import { Fsm } from '../fsm';
+import { CatalogDataService } from './catalog-data.service';
 import { getBestHostIP } from '../utils/host-ip';
 
 const logger = createLogger({ component: 'http-service' });
@@ -20,6 +21,7 @@ const logInfo = (event: string, meta?: any, msg?: string) => logger.info(event, 
 export class HttpService {
   constructor(
     private fsm: Fsm,
+    private catalogService: CatalogDataService,
     private wss: WebSocketServer,
     private clients: Map<WebSocket, { clientType: ClientType; deviceId: string; lastHeartbeat?: number }>,
     private isReadyGetter: () => boolean
@@ -44,7 +46,11 @@ export class HttpService {
     // Content catalog API
     app.get('/api/content/catalog', this.handleCatalog.bind(this));
 
-    logInfo('http_routes_registered', { routes: ['/live', '/ready', '/health', '/host-ip', '/api/content/catalog'] });
+    logInfo('http_routes_registered', { routes: ['/live', '/ready', '/health', '/host-ip', '/api/content/catalog', '/admin/catalog/*'] });
+
+    // --- Admin endpoints (S5) - always enabled (auth gating removed) ---
+    this.registerAdminRoutes(app);
+    logInfo('admin_routes_enabled', { base: '/admin/catalog' });
   }
 
   // --- Route Handlers ---
@@ -95,12 +101,100 @@ export class HttpService {
 
   private handleCatalog(_req: Request, res: Response): void {
     logInfo('http_request', { path: '/api/content/catalog', method: 'GET' });
-    const catalog = this.fsm.getCatalogData();
+    // S1: Serve catalog via CatalogDataService (read-only)
+    const catalog = this.catalogService.getCatalog();
     logInfo('catalog_served', { 
       performers: catalog.performers.length, 
       videos: catalog.videos.length, 
       scenes: catalog.scenes.length 
     });
     res.json(catalog);
+  }
+
+  // --- Admin Routes (S5) ---
+  private registerAdminRoutes(app: Express): void {
+    // Create performer
+    app.post('/admin/catalog/performers', (req: Request, res: Response) => {
+      try {
+        const { name, thumbnail } = req.body || {};
+        if (typeof name !== 'string' || typeof thumbnail !== 'string') {
+          res.status(400).json({ ok: false, error: 'Invalid payload: { name: string, thumbnail: string } required' });
+          return;
+        }
+        const created = this.catalogService.addPerformer({ name, thumbnail });
+        res.status(201).json(created);
+      } catch (e: any) {
+        res.status(400).json({ ok: false, error: e?.message || 'Invalid performer payload' });
+      }
+    });
+
+    // Delete performer (cascade videos/scenes)
+    app.delete('/admin/catalog/performers/:id', (req: Request, res: Response) => {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) {
+        res.status(400).json({ ok: false, error: 'Invalid performer id' });
+        return;
+      }
+      this.catalogService.removePerformer(id);
+      res.sendStatus(204);
+    });
+
+    // Create video
+    app.post('/admin/catalog/videos', (req: Request, res: Response) => {
+      try {
+        const { name, url, performerId, thumbnail } = req.body || {};
+        if (typeof name !== 'string' || typeof url !== 'string' || !Number.isFinite(performerId) || typeof thumbnail !== 'string') {
+          res.status(400).json({ ok: false, error: 'Invalid payload: { name, url, performerId, thumbnail } required' });
+          return;
+        }
+        const created = this.catalogService.addVideo({ name, url, performerId: Number(performerId), thumbnail });
+        res.status(201).json(created);
+      } catch (e: any) {
+        res.status(400).json({ ok: false, error: e?.message || 'Invalid video payload' });
+      }
+    });
+
+    // Delete video (cascade scenes)
+    app.delete('/admin/catalog/videos/:id', (req: Request, res: Response) => {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) {
+        res.status(400).json({ ok: false, error: 'Invalid video id' });
+        return;
+      }
+      this.catalogService.removeVideo(id);
+      res.sendStatus(204);
+    });
+
+    // Create scene
+    app.post('/admin/catalog/scenes', (req: Request, res: Response) => {
+      try {
+        const { name, videoId, startTime, endTime, thumbnail } = req.body || {};
+        if (typeof name !== 'string' || !Number.isFinite(videoId) || !Number.isFinite(startTime)) {
+          res.status(400).json({ ok: false, error: 'Invalid payload: { name, videoId, startTime } required' });
+          return;
+        }
+        const created = this.catalogService.addScene({ 
+          name, 
+          videoId: Number(videoId), 
+          startTime: Number(startTime), 
+          endTime: endTime !== undefined ? Number(endTime) : undefined,
+          thumbnail: typeof thumbnail === 'string' ? thumbnail : undefined
+        });
+        res.status(201).json(created);
+      } catch (e: any) {
+        res.status(400).json({ ok: false, error: e?.message || 'Invalid scene payload' });
+      }
+    });
+
+    // Delete scene
+    app.delete('/admin/catalog/scenes/:id', (req: Request, res: Response) => {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) {
+        res.status(400).json({ ok: false, error: 'Invalid scene id' });
+        return;
+      }
+      this.catalogService.removeScene(id);
+      res.sendStatus(204);
+    });
   }
 }

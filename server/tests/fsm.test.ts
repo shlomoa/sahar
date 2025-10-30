@@ -12,6 +12,7 @@
 import test from 'node:test';
 import { strict as assert } from 'node:assert';
 import { Fsm } from '../src/fsm';
+import { CatalogDataService } from '../src/services/catalog-data.service';
 import { ApplicationState, PlayerState } from 'shared';
 import { ControlCommandPayload } from 'shared';
 
@@ -29,7 +30,7 @@ function expectNoVersionChange(prev: Snapshot, next: Snapshot) {
 
 // Smoke check: default initial conditions align with architecture (Section: ApplicationState)
 test('Fsm: initializes with version >= 1 and default state', () => {
-    const fsm = new Fsm();
+    const fsm = new Fsm(new CatalogDataService());
     const s = fsm.getSnapshot();
     assert.ok(s.version >= 1);    
     assert.equal(s.player.isPlaying, false);
@@ -38,7 +39,7 @@ test('Fsm: initializes with version >= 1 and default state', () => {
 
 // Register flow: one client → initializing; both clients → ready; duplicate type rejected (no version bump)
 test('Fsm: registers tv and remote, transitions to ready once both present', () => {
-    const fsm = new Fsm();
+    const fsm = new Fsm(new CatalogDataService());
     const s0 = fsm.getSnapshot();
     let res = fsm.registerClient('tv', 'tv-1');
     assert.ok(res.ok);
@@ -62,7 +63,7 @@ test('Fsm: registers tv and remote, transitions to ready once both present', () 
 
 // Deregister flow: losing either client regresses back to 'initializing'
 test('Fsm: deregisters a client and regresses to initializing', () => {
-    const fsm = new Fsm();
+    const fsm = new Fsm(new CatalogDataService());
     fsm.registerClient('tv', 'tv-1');
     fsm.registerClient('remote', 'remote-1');
     const sReady = fsm.getSnapshot();
@@ -80,7 +81,7 @@ test('Fsm: deregisters a client and regresses to initializing', () => {
 
 // Navigation: performer→video→back preserves video context (scene cleared). Duplicate commands are suppressed.
 test('Fsm: navigationCommand updates levels with no-op suppression', () => {
-    const fsm = new Fsm();
+    const fsm = new Fsm(new CatalogDataService());
     const s0 = fsm.getSnapshot();
 
     fsm.navigationCommand('navigate_to_performer', 1);
@@ -110,7 +111,7 @@ test('Fsm: navigationCommand updates levels with no-op suppression', () => {
 
 // Control: play/pause/seek/volume/mute update only on actual change; repeated same-op is suppressed
 test('Fsm: controlCommand play/pause/seek/volume/mute toggles with no-op suppression', () => {
-    const fsm = new Fsm();
+  const fsm = new Fsm(new CatalogDataService());
     const s0 = fsm.getSnapshot();
     const playerState0: PlayerState = { 
         isPlaying: true,
@@ -188,7 +189,7 @@ test('Fsm: controlCommand play/pause/seek/volume/mute toggles with no-op suppres
 
 // action_confirmation: failure drives error state; repeated same failure is no-op; success clears error and returns to ready
 test('Fsm: actionConfirmation toggles error/ready state and only bumps on change', () => {
-    const fsm = new Fsm();
+    const fsm = new Fsm(new CatalogDataService());
     fsm.registerClient('tv', 'tv-1');
     fsm.registerClient('remote', 'remote-1');
     const sReady = fsm.getSnapshot();

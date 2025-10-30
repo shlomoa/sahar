@@ -16,6 +16,7 @@ import {
   ClientType
 } from 'shared';
 import { Fsm } from '../fsm';
+import { CatalogDataService } from './catalog-data.service';
 
 const logger = createLogger({ component: 'server-websocket' });
 const logInfo = (event: string, meta?: any, msg?: string) => logger.info(event, meta, msg);
@@ -62,6 +63,7 @@ export class ServerWebSocketService {
   constructor(
     private wss: WebSocketServer,
     private fsm: Fsm,
+    private catalogService: CatalogDataService,
     private clients: Map<WebSocket, ClientMetadata>
   ) {    
   }
@@ -244,15 +246,15 @@ export class ServerWebSocketService {
       const action = nav.payload.action;
       const targetId = nav.payload.targetId;
       
-      // Phase 3: Get catalog from FSM's getCatalogData(), not from state
-      const catalogData = this.fsm.getCatalogData();
+      // S3: Get catalog from CatalogDataService (decoupled from FSM)
+      const catalogData = this.catalogService.getCatalog();
       const performers = catalogData.performers || [];
       const videos = catalogData.videos || [];
       const scenes = catalogData.scenes || [];
 
-  const existsPerformer = (id?: number) => typeof id === 'number' && performers.some((p: any) => p.id === id);
-  const existsVideo = (id?: number) => typeof id === 'number' && videos.some((v: any) => v.id === id);
-  const existsScene = (id?: number) => typeof id === 'number' && scenes.some((s: any) => s.id === id);
+      const existsPerformer = (id?: number) => typeof id === 'number' && performers.some((p: any) => p.id === id);
+      const existsVideo = (id?: number) => typeof id === 'number' && videos.some((v: any) => v.id === id);
+      const existsScene = (id?: number) => typeof id === 'number' && scenes.some((s: any) => s.id === id);
 
       let validTarget = true;
       switch (action) {
