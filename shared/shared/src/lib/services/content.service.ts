@@ -1,5 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { Performer, Video, Scene, CatalogData } from '../models/video-navigation';
+import { deriveThumbFromUrl } from '../utils/thumbnails';
 
 /**
  * ContentService - HTTP-based catalog delivery (Phase 2: Content Delivery Separation)
@@ -59,8 +60,10 @@ export class ContentService {
           return res.json();
         })
         .then((data: CatalogData) => {
-          // Update catalog signal with fetched data
-          this.catalog.set(data);
+          // Normalize catalog: ensure non-nullable fields like Video.thumbnail are present
+          const normalized = this.normalizeCatalog(data);
+          // Update catalog signal with normalized data
+          this.catalog.set(normalized);
           
           fetchPromise = null;
           console.log('✅ Catalog loaded via HTTP:', {
@@ -79,6 +82,24 @@ export class ContentService {
       return fetchPromise;
     };
   })();
+
+  /**
+   * Normalize incoming catalog to satisfy non-nullability at public surfaces.
+   * - Ensures Video.thumbnail is a concrete string. For legacy payloads without thumbnail,
+   *   derive from url defensively with a placeholder fallback.
+   */
+  private normalizeCatalog(data: CatalogData): CatalogData {
+    const videos: Video[] = data.videos.map(v => ({
+      ...v,
+      thumbnail: (v as any).thumbnail ?? deriveThumbFromUrl(v.url)
+    }));
+    // Performers/scenes are passed through as-is (performer already has thumbnail in schema)
+    return {
+      performers: data.performers,
+      videos,
+      scenes: data.scenes
+    };
+  }
 
   /**
    * Get performer by ID

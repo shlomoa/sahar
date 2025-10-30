@@ -4,6 +4,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Scene } from '../../models/video-navigation';
+import { ClientType } from '../../models';
 
 @Component({
   selector: 'shared-scenes-grid',
@@ -20,7 +21,7 @@ import { Scene } from '../../models/video-navigation';
 export class SharedScenesGridComponent {
   @Input() scenes: Scene[] = [];
   @Input() selectedSceneId?: string;
-  @Input() clientType: 'remote' | 'tv' = 'remote';
+  @Input() clientType: ClientType = 'remote';
   
   @Output() sceneSelected = new EventEmitter<string>();
   @Output() backToVideos = new EventEmitter<void>();

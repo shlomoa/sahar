@@ -36,7 +36,8 @@ export const catalogData: CatalogData = {
       title: 'יובל המבולבל - אני ילד ישראלי המופע המלא',
       url: 'https://www.youtube.com/watch?v=RLXswLCRG08',
       duration: 240,
-      description: 'A fun birthday celebration song'
+      description: 'A fun birthday celebration song',
+      thumbnail: 'https://i.ytimg.com/vi/RLXswLCRG08/hqdefault.jpg'
     },
     {
       id: 'yuval-happy-birthday',
@@ -44,7 +45,8 @@ export const catalogData: CatalogData = {
       title: 'יום הולדת שמח - עם יובל המבולבל',
       url: 'https://www.youtube.com/watch?v=EsXQkdYj9jg',
       duration: 180,
-      description: 'Birthday celebration song'
+      description: 'Birthday celebration song',
+      thumbnail: 'https://i.ytimg.com/vi/EsXQkdYj9jg/hqdefault.jpg'
     },
     // Little Michal videos
     {
@@ -53,7 +55,8 @@ export const catalogData: CatalogData = {
       title: 'לומדים צבעים עם מיכל הקטנה',
       url: 'https://www.youtube.com/watch?v=mMRfmgR_oZ0',
       duration: 300,
-      description: 'Learning colors'
+      description: 'Learning colors',
+      thumbnail: 'https://i.ytimg.com/vi/mMRfmgR_oZ0/hqdefault.jpg'
     },
     {
       id: 'michal-numbers',
@@ -61,7 +64,8 @@ export const catalogData: CatalogData = {
       title: 'מיכל מלמדת מספרים',
       url: 'https://www.youtube.com/watch?v=numbers123',
       duration: 240,
-      description: 'Learning numbers'
+      description: 'Learning numbers',
+      thumbnail: 'https://i.ytimg.com/vi/numbers123/hqdefault.jpg'
     },
     {
       id: 'michal-animals',
@@ -69,7 +73,8 @@ export const catalogData: CatalogData = {
       title: 'חיות בחווה - עם מיכל הקטנה',
       url: 'https://www.youtube.com/watch?v=animals456',
       duration: 360,
-      description: 'Farm animals'
+      description: 'Farm animals',
+      thumbnail: 'https://i.ytimg.com/vi/animals456/hqdefault.jpg'
     },
     // Roy Boy videos
     {
@@ -78,7 +83,8 @@ export const catalogData: CatalogData = {
       title: 'רועי בוי - הגיבור שלי',
       url: 'https://www.youtube.com/watch?v=superhero789',
       duration: 420,
-      description: 'Superhero adventures'
+      description: 'Superhero adventures',
+      thumbnail: 'https://i.ytimg.com/vi/superhero789/hqdefault.jpg'
     },
     {
       id: 'roy-adventure',
@@ -86,7 +92,8 @@ export const catalogData: CatalogData = {
       title: 'הרפתקה עם רועי',
       url: 'https://www.youtube.com/watch?v=adventure101',
       duration: 480,
-      description: 'Adventure time'
+      description: 'Adventure time',
+      thumbnail: 'https://i.ytimg.com/vi/adventure101/hqdefault.jpg'
     },
     {
       id: 'roy-friends',
@@ -94,7 +101,8 @@ export const catalogData: CatalogData = {
       title: 'רועי והחברים',
       url: 'https://www.youtube.com/watch?v=friends202',
       duration: 300,
-      description: 'Friends and teamwork'
+      description: 'Friends and teamwork',
+      thumbnail: 'https://i.ytimg.com/vi/friends202/hqdefault.jpg'
     },
     // Uncle Haim videos
     {
@@ -103,7 +111,8 @@ export const catalogData: CatalogData = {
       title: 'דוד חיים מצחיק',
       url: 'https://www.youtube.com/watch?v=funny303',
       duration: 360,
-      description: 'Comedy show'
+      description: 'Comedy show',
+      thumbnail: 'https://i.ytimg.com/vi/funny303/hqdefault.jpg'
     },
     {
       id: 'haim-magic',
@@ -111,7 +120,8 @@ export const catalogData: CatalogData = {
       title: 'קסמים עם דוד חיים',
       url: 'https://www.youtube.com/watch?v=magic404',
       duration: 300,
-      description: 'Magic tricks'
+      description: 'Magic tricks',
+      thumbnail: 'https://i.ytimg.com/vi/magic404/hqdefault.jpg'
     },
     {
       id: 'haim-stories',
@@ -119,7 +129,8 @@ export const catalogData: CatalogData = {
       title: 'סיפורים מדוד חיים',
       url: 'https://www.youtube.com/watch?v=stories505',
       duration: 420,
-      description: 'Storytelling time'
+      description: 'Storytelling time',
+      thumbnail: 'https://i.ytimg.com/vi/stories505/hqdefault.jpg'
     }
   ],
   scenes: [
