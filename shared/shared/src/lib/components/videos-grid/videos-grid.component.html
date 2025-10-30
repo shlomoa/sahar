@@ -14,9 +14,6 @@
           
         <mat-card-content>
           <h3>{{ video.name }}</h3>
-          @if (video.duration) {
-            <p>{{ formatDuration(video.duration) }} min</p>
-          }
         </mat-card-content>
       </mat-card>
     } @empty {

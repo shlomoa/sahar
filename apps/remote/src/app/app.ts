@@ -76,8 +76,7 @@ export class App implements OnInit, OnDestroy {
   }
 
   onSceneSelected(sceneId: number): void {
-    console.log('📱 Remote: Scene selected:', sceneId);
-    const video = this.currentVideo();
+    console.log('📱 Remote: Scene selected:', sceneId);    
     const scene = this.currentScene();
     const playerState: PlayerState  = {
       currentTime: scene?.startTime || 0,

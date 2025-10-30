@@ -31,7 +31,6 @@ export const catalogData: CatalogData = {
       performerId: 1,
       name: 'יובל המבולבל - אני ילד ישראלי המופע המלא',
       url: 'https://www.youtube.com/watch?v=RLXswLCRG08',
-      duration: 240,
       thumbnail: 'https://i.ytimg.com/vi/RLXswLCRG08/hqdefault.jpg'
     },
     {
@@ -39,7 +38,6 @@ export const catalogData: CatalogData = {
       performerId: 1,
       name: 'יום הולדת שמח - עם יובל המבולבל',
       url: 'https://www.youtube.com/watch?v=EsXQkdYj9jg',
-      duration: 180,
       thumbnail: 'https://i.ytimg.com/vi/EsXQkdYj9jg/hqdefault.jpg'
     },
     // Little Michal videos
@@ -48,7 +46,6 @@ export const catalogData: CatalogData = {
       performerId: 2,
       name: 'לומדים צבעים עם מיכל הקטנה',
       url: 'https://www.youtube.com/watch?v=mMRfmgR_oZ0',
-      duration: 300,
       thumbnail: 'https://i.ytimg.com/vi/mMRfmgR_oZ0/hqdefault.jpg'
     },
     {
@@ -56,7 +53,6 @@ export const catalogData: CatalogData = {
       performerId: 2,
       name: 'מיכל מלמדת מספרים',
       url: 'https://www.youtube.com/watch?v=numbers123',
-      duration: 240,
       thumbnail: 'https://i.ytimg.com/vi/numbers123/hqdefault.jpg'
     },
     {
@@ -64,7 +60,6 @@ export const catalogData: CatalogData = {
       performerId: 2,
       name: 'חיות בחווה - עם מיכל הקטנה',
       url: 'https://www.youtube.com/watch?v=animals456',
-      duration: 360,
       thumbnail: 'https://i.ytimg.com/vi/animals456/hqdefault.jpg'
     },
     // Roy Boy videos
@@ -73,7 +68,6 @@ export const catalogData: CatalogData = {
       performerId: 3,
       name: 'רועי בוי - הגיבור שלי',
       url: 'https://www.youtube.com/watch?v=superhero789',
-      duration: 420,
       thumbnail: 'https://i.ytimg.com/vi/superhero789/hqdefault.jpg'
     },
     {
@@ -81,7 +75,6 @@ export const catalogData: CatalogData = {
       performerId: 3,
       name: 'הרפתקה עם רועי',
       url: 'https://www.youtube.com/watch?v=adventure101',
-      duration: 480,
       thumbnail: 'https://i.ytimg.com/vi/adventure101/hqdefault.jpg'
     },
     {
@@ -89,7 +82,6 @@ export const catalogData: CatalogData = {
       performerId: 3,
       name: 'רועי והחברים',
       url: 'https://www.youtube.com/watch?v=friends202',
-      duration: 300,
       thumbnail: 'https://i.ytimg.com/vi/friends202/hqdefault.jpg'
     },
     // Uncle Haim videos
@@ -98,7 +90,6 @@ export const catalogData: CatalogData = {
       performerId: 4,
        name: 'דוד חיים מצחיק',
       url: 'https://www.youtube.com/watch?v=funny303',
-      duration: 360,
       thumbnail: 'https://i.ytimg.com/vi/funny303/hqdefault.jpg'
     },
     {
@@ -106,7 +97,6 @@ export const catalogData: CatalogData = {
       performerId: 4,
       name: 'קסמים עם דוד חיים',
       url: 'https://www.youtube.com/watch?v=magic404',
-      duration: 300,
       thumbnail: 'https://i.ytimg.com/vi/magic404/hqdefault.jpg'
     },
     {
@@ -114,7 +104,6 @@ export const catalogData: CatalogData = {
       performerId: 4,
       name: 'סיפורים מדוד חיים',
       url: 'https://www.youtube.com/watch?v=stories505',
-      duration: 420,
       thumbnail: 'https://i.ytimg.com/vi/stories505/hqdefault.jpg'
     }
   ],

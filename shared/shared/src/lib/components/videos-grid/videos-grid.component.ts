@@ -55,12 +55,6 @@ export class SharedVideosGridComponent {
       : `${baseClasses} remote-card`;
   }
 
-  // Format duration from seconds to readable format
-  formatDuration(seconds: number): string {
-    const minutes = Math.floor(seconds / 60);
-    return `${minutes}`;
-  }
-
   // Calculate YouTube thumbnail URL from video URL
   getVideoThumbnail(video: Video): string | null {
     const videoId = getYoutubeVideoId(video.url);

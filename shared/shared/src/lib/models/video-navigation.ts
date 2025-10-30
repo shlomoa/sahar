@@ -12,7 +12,6 @@ export interface Video {
   url: string; // YouTube video URL
   performerId: number; // Foreign key reference to Performer
   thumbnail: string; // M1: non-nullable on public surfaces; normalized client-side if missing in legacy payloads
-  duration?: number; // Optional metadata hint (PlayerState.duration is authoritative at runtime)
 }
 
 export interface Scene {

@@ -22,7 +22,7 @@ export const appConfig: ApplicationConfig = {
     MatIconRegistry,
 
     provideRouter(routes),
-
+    provideAnimations(),
     provideAppInitializer(() => {
       const contentService = inject(ContentService);
       return contentService.fetchCatalog();

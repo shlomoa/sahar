@@ -18,7 +18,7 @@
     "rebuild:all": "npm run build && npm run build:clients",
     "start:with-shared": "npm run relink:shared && npm run rebuild:all && node dist/main.js",
     "typecheck": "tsc -p tsconfig.server.json --noEmit --noUnusedLocals --noUnusedParameters",
-    "typecheck:all": "npm run typecheck && cd ../shared && npm run typecheck && cd ../apps/tv && npm run typecheck && cd ../apps/remote && npm run typecheck",
+    "typecheck:all": "npm run typecheck && cd ../shared && npm run typecheck && cd ../apps/tv && npm run typecheck && cd ../remote && npm run typecheck",
     "test": "npm run build && node --test dist/tests/**/*.test.js"
   },
   "dependencies": {
