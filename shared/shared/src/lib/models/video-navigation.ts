@@ -4,7 +4,6 @@ export interface Performer {
   id: number;
   name: string;
   thumbnail: string;
-  description?: string;
 }
 
 export interface Video {
@@ -14,7 +13,6 @@ export interface Video {
   performerId: number; // Foreign key reference to Performer
   thumbnail: string; // M1: non-nullable on public surfaces; normalized client-side if missing in legacy payloads
   duration?: number; // Optional metadata hint (PlayerState.duration is authoritative at runtime)
-  description?: string;
 }
 
 export interface Scene {
@@ -24,7 +22,6 @@ export interface Scene {
   startTime: number; // Offset time from video start in seconds
   endTime?: number; // Optional end time for scene duration
   thumbnail?: string; // Optional custom thumbnail for the scene
-  description?: string;
 }
 
 export interface CatalogData {
