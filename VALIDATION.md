@@ -123,15 +123,15 @@ These tests are performed manually by running the server and one client applicat
 ## Full Integration Testing (`/validation`)
 
 -   **Objective**: Automate end-to-end user stories involving the real server and both client applications.
--   **Method**: Prefer the npm mode scripts (`mode:prod`) for standing up the environment. The legacy `sahar-validation.ps1` tasks remain available (VS Code tasks: Environment Check / Start Applications / Integration Tests) but are being phased out in favor of pure package scripts.
+-   **Method**: Prefer the npm mode scripts (`mode:prod`) for standing up the environment. 
 
 Canonical driver (Milestone 1, Path B)
 - Use `npm run quick -w validation` as the canonical automation entrypoint. For verbose debug logs, use `npm run quick:dev -w validation`. This executes Hooks A, B, I, C, D, E, J end-to-end using the existing `validation/validate.js` orchestrator. Optional artifact capture and schema checks are planned for Milestone 2.
 
 -   **Flow 1: Full System Startup & Navigation**
-    1.  `sahar-validation.ps1 start`: Starts the server, TV app, and Remote app.
+    1.  `npm run start`: Starts the server, TV app, and Remote app.
     2.  **Expected**: Server logs show both clients connect and register successfully.
-    3.  `sahar-validation.ps1 test -name "navigation"`: The test driver instructs the Remote app.
+    3.  `npm run test -name "navigation"`: The test driver instructs the Remote app.
     4.  **Action**: Remote test driver simulates a click on the "Videos" navigation button.
     5.  **Expected**: Remote app sends `navigation_command`. Server sends `ack` to Remote. Server sends `state_sync` to both clients.
     6.  **Expected**: TV app test driver verifies the UI now displays the video grid.
@@ -139,7 +139,7 @@ Canonical driver (Milestone 1, Path B)
 
 -   **Flow 2: Video Playback Control**
     1.  (Continuing from Flow 1, with video grid displayed)
-    2.  `sahar-validation.ps1 test -name "playback"`: The test driver continues the scenario.
+    2.  `npm run test -name "playback"`: The test driver continues the scenario.
     3.  **Action**: Remote driver simulates selecting and playing a video.
     4.  **Expected**: Remote sends `control_command` (e.g., `play_video`). Server sends `ack`. Server sends `state_sync`.
     5.  **Expected**: TV driver verifies the video player is now active and playing the correct video.
@@ -149,10 +149,10 @@ Canonical driver (Milestone 1, Path B)
 
 -   **Flow 3: Client Reconnection**
     1.  (Continuing from Flow 2)
-    2.  `sahar-validation.ps1 stop -app "tv"`: Manually stop the TV application process.
+    2.  `npm run stop -app "tv"`: Manually stop the TV application process.
     3.  **Expected**: Server detects the disconnection and updates its FSM.
     4.  **Expected**: Remote app receives a `state_sync` indicating the TV is disconnected.
-    5.  `sahar-validation.ps1 start -app "tv"`: Restart the TV application.
+    5.  `npm run start -app "tv"`: Restart the TV application.
     6.  **Expected**: TV app reconnects, re-registers, and receives the current `state_sync` from the server, displaying the paused video player correctly.
 
 -   **Flow 4: Health & Readiness Preflight**
