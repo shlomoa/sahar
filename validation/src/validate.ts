@@ -191,13 +191,13 @@ async function placeholder(name: string): Promise<HookResult> {
 async function hookC(): Promise<HookResult> {
   const before = await getTvState();
   const v0 = getVersion(before) || 0;
-  const cmd = { msgType: 'navigation_command', payload: { action: 'navigate_to_performer', targetId: 'perf-1' } };
+  const cmd = { msgType: 'navigation_command', payload: { action: 'navigate_to_performer', targetId: 1 } };
   const r = await postJson(REMOTE_STUB_PORT, '/command', cmd);
   if (r.status !== 200) return { hook: 'C', pass: false, detail: `remote /command HTTP ${r.status}` };
   const ok = await waitFor(async () => {
     const s = await getTvState();
     const p = (s as any)?.lastStateSync?.payload;
-    return p && p.navigation?.currentLevel === 'videos' && p.navigation?.performerId === 'perf-1' && (getVersion(s) || 0) >= v0 + 1;
+    return p && p.navigation?.currentLevel === 'videos' && p.navigation?.performerId === 1 && (getVersion(s) || 0) >= v0 + 1;
   }, HOOK_B_TIMEOUT_MS, POLL_INTERVAL_MS);
   if (!ok) {
     const s = await getTvState();
@@ -234,13 +234,13 @@ async function hookE(): Promise<HookResult> {
   const before = await getTvState();
   const v0 = getVersion(before) || 0;
   // Fire two commands rapidly
-  void postJson(REMOTE_STUB_PORT, '/command', { msgType: 'navigation_command', payload: { action: 'navigate_to_performer', targetId: 'perf-2' } });
-  const r2 = await postJson(REMOTE_STUB_PORT, '/command', { msgType: 'navigation_command', payload: { action: 'navigate_to_video', targetId: 'vid-1' } });
+  void postJson(REMOTE_STUB_PORT, '/command', { msgType: 'navigation_command', payload: { action: 'navigate_to_performer', targetId: 2 } });
+  const r2 = await postJson(REMOTE_STUB_PORT, '/command', { msgType: 'navigation_command', payload: { action: 'navigate_to_video', targetId: 100 } });
   if (r2.status !== 200) return { hook: 'E', pass: false, detail: `second /command HTTP ${r2.status}` };
   const ok = await waitFor(async () => {
     const s = await getTvState();
     const p = (s as any)?.lastStateSync?.payload;
-    return p && p.navigation?.currentLevel === 'scenes' && p.navigation?.videoId === 'vid-1';
+    return p && p.navigation?.currentLevel === 'scenes' && p.navigation?.videoId === 100;
   }, HOOK_B_TIMEOUT_MS, POLL_INTERVAL_MS);
   const after = await getTvState();
   const v1 = getVersion(after) || 0;
