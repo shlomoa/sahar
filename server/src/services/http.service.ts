@@ -116,12 +116,12 @@ export class HttpService {
     // Create performer
     app.post('/admin/catalog/performers', (req: Request, res: Response) => {
       try {
-        const { name, thumbnail } = req.body || {};
-        if (typeof name !== 'string' || typeof thumbnail !== 'string') {
-          res.status(400).json({ ok: false, error: 'Invalid payload: { name: string, thumbnail: string } required' });
+        const { name, thumbnail, channelId } = req.body || {};
+        if (typeof name !== 'string' || typeof thumbnail !== 'string' || typeof channelId !== 'string') {
+          res.status(400).json({ ok: false, error: 'Invalid payload: { name: string, thumbnail: string, channelId: string } required' });
           return;
         }
-        const created = this.catalogService.addPerformer({ name, thumbnail });
+        const created = this.catalogService.addPerformer({ name, thumbnail, channelId });
         res.status(201).json(created);
       } catch (e: any) {
         res.status(400).json({ ok: false, error: e?.message || 'Invalid performer payload' });

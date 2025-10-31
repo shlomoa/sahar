@@ -6,21 +6,25 @@ export const catalogData: CatalogData = {
     {
       id: 1,
       name: 'Yuval',
+      channelId: '@7yuval',
       thumbnail: 'https://yt3.googleusercontent.com/ELvjLVIwbpAabtF2R3wgzS4fOVL1XU4ySxrm61gdhdlZCx3zYAR5HKmVlsuI_IkhzNpZEjAd=s160-c-k-c0x00ffffff-no-rj'
     },
     {
       id: 2,
       name: 'Little Michal',
+      channelId: '@littlemichal',
       thumbnail: 'https://yt3.googleusercontent.com/ytc/AIdro_nWusm1zzELGjN8vNamxNfqWvZ18QCb98giM0suD4jaOLQ=s160-c-k-c0x00ffffff-no-rj'
     },
     {
       id: 3,
       name: 'Roy Boy',
+      channelId: '@royboy',
       thumbnail: 'https://yt3.googleusercontent.com/pVKTM2PwD5QEYrvk2WvjIv_in_yCXnpH9HlgO8EQYXxys0wZRCoNfaCSWhPVHE-e4rorqWjmeA=s160-c-k-c0x00ffffff-no-rj'
     },
     {
       id: 4,
       name: 'Uncle Haim',
+      channelId: '@unclehaim',
       thumbnail: 'https://yt3.googleusercontent.com/VH4WLb2QOqIsNue1J9MnsVJgraCN3lDc6tSkhTRqhtK6Ug-KLNh7htAXfNbZ-wX8-2hQsNoVFKY=s160-c-k-c0x00ffffff-no-rj'
     }
   ],

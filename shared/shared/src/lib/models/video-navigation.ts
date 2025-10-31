@@ -3,6 +3,7 @@
 export interface Performer {
   id: number;
   name: string;
+  channelId: string; // Non-null YouTube (or platform) channel identifier (e.g., @handle)
   thumbnail: string;
 }
 

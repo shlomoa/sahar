@@ -30,9 +30,9 @@ export class CatalogDataService {
   // --- S4: Mutation APIs ---
 
   /** Add a new performer with deterministic numeric id */
-  addPerformer(input: Pick<Performer, 'name' | 'thumbnail'>): Performer {
+  addPerformer(input: Pick<Performer, 'name' | 'thumbnail' | 'channelId'>): Performer {
     const nextId = this.nextId(this.catalog.performers, 1);
-    const performer: Performer = { id: nextId, name: input.name, thumbnail: input.thumbnail };
+    const performer: Performer = { id: nextId, name: input.name, thumbnail: input.thumbnail, channelId: input.channelId };
     this.catalog.performers = [...this.catalog.performers, performer];
     logInfo('catalog_add_performer', { id: performer.id, name: performer.name });
     return performer;
