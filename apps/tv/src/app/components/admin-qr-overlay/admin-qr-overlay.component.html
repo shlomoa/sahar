@@ -1,0 +1,29 @@
+@if (overlay.visible()) {
+  <div class="overlay-backdrop" (click)="onBackdropClick()">
+    <div
+      class="overlay-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Admin QR"
+      (click)="onDialogClick($event)"
+    >
+      <div class="overlay-header">
+        <span class="title">Scan to open Admin</span>
+        <button class="close-btn" type="button" (click)="overlay.hide()" aria-label="Close">×</button>
+      </div>
+
+      <div class="qr-section">
+        <qrcode [qrdata]="overlay.adminUrl()" [width]="224" [errorCorrectionLevel]="'M'"></qrcode>
+      </div>
+
+      <div class="url-section" aria-live="polite">
+        <span class="url-text">{{ overlay.adminUrl() }}</span>
+        <button class="copy-btn" type="button" (click)="copyUrl()" aria-label="Copy URL">Copy</button>
+      </div>
+
+      <div class="footer" aria-live="polite">
+        <span>Closes in {{ overlay.secondsLeft() }}s</span>
+      </div>
+    </div>
+  </div>
+}

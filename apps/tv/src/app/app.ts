@@ -17,6 +17,9 @@ import { getYoutubeVideoId,
 import { WebSocketService } from './services/websocket.service';
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
 import { QrConnectionComponent } from './components/qr-connection/qr-connection.component';
+import { AdminQrOverlayComponent } from './components/admin-qr-overlay/admin-qr-overlay.component';
+import { SecretTapService } from './services/secret-tap.service';
+import { AdminQrOverlayService } from './services/admin-qr-overlay.service';
 
 
 @Component({
@@ -29,6 +32,7 @@ import { QrConnectionComponent } from './components/qr-connection/qr-connection.
     VideoPlayerComponent,
     SharedNavigationRootComponent,
     QrConnectionComponent,
+    AdminQrOverlayComponent,
     AppToolbarComponent
   ],
   templateUrl: './app.html',
@@ -46,6 +50,8 @@ export class App implements OnInit, OnDestroy {
   private readonly webSocketService = inject(WebSocketService);
   private readonly catalogHelper = inject(CatalogHelperService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly secretTap = inject(SecretTapService);
+  private readonly adminQrOverlay = inject(AdminQrOverlayService);
   
   // Computed signals from CatalogHelperService - automatic reactivity
   readonly currentPerformer = this.catalogHelper.currentPerformer;
@@ -58,6 +64,9 @@ export class App implements OnInit, OnDestroy {
 
   // QR: Remote entry URL to encode
   remoteUrl = '';
+
+  // QR: Admin panel URL to encode
+  adminUrl = '';
 
   // Derived playback bindings for the video-player component
   get playbackVideoId(): string {
@@ -112,9 +121,11 @@ export class App implements OnInit, OnDestroy {
     const protocol = window.location.protocol;
     const defaultHost = window.location.hostname;
     const buildRemoteUrl = (host: string) => `${protocol}//${host}:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}/remote`;
+    const buildAdminUrl = (host: string) => `${protocol}//${host}:${WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT}/admin`;
 
     // Start with a provisional URL based on the browser hostname.
     this.remoteUrl = buildRemoteUrl(defaultHost);
+    this.adminUrl = buildAdminUrl(defaultHost);
 
     // Try to fetch authoritative host IP from the server and prefer it if available.
     (async () => {
@@ -125,6 +136,7 @@ export class App implements OnInit, OnDestroy {
           const ip = data?.ip;
           if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
             this.remoteUrl = buildRemoteUrl(ip);
+            this.adminUrl = buildAdminUrl(ip);
           }
         }
       } catch (err) {
@@ -181,10 +193,18 @@ export class App implements OnInit, OnDestroy {
 
     this.subscriptions.push(errorSub);
 
+    // Secret admin gesture: attach global tap listener and show admin QR overlay on trigger
+    this.secretTap.attach(document);
+    const secretSub = this.secretTap.triggered$.subscribe(() => {
+      this.adminQrOverlay.show(5000, this.adminUrl);
+    });
+    this.subscriptions.push(secretSub);
+
   }
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
+    this.secretTap.detach(document);
   }
 
   // Connected device
