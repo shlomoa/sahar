@@ -81,6 +81,13 @@ Integrated validation flows: see [VALIDATION.md](./VALIDATION.md).
   - No on-device user controls; all control comes from the Remote
   - See details: [ARCHITECTURE.md — TV Application](./ARCHITECTURE.md#tv-application-appstv)
 
+#### Operator Tools — Admin QR (TV)
+- Secret gesture: tap pattern 3–pause–3 anywhere on the TV screen
+- Shows a 5s modal overlay with a QR code and direct URL to `/admin`
+- ESC or click outside to dismiss; includes countdown and "Copy URL" button
+- URL is built using server host discovery (`/host-ip` fallback) to avoid localhost in the QR
+- More details: [IMPLEMENTATION.md — Admin QR Overlay](./IMPLEMENTATION.md#operator-tools-%E2%80%94-admin-qr-overlay-tv)
+
 ### 📱 Remote Application (`apps/remote/`)  
 **Role**: Control Interface and Data Owner
 - **Technology**: Angular 20+ with Material Design

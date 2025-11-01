@@ -633,6 +633,40 @@ export class AppComponent {
 
 ---
 
+## Operator Tools — Admin QR Overlay (TV)
+
+Status: Implemented (November 2025)
+
+Purpose
+- Provide a safe, on-demand way to open the Admin UI on another device by revealing a QR code on the TV via a secret gesture.
+
+How it works
+- Gesture: Two-burst tap pattern anywhere on the TV screen — 3 taps, short pause, then 3 taps ("3–pause–3").
+  - Timing thresholds: intraTapMaxMs=400ms, interBurstMinMs=300ms, interBurstMaxMs=1200ms, cooldownMs=5000ms.
+- Overlay: Modal with QR + URL, auto-hides after ~5s. ESC and click‑outside to close. Countdown indicator and Copy URL button included.
+- URL: Encodes `/admin` at the server host/port. Host prefers `/host-ip` endpoint and falls back to `window.location.hostname`. Port comes from `WEBSOCKET_CONFIG.SERVER_DEFAULT_PORT`.
+
+Code locations
+- Gesture detection: `apps/tv/src/app/services/secret-tap.service.ts`
+- Overlay service: `apps/tv/src/app/services/admin-qr-overlay.service.ts`
+- Overlay component: `apps/tv/src/app/components/admin-qr-overlay/`
+- App wiring (gesture + overlay host):
+  - `apps/tv/src/app/app.ts` (subscribe to secret tap and call `adminQrOverlay.show(visibleMs, adminUrl)`)
+  - `apps/tv/src/app/app.html` (place `<app-admin-qr-overlay>` once at root)
+- Admin URL building: Implemented inline in `apps/tv/src/app/app.ts` next to the Remote QR builder (utility extraction optional).
+
+Accessibility
+- Dialog semantics with ESC to close; high-contrast backdrop; copy button feedback is non-blocking.
+
+Behavioral notes
+- Available on any TV screen; no authentication required (LAN operator convenience).
+- `show()` is idempotent; retriggers extend the visibility window.
+
+Manual verification
+- See `TODO.md` → Admin QR code display → Verification for latest smoke test status.
+
+---
+
 ## Operational Schemas: Health/Readiness
 
 The Unified Server exposes three HTTP endpoints with JSON payloads for preflight and monitoring. Status values: "ok" | "degraded" | "error".
